@@ -1,0 +1,13 @@
+polysoftk_lite — excerpt from PySoftK
+=====================================
+
+Upstream: https://github.com/alejandrosantanabonilla/pysoftk  
+License: BSD 3-Clause (same as upstream PySoftK)  
+Vendored git revision: da049f2437eff55fd2ed0e62c4de48aef8a1c51f  
+
+This directory contains a minimal subset of PySoftK sufficient for
+``Lp.linear_polymer()`` (RDKit assembly → PDB → Open Babel force-field
+relaxation and rotor optimization). It is not the full PySoftK package;
+do not treat it as a drop-in replacement outside this skill.
+
+See the repository root LICENSE or upstream LICENSE for the full BSD-3-Clause text.

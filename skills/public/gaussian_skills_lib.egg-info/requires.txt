@@ -1,0 +1,6 @@
+ase>=3.22
+cclib>=1.8
+paramiko>=3.0
+pyyaml>=6.0
+requests>=2.28
+basis-set-exchange>=0.9

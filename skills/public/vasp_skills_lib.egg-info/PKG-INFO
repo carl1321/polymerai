@@ -1,0 +1,72 @@
+Metadata-Version: 2.4
+Name: vasp_skills_lib
+Version: 0.1.0
+Summary: Shared lightweight library for vasp-skills atomic skills
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: pymatgen>=2024.1.1
+Requires-Dist: custodian>=2024.2.15
+Requires-Dist: paramiko>=3.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: numpy
+Provides-Extra: atomate2
+Requires-Dist: atomate2>=0.0.14; extra == "atomate2"
+Provides-Extra: phonon
+Requires-Dist: phonopy>=2.20; extra == "phonon"
+Provides-Extra: analysis
+Requires-Dist: sumo; extra == "analysis"
+Requires-Dist: pyprocar; extra == "analysis"
+
+# vasp-skills
+
+原子化的 VASP 计算 skill 集合。每个 skill 负责一种 coherent workflow（relax / scf / band / dos / phonon / elastic / …），共享一个轻量库 `vasp_skills_lib` 做错误处理、输入集生成、HPC 执行。
+
+**与 `vasp-agent` 的关系**：本项目完全不依赖 vasp-agent 的代码，而是直接基于上游主流库（pymatgen、custodian、atomate2、paramiko）重建。vasp-agent 保留为参考实现。
+
+完整设计见 [`PLAN.md`](./PLAN.md)。
+
+## 安装
+
+```bash
+# 安装共享库 _lib 为可导入包
+pip install -e D:/code/vasp-skills
+```
+
+依赖：
+- `pymatgen` — 结构 / 输入集 / 解析
+- `custodian` — 基础错误处理框架
+- `atomate2` — 上游输入集参考
+- `paramiko` — SSH
+- `phonopy`（可选）— vasp-phonon
+- `pyyaml` — config
+
+## Skill 清单
+
+| Skill | 状态 | 说明 |
+|---|---|---|
+| vasp-relax | ✅ 完整 | 结构弛豫 |
+| vasp-scf | stub | 自洽 |
+| vasp-band | stub | 能带（含 HighSymmKpath） |
+| vasp-dos | stub | 态密度 |
+| vasp-double-relax | stub | 两步弛豫 |
+| vasp-dielectric | stub | DFPT 介电 |
+| vasp-optics | stub | 光学性质 |
+| vasp-elastic | stub | 弹性常数（6×2 strain） |
+| vasp-phonon | stub | 声子（phonopy） |
+| vasp-defect | stub | 缺陷形成能（输入 supercell 由 modeling 提供） |
+| vasp-magnetic | stub | 磁性 / SOC |
+| vasp-lobster | stub | LOBSTER pre-static |
+| vasp-batch | stub | 高通量调度 |
+| vasp-diagnose | stub | 纯诊断 |
+
+## 配置
+
+```bash
+mkdir -p ~/.vasp_skills
+cp _shared/config.template.yaml ~/.vasp_skills/config.yaml
+# 编辑填入 HPC 信息
+```
+
+## 共享约定
+
+见 [`_shared/conventions.md`](./_shared/conventions.md)。

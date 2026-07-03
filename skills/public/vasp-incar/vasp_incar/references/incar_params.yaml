@@ -1,0 +1,193 @@
+# Compact INCAR parameter database used by vasp-incar explain.
+# Each entry: meaning, default, recommended (typical range), notes, related.
+
+ENCUT:
+  meaning: Plane-wave kinetic-energy cutoff (eV). Sets basis-set size.
+  default: Largest ENMAX from POTCARs (≈ 400 eV for PBE).
+  recommended: 1.3×ENMAX (production); 1.5×ENMAX (high precision); 520 eV is a
+    typical Materials Project value for any PBE calc.
+  notes: Same ENCUT must be used across all calcs that are compared (e.g.
+    relax + static + band).
+  related: [PREC, NBANDS]
+
+PREC:
+  meaning: Overall precision preset; affects FFT grids, projector accuracy.
+  default: Normal
+  recommended: Accurate (production); Single (for very rough scans only).
+  related: [ENCUT, ROPT, ADDGRID]
+
+EDIFF:
+  meaning: Electronic SCF convergence threshold on the total energy (eV).
+  default: 1e-4
+  recommended: 1e-6 for static/band, 1e-8 for phonon/DFPT.
+  related: [NELM]
+
+EDIFFG:
+  meaning: Ionic convergence criterion. Negative = max force (eV/Å); positive =
+    energy (eV).
+  default: 0.1×EDIFF
+  recommended: -0.01 eV/Å (production), -0.001 (publication).
+  related: [IBRION, NSW]
+
+ISMEAR:
+  meaning: How partial occupancies are set. 0=Gaussian, ±1=Methfessel-Paxton,
+    -1=Fermi, -5=tetrahedron with Bloechl correction.
+  default: 1
+  recommended: -5 for insulators (DOS, total energy); 0/2 for metals; 0 for
+    geometry relaxations.
+  notes: ISMEAR=-5 needs ≥4 irreducible k-points and is unsuitable for forces.
+  related: [SIGMA]
+
+SIGMA:
+  meaning: Smearing width (eV).
+  default: 0.2
+  recommended: 0.05 for insulators with ISMEAR=0; 0.1–0.2 for metals.
+  related: [ISMEAR]
+
+ALGO:
+  meaning: Electronic-minimisation algorithm.
+  default: Normal
+  recommended: Normal (most cases); Fast for large GGA jobs; All/Damped for
+    hybrids (HSE) and meta-GGA.
+  notes: ALGO=Fast/VeryFast cannot be combined with LHFCALC=.TRUE..
+  related: [LHFCALC, METAGGA]
+
+IBRION:
+  meaning: Ionic algorithm. -1=fixed, 0=MD, 1=quasi-Newton, 2=CG, 3=damped MD,
+    5/6/7/8=phonon (finite displacement / DFPT).
+  default: -1 (NSW=0); 0 (NSW>0)
+  recommended: 2 (relaxation); -1 (static); 8 (DFPT phonon); 5/6 (finite displacement).
+  related: [NSW, ISIF, EDIFFG]
+
+NSW:
+  meaning: Maximum number of ionic steps.
+  default: 0
+  recommended: 100 for a relax; 0 for static/band/DOS.
+  related: [IBRION, EDIFFG]
+
+ISIF:
+  meaning: Stress / cell relaxation control. 2=ions only, 3=ions + cell + volume,
+    4=ions + cell shape, 8=ions + cell volume.
+  default: 2
+  recommended: 3 for full relaxation; 2 for defects / fixed-cell.
+  related: [IBRION]
+
+LREAL:
+  meaning: Project PAWs in real space (faster for large cells).
+  default: Auto
+  recommended: False for <20 atoms; Auto for >20 atoms; never for very small
+    high-precision calcs.
+  related: [PREC, ENCUT]
+
+NCORE:
+  meaning: Number of cores per orbital (parallelisation).
+  default: 1
+  recommended: sqrt(total_cores) — typical 4 or 8 on modern HPC.
+  related: [KPAR, NPAR]
+
+KSPACING:
+  meaning: Auto k-mesh density (1/Å). Used only when no KPOINTS file is present.
+  default: 0.5
+  recommended: 0.3 (production); 0.2 (high precision).
+  notes: Set KSPACING="auto" in pymatgen-style sets to derive from band gap.
+  related: [KPOINTS]
+
+LHFCALC:
+  meaning: Enable hybrid (Hartree-Fock + DFT exchange) functional.
+  default: False
+  recommended: True for HSE/HSE06; combine with HFSCREEN=0.2 and AEXX=0.25.
+  related: [ALGO, AEXX, HFSCREEN, PRECFOCK]
+
+AEXX:
+  meaning: Fraction of exact exchange in hybrid functionals.
+  default: 0.25 (HSE06)
+  recommended: 0.25 for HSE06; 0.20 for typical mixing studies.
+  related: [LHFCALC, HFSCREEN]
+
+HFSCREEN:
+  meaning: Range-separation parameter for screened hybrids (Å^-1).
+  default: 0
+  recommended: 0.2 for HSE06; 0.0 for PBE0.
+  related: [LHFCALC, AEXX]
+
+METAGGA:
+  meaning: Meta-GGA functional choice (R2SCAN/SCAN/TPSS).
+  default: None
+  recommended: R2SCAN with LASPH=.TRUE. and PREC=Accurate.
+  related: [LASPH, GGA]
+
+LASPH:
+  meaning: Include non-spherical contributions in the PAW one-centre terms.
+  default: False
+  recommended: True for meta-GGA, hybrid, and any PAW with d/f electrons.
+
+LDAU:
+  meaning: Enable DFT+U corrections.
+  default: False
+  recommended: True for d/f electron systems (Fe, Mn, Ce, etc.).
+  notes: Requires LMAXMIX>=4 (d) or >=6 (f) and per-element LDAUU/LDAUL/LDAUJ.
+  related: [LMAXMIX, LDAUU, LDAUJ, LDAUL]
+
+LMAXMIX:
+  meaning: Maximum l-quantum number used in charge mixer.
+  default: 2
+  recommended: 4 with LDAU on d-electrons; 6 on f-electrons.
+  related: [LDAU]
+
+ISPIN:
+  meaning: 1=non-spin-polarised, 2=spin-polarised collinear.
+  default: 1
+  recommended: 2 whenever any 3d/4f magnetic species is present or moments
+    are non-zero.
+  related: [MAGMOM, NUPDOWN]
+
+MAGMOM:
+  meaning: Initial magnetic moment per atom (μB).
+  default: From pymatgen species.spin or 0.6 fallback.
+  recommended: 5 for high-spin Fe/Mn, 4 for Co, 2 for Ni, etc.; pymatgen handles
+    species-specific defaults.
+  related: [ISPIN]
+
+LSORBIT:
+  meaning: Spin-orbit coupling.
+  default: False
+  recommended: True for heavy elements (5d, 6p, lanthanides/actinides) when
+    spin-orbit splitting matters.
+  notes: Requires noncollinear MAGMOM (3 components per atom) and LMAXMIX>=4.
+  related: [LNONCOLLINEAR, MAGMOM]
+
+ICHARG:
+  meaning: How charge density is initialised. 0=from WAVECAR, 1=from CHGCAR,
+    2=atomic, 11=fixed CHGCAR (non-SCF, used for band structure).
+  default: 2
+  recommended: 11 for non-SCF band; 1 for restart.
+  related: [ISTART]
+
+LWAVE:
+  meaning: Write WAVECAR after the run.
+  default: True
+  recommended: False for relaxations; True for static SCF used as restart source.
+
+LCHARG:
+  meaning: Write CHGCAR after the run.
+  default: True
+  recommended: True for static SCF (needed for band/DOS); False for big relax.
+
+LORBIT:
+  meaning: Site-projected wavefunction characters.
+  default: 0
+  recommended: 11 (PROCAR + DOSCAR with l/m projections); 12 (with phase).
+  related: [ICHARG]
+
+LOPTICS:
+  meaning: Compute optical matrix elements (frequency-dependent dielectric).
+  default: False
+  recommended: True for optical spectra; pair with NBANDS≈2× default and a
+    dense k-mesh.
+  related: [NBANDS, CSHIFT]
+
+NUPDOWN:
+  meaning: Constrain net spin (μB).
+  default: -1 (unconstrained)
+  recommended: Set only when probing a specific spin state.
+  related: [ISPIN, MAGMOM]

@@ -1,0 +1,12 @@
+# Core Python stack for polymer-build (public skill).
+# Installed into the sandbox shared venv by ``make install`` / ``ensure_sandbox_shared_deps.py``
+# together with ``skills/public/_shared-vasp`` and ``skills/custom/**``.
+
+rdkit>=2023.9.1
+pymatgen>=2023.10.3
+openbabel-wheel>=3.1.1
+
+# Step 3 uses the vendored ``polysoftk_lite/`` excerpt (Lp + OB helpers); no full PySoftK install.
+
+# Optional — richer trajectory/topology workflows:
+# MDAnalysis>=2.6

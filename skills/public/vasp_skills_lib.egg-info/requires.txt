@@ -1,0 +1,15 @@
+pymatgen>=2024.1.1
+custodian>=2024.2.15
+paramiko>=3.0
+pyyaml>=6.0
+numpy
+
+[analysis]
+sumo
+pyprocar
+
+[atomate2]
+atomate2>=0.0.14
+
+[phonon]
+phonopy>=2.20

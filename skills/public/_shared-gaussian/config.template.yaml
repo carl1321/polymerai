@@ -1,0 +1,30 @@
+# gaussian-skills 项目级配置模板
+# 复制到 ~/.gaussian_skills/config.yaml 后按需修改
+#
+# HPC 凭据已转移到 ~/.hpc/profiles.yaml（vasp-skills + gaussian-skills 共享）。
+# 本文件只放：选哪个 profile + 项目专属设置（默认基组、溶剂模型等）。
+# 详细见 _shared-gaussian/HPC.md。
+
+# 引用 ~/.hpc/profiles.yaml 里的 profile 名。
+# 省略时使用 ~/.hpc/profiles.yaml 的 default_profile。
+profile: generic-slurm
+
+# 项目专属：HPC 上 Gaussian 的细节（profile.apps 默认已经覆盖大部分）
+hpc:
+  gaussian_module: gaussian/g16    # 覆盖 profile.apps.gaussian_module（如有）
+
+# 默认资源（可被命令行 --nprocs / --memory 覆盖）
+resources:
+  nprocs: 16
+  memory: 32GB
+  walltime: "48:00:00"
+
+# Gaussian 计算默认值
+defaults:
+  preset: b3lyp-d3
+  solvation: null
+
+# 临时调试时可以在这里覆盖 profile 字段（不推荐长期使用）
+# executor:
+#   ssh:
+#     port: 2222

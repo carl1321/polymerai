@@ -1,0 +1,153 @@
+# HPC profiles registry — shared across vasp-skills and gaussian-skills
+# Security: chmod 600 /mnt/skills/public/_shared-vasp/profiles.yaml
+
+default_profile: cancon-wenliyang-scnet
+
+profiles:
+
+  # ------------------------------------------------------------------
+  # 曙光 cancon — wenliyang 账号（VASP）
+  # ------------------------------------------------------------------
+  cancon-wenliyang:
+    type: ssh
+    host: cancon.hpccube.com
+    port: 65023
+    username: wenliyang
+    key_path: /mnt/skills/public/_shared-vasp/wenliyang_cancon.hpccube.com_RsaKeyExpireTime_2026-05-25_16-04-32.txt
+    work_root: /public/home/wenliyang/vasp_agent
+    scheduler: slurm
+    modules:
+      - compiler/intel/2017.5.239
+      - mpi/intelmpi/2017.4.239
+    resources:
+      partition: kshcnormal
+      nodes: 1
+      ntasks_per_node: 32
+      walltime: "48:00:00"
+    apps:
+      vasp_cmd: "I_MPI_FABRICS=shm:tcp mpirun -np $SLURM_NPROCS /public/home/wenliyang/softwares/vasp.6.3.0/bin/vasp_std"
+
+  # 旧名称别名（保持向后兼容；vasp_skills/config.yaml 之前写的是 profile: cancon）
+  cancon:
+    type: ssh
+    host: cancon.hpccube.com
+    port: 65023
+    username: wenliyang
+    key_path: /mnt/skills/public/_shared-vasp/wenliyang_cancon.hpccube.com_RsaKeyExpireTime_2026-05-25_16-04-32.txt
+    work_root: /public/home/wenliyang/vasp_agent
+    scheduler: slurm
+    modules:
+      - compiler/intel/2017.5.239
+      - mpi/intelmpi/2017.4.239
+    resources:
+      partition: kshcnormal
+      nodes: 1
+      ntasks_per_node: 32
+      walltime: "48:00:00"
+    apps:
+      vasp_cmd: "I_MPI_FABRICS=shm:tcp mpirun -np $SLURM_NPROCS /public/home/wenliyang/softwares/vasp.6.3.0/bin/vasp_std"
+
+  # SCNet API模式
+  # cluster_id 含义：曙光 OpenAPI 的「区域 ID」(POST /api/user/v3/tokens 响应里的
+  #   clusterId 字段，例 "11112")，不是作业接口需要的 JobManagerID。后者由代码
+  #   通过 GET {hpcUrls}/hpc/openapi/v2/cluster 自动解析，无需手填。
+  # 留空时执行器会从 token 响应里挑首个 clusterId != "0" 的区域 (clusterId=0 是
+  #   平台 token，只能调认证)。建议首次跑通后用日志里看到的 clusterId/clusterName
+  #   回填，避免账号将来获得多区域权限时挑错。
+  cancon-wenliyang-scnet:
+    type: scnet
+    base_url: https://api.scnet.cn       # token 端点
+    ingress_url: https://www.scnet.cn    # /ac/openapi/v2/center 端点（必须不同 host）
+    username: wenliyang
+    access_key: ee3d8a20cdda450bbd85e32804678054
+    secret_key: 541841aa8ce2484fb5a660d3f76f595c
+    cluster_id: "11250"                  # 中国一区（珠海）
+    cluster_name: "中国一区（珠海）"
+    work_root: /public/home/wenliyang/vasp_agent
+    scheduler: slurm
+    modules:
+      - compiler/intel/2017.5.239
+      - mpi/intelmpi/2017.4.239
+    resources:
+      partition: kshcnormal
+      nodes: 1
+      ntasks_per_node: 32
+      walltime: "48:00:00"
+    apps:
+      vasp_cmd: "I_MPI_FABRICS=shm:tcp mpirun -np $SLURM_NPROCS /public/home/wenliyang/softwares/vasp.6.3.0/bin/vasp_std"
+
+  # ------------------------------------------------------------------
+  # 曙光 cancon — 马纷纷账号（Gaussian）
+  # g16 安装在用户目录，需要 source g16.profile 并设置 GAUSS_SCRDIR
+  # 通过 modules 列表里附加 export 行，executor 会逐行执行
+  # ------------------------------------------------------------------
+  cancon-mafenfen:
+    type: ssh
+    host: cancon.hpccube.com
+    port: 65023
+    username: lab_mafenfen
+    key_path: /mnt/skills/public/_shared-vasp/lab_mafenfen_cancon.hpccube.com_RsaKeyExpireTime_2026-05-12_17-00-29.txt
+    work_root: /public/home/lab_mafenfen/gaussian_agent
+    scheduler: slurm
+    modules:
+      - compiler/intel/2017.5.239
+      - mpi/intelmpi/2017.4.239
+    resources:
+      partition: kshcnormal
+      nodes: 1
+      ntasks_per_node: 32
+      walltime: "48:00:00"
+      memory: 64GB
+    apps:
+      gaussian_cmd: g16
+      gaussian_module: ""
+      # g16 不是 module 形式安装，留空；下方 env_setup 通过 SSH 命令前缀注入
+      env_setup: |
+        export g16root=/public/home/lab_mafenfen/soft/g16-new
+        export GAUSS_SCRDIR=/public/home/lab_mafenfen/soft/g16-new/g16/scratch
+        source /public/home/lab_mafenfen/soft/g16-new/g16/bsd/g16.profile
+        export PGI_FASTMATH_CPU=sandybridge
+
+  # ------------------------------------------------------------------
+  # 曙光 cancon — 马芬芬账号（Gaussian, SCNet REST API 路径）
+  # 用 access_key / secret_key 走 OpenAPI v2，免去 SSH 私钥
+  # cluster_id 需要首次调用 API 后填入
+  # ------------------------------------------------------------------
+  cancon-mafenfen-scnet:
+    type: scnet
+    base_url: https://api.scnet.cn       # token 端点
+    ingress_url: https://www.scnet.cn    # /ac/openapi/v2/center 端点
+    username: lab_mafenfen
+    access_key: 5e1894a843f2400bbe78f56fdca9c1ec
+    secret_key: bba3bcdeb1704f319cebf3901a7fd01a
+    cluster_id: "11250"          # 中国一区（珠海），与 wenliyang 同区
+    cluster_name: "中国一区（珠海）"
+    work_root: /public/home/lab_mafenfen/gaussian_agent
+    scheduler: slurm
+    modules:
+      - compiler/intel/2017.5.239
+      - mpi/intelmpi/2017.4.239
+    resources:
+      partition: kshcnormal
+      nodes: 1
+      ntasks_per_node: 32
+      walltime: "48:00:00"
+      memory: 64GB
+    apps:
+      gaussian_cmd: g16
+      gaussian_module: ""
+      env_setup: |
+        export g16root=/public/home/lab_mafenfen/soft/g16-new
+        export GAUSS_SCRDIR=/public/home/lab_mafenfen/soft/g16-new/g16/scratch
+        source /public/home/lab_mafenfen/soft/g16-new/g16/bsd/g16.profile
+        export PGI_FASTMATH_CPU=sandybridge
+
+  # ------------------------------------------------------------------
+  # 纯本地 profile（调试用）
+  # ------------------------------------------------------------------
+  local:
+    type: local
+    apps:
+      vasp_cmd: "mpirun -np 4 vasp_std"
+      gaussian_cmd: "g16"
+    scratch_dir: /tmp/hpc_runs

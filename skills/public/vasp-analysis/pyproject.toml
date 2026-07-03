@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vasp-analysis"
+version = "0.1.0"
+description = "VASP post-processing & publication-quality plotting skill for Claude Code"
+requires-python = ">=3.10"
+dependencies = [
+    "pymatgen>=2024.1.1",
+    "sumo>=2.3.0",
+    "pyprocar>=6.1.0",
+    "phonopy>=2.20",
+    "matplotlib>=3.7",
+    "numpy>=1.24",
+    "seekpath>=2.1",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0"]
+
+[project.scripts]
+vasp-analysis = "vasp_analysis.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["vasp_analysis"]

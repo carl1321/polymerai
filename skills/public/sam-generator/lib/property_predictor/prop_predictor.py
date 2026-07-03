@@ -1,0 +1,90 @@
+import os
+import sys
+import time
+import pandas as pd
+from typing import List
+import logging
+
+# Get the directory of this file
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Ensure that the local unimol_tools package in this directory is importable as top-level "unimol_tools".
+# This avoids using the site-packages version and lets all internal imports like `from unimol_tools.data import ...`
+# resolve to the project-local copy.
+if _current_dir not in sys.path:
+    sys.path.insert(0, _current_dir)
+
+try:
+    from unimol_tools import MolPredict  # type: ignore
+    _UNIMOL_TOOLS_IMPORT_ERROR: Exception | None = None
+except Exception as e:  # pragma: no cover
+    MolPredict = None  # type: ignore[assignment]
+    _UNIMOL_TOOLS_IMPORT_ERROR = e
+
+_logger = logging.getLogger(__name__)
+
+# convert input to csv 
+def input_form(smiles_list):
+    assert isinstance(smiles_list, list), "Input should be a list of SMILES strings."
+    df = pd.DataFrame({"SMILES": smiles_list})
+    output_file = "smiles_data.csv"
+    return df.to_csv(output_file, index=False)
+    
+
+class Predictor:
+    def __init__(self):
+        # Use relative paths from src/tools/property_predictor
+        self.HOMO_dir = os.path.join(_current_dir, 'homo_bs_32_lr_1e-4')
+        self.LUMO_dir = os.path.join(_current_dir, 'lumo_bs_32_lr_1e-4')
+        self.DM_dir = os.path.join(_current_dir, 'dm_bs_32_lr_1e-4')
+
+        # 确保 unimol_tools 可用
+        if MolPredict is None:
+            raise RuntimeError(
+                "未能导入 unimol_tools 模块（优先使用当前仓库 backend/src/toolbox/agentic_tools/property_predictor/unimol_tools）。"
+                "请确认该目录存在且依赖（torch、rdkit 等）已正确安装。"
+                f"原始错误：{_UNIMOL_TOOLS_IMPORT_ERROR}"
+            )
+        
+    def HOMO_pred(self, smiles, generated):
+        _logger.info("[PROP-DBG] 2 HOMO_pred start, before MolPredict ts=%.3f", time.time())
+        if generated:
+            smiles_dir = "src/tools/molecular_generator/generated_data.csv"
+        else:
+            smiles = input_form(smiles)
+            smiles_dir = "smiles_data.csv"
+        HOMO_predictor = MolPredict(load_model=self.HOMO_dir)
+        _logger.info("[PROP-DBG] 3 HOMO MolPredict created, before predict() ts=%.3f", time.time())
+        HOMO_pred = HOMO_predictor.predict(smiles_dir)
+        return HOMO_pred
+    
+    def LUMO_pred(self, smiles, generated):
+        if generated:
+            smiles_dir = "src/tools/molecular_generator/generated_data.csv"
+        else:
+            smiles = input_form(smiles)
+            smiles_dir = "smiles_data.csv"
+        LUMO_predictor = MolPredict(load_model=self.LUMO_dir)
+        LUMO_pred = LUMO_predictor.predict(smiles_dir)
+        return LUMO_pred
+    
+    def DM_pred(self, smiles, generated):
+        if generated:
+            smiles_dir = "src/tools/molecular_generator/generated_data.csv"
+        else:
+            smiles = input_form(smiles)
+            smiles_dir = "smiles_data.csv" 
+        DM_predictor = MolPredict(load_model=self.DM_dir)
+        DM_pred = DM_predictor.predict(smiles_dir)
+        return DM_pred
+    
+    def prop_pred(self, smiles, generated, HOMO=False, LUMO=False, DM=False):
+        _logger.info("[PROP-DBG] 1 prop_pred entered ts=%.3f", time.time())
+        results = {}
+        if HOMO:
+            results['HOMO'] = self.HOMO_pred(smiles, generated)
+        if LUMO:
+            results['LUMO'] = self.LUMO_pred(smiles, generated)
+        if DM:
+            results['DM'] = self.DM_pred(smiles, generated)
+        return results

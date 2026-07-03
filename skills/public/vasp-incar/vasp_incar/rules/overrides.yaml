@@ -1,0 +1,18 @@
+rules:
+  - name: 3d-magnetic-elements-set-spin
+    when:
+      magnetic_elements_any: [Mn, Fe, Co, Ni, Cr, V]
+    apply:
+      ISPIN: 2
+
+  - name: localized-f-electrons
+    when:
+      has_localized_f: true
+    apply:
+      LMAXMIX: 6
+
+  - name: large-cell-real-space
+    when:
+      n_atoms_gt: 60
+    apply:
+      LREAL: Auto

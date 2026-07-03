@@ -1,0 +1,247 @@
+rules:
+  # ---- Smearing & metal/insulator -----------------------------------------
+  - id: ISMEAR_M5_INSUFFICIENT_KPTS
+    severity: error
+    description: ISMEAR=-5 (tetrahedron) requires at least 4 irreducible k-points.
+    condition:
+      tag_set: {ISMEAR: -5}
+      context_eq: {n_kpoints: "lt:4"}
+
+  - id: ISMEAR_M5_RELAX
+    severity: warning
+    description: ISMEAR=-5 should not be used during ionic relaxation; forces are
+      not well defined for tetrahedron smearing.
+    condition:
+      tag_set: {ISMEAR: -5}
+      tag_gt: {NSW: 0}
+
+  - id: ISMEAR_2_LARGE_SIGMA
+    severity: warning
+    description: SIGMA > 0.4 with Methfessel-Paxton (ISMEAR>=1) usually overestimates
+      entropy contribution; reduce SIGMA or use ISMEAR=0 with a smaller value.
+    condition:
+      tag_in: {ISMEAR: [1, 2]}
+      tag_gt: {SIGMA: 0.4}
+
+  - id: ISMEAR_GAUSSIAN_LARGE_SIGMA
+    severity: warning
+    description: SIGMA > 0.1 with Gaussian smearing (ISMEAR=0) for insulators
+      smears occupations across the gap; use a smaller SIGMA or tetrahedron.
+    condition:
+      tag_set: {ISMEAR: 0}
+      tag_gt: {SIGMA: 0.1}
+      context_eq: {is_metal: false}
+
+  - id: ISMEAR_M1_FERMI_RELAX
+    severity: warning
+    description: ISMEAR=-1 (Fermi smearing) is rarely the right choice for
+      production runs; prefer ISMEAR=0/1/2 or -5 depending on metal/insulator.
+    condition:
+      tag_set: {ISMEAR: -1}
+
+  # ---- Hybrid functionals (HSE) ------------------------------------------
+  - id: HSE_ALGO_FAST
+    severity: error
+    description: ALGO=Fast/VeryFast cannot be used with hybrid functionals; use
+      ALGO=All, Damped, or Normal.
+    condition:
+      tag_truthy: [LHFCALC]
+      tag_in: {ALGO: ["Fast", "VeryFast", "fast", "veryfast"]}
+
+  - id: HSE_PRECFOCK_MISSING
+    severity: warning
+    description: Hybrid runs should explicitly set PRECFOCK (=Fast for production,
+      =Accurate for spectroscopy) instead of relying on defaults.
+    condition:
+      tag_truthy: [LHFCALC]
+      tag_missing: [PRECFOCK]
+
+  - id: HSE_NKRED_PARITY
+    severity: warning
+    description: NKRED for HSE must divide every k-mesh dimension; mismatched
+      values will silently break symmetry.
+    condition:
+      tag_truthy: [LHFCALC]
+      tag_gt: {NKRED: 1}
+
+  # ---- Meta-GGA / SCAN ---------------------------------------------------
+  - id: METAGGA_NEEDS_LASPH
+    severity: error
+    description: METAGGA functionals (R2SCAN/SCAN/TPSS) require LASPH=.TRUE..
+    condition:
+      tag_in: {METAGGA: ["R2SCAN", "SCAN", "TPSS", "RTPSS"]}
+      tag_falsy: [LASPH]
+
+  - id: METAGGA_GGA_BOTH
+    severity: error
+    description: Setting both GGA and METAGGA leads to undefined behaviour;
+      remove the GGA tag when using a meta-GGA.
+    condition:
+      tag_in: {METAGGA: ["R2SCAN", "SCAN", "TPSS", "RTPSS"]}
+      tag_in: {GGA: ["PE", "PS", "PB", "RP"]}
+
+  # ---- Relaxation parameters ---------------------------------------------
+  - id: NSW_WITHOUT_IBRION
+    severity: warning
+    description: NSW > 0 but IBRION=-1 (no ionic motion); set IBRION=2 (CG) or
+      similar to actually move atoms.
+    condition:
+      tag_gt: {NSW: 0}
+      tag_set: {IBRION: -1}
+
+  - id: ISIF_3_IBRION_M1
+    severity: warning
+    description: ISIF=3 (cell + ions) with IBRION=-1 does nothing; choose an
+      ionic algorithm or set NSW=0.
+    condition:
+      tag_set: {ISIF: 3, IBRION: -1}
+
+  - id: EDIFF_LOOSE_FOR_PHONON
+    severity: error
+    description: Phonon (DFPT or finite displacement) needs EDIFF<=1e-7 for
+      stable forces; current value is too loose.
+    condition:
+      tag_in: {IBRION: [5, 6, 7, 8]}
+      tag_gt: {EDIFF: 1.0e-6}
+
+  - id: EDIFFG_POSITIVE_FORCES
+    severity: warning
+    description: EDIFFG > 0 means convergence on energy diff (eV); for force
+      criteria use a negative value such as -0.01.
+    condition:
+      tag_gt: {EDIFFG: 0}
+
+  - id: NSW_TOO_LOW
+    severity: warning
+    description: NSW < 20 may not be enough for non-trivial relaxations.
+    condition:
+      tag_gt: {NSW: 0}
+      tag_lt: {NSW: 20}
+      tag_in: {IBRION: [1, 2, 3]}
+
+  # ---- DFT+U / magnetic --------------------------------------------------
+  - id: LDAU_WITHOUT_LMAXMIX
+    severity: error
+    description: LDAU=.TRUE. requires LMAXMIX>=4 for d-electrons (>=6 for f).
+    condition:
+      tag_truthy: [LDAU]
+      tag_lt: {LMAXMIX: 4}
+
+  - id: ISPIN_WITHOUT_MAGMOM
+    severity: warning
+    description: ISPIN=2 should be paired with an explicit MAGMOM unless the
+      structure carries site magmoms.
+    condition:
+      tag_set: {ISPIN: 2}
+      tag_missing: [MAGMOM]
+
+  # ---- Convergence / numerics --------------------------------------------
+  - id: PREC_LOW_PRODUCTION
+    severity: warning
+    description: PREC=Low or Med is not recommended for production runs;
+      use Accurate (or Normal) and let ENCUT control quality.
+    condition:
+      tag_in: {PREC: ["Low", "Med", "low", "med", "Medium"]}
+
+  - id: ENCUT_TOO_LOW
+    severity: warning
+    description: ENCUT < 300 eV is below typical PBE PAW recommendations.
+    condition:
+      tag_lt: {ENCUT: 300}
+
+  - id: ENCUT_VERY_HIGH
+    severity: warning
+    description: ENCUT > 800 eV is rarely necessary; check that you are not
+      paying for unused precision.
+    condition:
+      tag_gt: {ENCUT: 800}
+
+  # ---- Output flags -------------------------------------------------------
+  - id: BAND_NEEDS_LORBIT
+    severity: warning
+    description: For band/DOS post-processing, set LORBIT=11 to get the
+      site-projected wavefunction characters in PROCAR.
+    condition:
+      tag_set: {ICHARG: 11}
+      tag_missing: [LORBIT]
+
+  - id: SCF_NO_CHARGE_OUT
+    severity: warning
+    description: A static SCF intended as a charge source (for non-SCF band)
+      should write CHGCAR (LCHARG=.TRUE.).
+    condition:
+      tag_set: {NSW: 0, IBRION: -1}
+      tag_falsy: [LCHARG]
+      tag_not_in: {ICHARG: [11]}
+
+  # ---- Mixing / electronic algorithms ------------------------------------
+  - id: AMIX_OUT_OF_RANGE
+    severity: warning
+    description: AMIX should be in (0, 1]; values outside this often cause
+      divergence.
+    condition:
+      tag_gt: {AMIX: 1.0}
+
+  - id: ALGO_ALL_LARGE_SYSTEM
+    severity: warning
+    description: ALGO=All is very expensive for >100 atoms; consider Normal or
+      Damped unless required for hybrids/excited states.
+    condition:
+      tag_in: {ALGO: ["All", "all"]}
+      context_eq: {n_atoms: "gt:100"}
+
+  - id: LREAL_AUTO_SMALL
+    severity: warning
+    description: LREAL=Auto is only worthwhile for >20 atoms; use False for
+      small unit cells (preserves accuracy).
+    condition:
+      tag_in: {LREAL: ["Auto", "auto", "A"]}
+      context_eq: {n_atoms: "lt:20"}
+
+  - id: LREAL_FALSE_LARGE
+    severity: warning
+    description: LREAL=False on a >100-atom cell is wasteful; switch to Auto
+      to use real-space projectors.
+    condition:
+      tag_in: {LREAL: [false, "False", "F", ".FALSE."]}
+      context_eq: {n_atoms: "gt:100"}
+
+  # ---- I/O & restart ------------------------------------------------------
+  - id: ISTART_1_NO_WAVECAR
+    severity: warning
+    description: ISTART=1 requires a previous WAVECAR; if none is provided,
+      set ISTART=0 to avoid silent fallback.
+    condition:
+      tag_set: {ISTART: 1}
+
+  - id: ICHARG_11_NEEDS_CHGCAR
+    severity: warning
+    description: ICHARG=11 reads a fixed charge density and requires CHGCAR
+      from a converged static run.
+    condition:
+      tag_set: {ICHARG: 11}
+
+  # ---- Specific physics gotchas ------------------------------------------
+  - id: LSORBIT_REQUIRES_LMAXMIX
+    severity: error
+    description: LSORBIT=.TRUE. needs LMAXMIX>=4 (>=6 for f) and noncollinear
+      MAGMOM (3 components per atom).
+    condition:
+      tag_truthy: [LSORBIT]
+      tag_lt: {LMAXMIX: 4}
+
+  - id: LOPTICS_NEEDS_NBANDS
+    severity: warning
+    description: LOPTICS=.TRUE. needs many empty bands (NBANDS at least
+      2x default); leaving NBANDS unset risks under-resolved spectra.
+    condition:
+      tag_truthy: [LOPTICS]
+      tag_missing: [NBANDS]
+
+  - id: NUPDOWN_WITHOUT_ISPIN
+    severity: error
+    description: NUPDOWN constrains the spin moment, which is meaningless
+      without ISPIN=2.
+    condition:
+      tag_gt: {NUPDOWN: -1}
+      tag_set: {ISPIN: 1}

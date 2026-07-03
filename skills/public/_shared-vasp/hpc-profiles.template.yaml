@@ -1,0 +1,74 @@
+# HPC profiles registry — shared across vasp-skills and gaussian-skills
+#
+# Copy to ~/.hpc/profiles.yaml and fill in. Both projects read this file.
+# A "profile" is a named set of HPC credentials + scheduler info. Projects
+# pick a profile by name in their own config (e.g. ~/.vasp_skills/config.yaml
+# has `profile: sugon-cancon`).
+#
+# Security: prefer key_path over password. Use environment variables for API
+# secrets via ${ENV_VAR} substitution.
+
+default_profile: scnet-h100   # used when project config omits `profile:` (VASP defaults to SCNet when using template registry)
+
+profiles:
+
+  # -------- A pure-local profile for testing --------------------------------
+  local:
+    type: local
+    apps:
+      vasp_cmd: "mpirun -np 4 vasp_std"
+      gaussian_cmd: "g16"
+    scratch_dir: /tmp/hpc_runs
+
+  # -------- Generic SSH-attached HPC (Slurm) -------------------------------
+  generic-slurm:
+    type: ssh
+    host: hpc.example.edu
+    port: 22
+    username: yourname
+    key_path: ~/.ssh/id_rsa
+    # password: (avoid; use key_path instead)
+    work_root: /public/home/yourname/runs
+    scheduler: slurm                # slurm | pbs | lsf
+    modules:
+      - intel/2022
+      - vasp/6.4.2
+      # - gaussian/g16
+    resources:
+      partition: normal
+      nodes: 1
+      ntasks_per_node: 32
+      walltime: "24:00:00"
+      memory: 64GB
+    apps:
+      vasp_cmd: "mpirun vasp_std"
+      gaussian_cmd: "g16"
+      gaussian_module: "gaussian/g16"
+
+  # -------- SCNet (Sugon/曙光) REST API ------------------------------------
+  # cluster_id: 区域 ID (POST /api/user/v3/tokens 响应里的 clusterId, 例 "11112")，
+  #   不是 JobManagerID。后者由代码通过 GET /hpc/openapi/v2/cluster 自动解析。
+  #   留空时挑首个 clusterId != "0" 的区域 (clusterId=0 是平台 token，不能跑作业)。
+  #   建议首次跑通后从日志里把实际 clusterId/clusterName 回填，避免多区域账号挑错。
+  scnet-h100:
+    type: scnet
+    base_url: https://api.scnet.cn
+    cluster_id: ""                    # 例 "11112"；留空走自动选择
+    cluster_name: ""                  # 与 cluster_id 二选一，例 "OpenAPI计算中心"
+    username: yourname
+    access_key: ${SCNET_AK}         # env var, not stored in plaintext
+    secret_key: ${SCNET_SK}
+    work_root: /public/home/yourname/runs
+    resources:
+      queue: h100
+      cores: 64
+      walltime: "48:00:00"
+    apps:
+      vasp_cmd: "mpirun vasp_std"
+      gaussian_cmd: "g16"
+
+  # -------- Add more profiles below ----------------------------------------
+  # sugon-cancon:
+  #   type: ssh
+  #   host: cancon.hpccube.com
+  #   ...
