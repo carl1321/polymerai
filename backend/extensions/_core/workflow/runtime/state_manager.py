@@ -657,13 +657,28 @@ class DatabaseStateManager(NodeExecutionStateManager):
                 self._close_conn_if_needed(conn)
         
         return is_new
-    
+
+    # ============= 通用事件日志 =============
+
+    def append_event(self, event: str, payload: Dict[str, Any], level: str = "info") -> None:
+        """追加一条自定义 run_logs 事件（不改变节点状态）。"""
+        conn = self._get_conn()
+        try:
+            append_log(conn, self.run_id, level, event, payload=payload)
+            conn.commit()
+        except Exception as e:
+            logger.error(f"Error appending event {event}: {e}", exc_info=True)
+            if conn != self._db_conn:
+                conn.rollback()
+        finally:
+            self._close_conn_if_needed(conn)
+
     # ============= 状态同步 =============
-    
+
     def sync_state_from_db(self):
         """从数据库加载最新状态"""
         from extensions._core.workflow.runtime.db import get_run_tasks
-        
+
         conn = self._get_conn()
         try:
             tasks = get_run_tasks(conn, self.run_id)

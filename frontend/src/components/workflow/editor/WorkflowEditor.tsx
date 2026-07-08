@@ -997,13 +997,14 @@ function WorkflowEditorInner({
                   ? "工具"
                   : nodeName,
           ...(nodeTypeToAdd === "loop" ? { loopCount: 3, loop_count: 3 } : {}),
+          ...(nodeTypeToAdd === "output_parser" ? { saveAll: true } : {}),
           loopId,
           loop_id: loopId,
           isLoopChild: !!loopId,
         },
         style: loopId ? { zIndex: 15, pointerEvents: "auto" } : undefined,
       };
-        
+
       addNodes(normalizeNodes([newNode]));
       setNodeTypeToAdd(null);
 
@@ -1108,6 +1109,7 @@ function WorkflowEditorInner({
                   ? "工具"
                   : nodeName,
           ...(type === "loop" ? { loopCount: 3, loop_count: 3 } : {}),
+          ...(type === "output_parser" ? { saveAll: true } : {}),
           loopId,
           loop_id: loopId,
           isLoopChild: !!loopId,
@@ -1137,6 +1139,7 @@ function WorkflowEditorInner({
       llm: "LLM",
       condition: "条件",
       loop: "loop",
+      output_parser: "结果保存",
     };
 
     const baseName = typeLabels[type] || type;

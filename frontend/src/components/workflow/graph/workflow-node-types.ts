@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 import type { NodeTypes } from "@xyflow/react";
-import { StartNode } from "../editor/nodes/StartNode";
+
+import { ConditionNode } from "../editor/nodes/ConditionNode";
 import { EndNode } from "../editor/nodes/EndNode";
 import { LLMNode } from "../editor/nodes/LLMNode";
-import { ToolNode } from "../editor/nodes/ToolNode";
-import { ConditionNode } from "../editor/nodes/ConditionNode";
 import { LoopNode } from "../editor/nodes/LoopNode";
+import { OutputParserNode } from "../editor/nodes/OutputParserNode";
+import { StartNode } from "../editor/nodes/StartNode";
+import { ToolNode } from "../editor/nodes/ToolNode";
 
 export const workflowNodeTypes: NodeTypes = {
   start: StartNode,
@@ -16,4 +18,5 @@ export const workflowNodeTypes: NodeTypes = {
   tool: ToolNode,
   condition: ConditionNode,
   loop: LoopNode,
+  output_parser: OutputParserNode,
 };

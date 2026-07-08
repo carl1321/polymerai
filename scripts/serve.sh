@@ -266,11 +266,14 @@ INTERNAL_GATEWAY_URL="http://127.0.0.1:${GATEWAY_PORT}"
 TRUSTED_ORIGINS="http://localhost:${FRONTEND_PORT},http://127.0.0.1:${FRONTEND_PORT},http://localhost:${NGINX_PORT},http://127.0.0.1:${NGINX_PORT}"
 FRONTEND_RUNTIME_ENV="DEER_FLOW_INTERNAL_GATEWAY_BASE_URL=${INTERNAL_GATEWAY_URL} DEER_FLOW_TRUSTED_ORIGINS=${TRUSTED_ORIGINS}"
 
-# Turbopack HMR works with allowedDevOrigins in next.config.js; webpack --webpack HMR 404 on Next 16.
+# Turbopack is unstable on this project path (non-ASCII/spaces) + Node mismatch:
+# it intermittently fails with stale runtime chunks, missing build-manifest, and
+# cannot resolve pnpm-symlinked deps (e.g. mermaid -> d3). Use webpack for reliability.
+# Trade-off: webpack HMR may 404 on Next 16, so code edits can need a manual refresh.
 if $SKIP_NGINX; then
-    FRONTEND_DEV_BIN="node scripts/next-with-root-env.mjs next dev --turbo -p ${FRONTEND_PORT}"
+    FRONTEND_DEV_BIN="node scripts/next-with-root-env.mjs next dev --webpack -p ${FRONTEND_PORT}"
 else
-    FRONTEND_DEV_BIN="node scripts/next-with-root-env.mjs next dev --turbo -p ${FRONTEND_PORT}"
+    FRONTEND_DEV_BIN="node scripts/next-with-root-env.mjs next dev --webpack -p ${FRONTEND_PORT}"
 fi
 
 # Frontend command
@@ -499,7 +502,18 @@ else
     echo "⏩ Skipping LangGraph (Gateway mode — runtime embedded in Gateway)"
 fi
 
+# macOS + uv(0.11.x) 在含非 ASCII / 空格的项目路径下，会把 venv 里的 .pth 文件标记为 UF_HIDDEN，
+# 而 CPython 的 site 模块会跳过 hidden 的 .pth（`python -v` 可见 "Skipping hidden .pth file"），
+# 导致 deerflow-harness 的 editable 安装失效 → `ModuleNotFoundError: No module named 'deerflow'`。
+# 翻转点：import zstandard（经 httpx）。每个 uv-run 的 Python 进程启动前清一次即可
+# （进程 import 期间 .pth 是干净态，import 成功后即便被重标也不影响已运行的进程）。
+unhide_venv_pth() {
+    command -v chflags >/dev/null 2>&1 || return 0   # 仅 macOS 需要 chflags
+    chflags nohidden "${REPO_ROOT}"/backend/.venv/lib/python*/site-packages/*.pth 2>/dev/null || true
+}
+
 echo "Starting Gateway API..."
+unhide_venv_pth
 # Ensure gateway uses repo-root config.yaml (for ragflow, etc.) even when cwd is backend/
 (cd backend && PYTHONPATH=. DEER_FLOW_CONFIG_PATH="${REPO_ROOT}/config.yaml" uv run uvicorn app.gateway.app:app --host 0.0.0.0 --port "$GATEWAY_PORT" $GATEWAY_EXTRA_FLAGS > ../logs/gateway.log 2>&1) &
 ./scripts/wait-for-port.sh "$GATEWAY_PORT" 30 "Gateway API" || {
@@ -517,6 +531,7 @@ echo "✓ Gateway API started on localhost:${GATEWAY_PORT}"
 echo "Starting Workflow Worker..."
 pkill -f "${REPO_ROOT}/backend.*extensions._core.workflow.runtime.run_worker" 2>/dev/null || true
 sleep 0.5
+unhide_venv_pth
 (cd backend && uv run python -m extensions._core.workflow.runtime.run_worker > ../logs/workflow-worker.log 2>&1) &
 echo "✓ Workflow worker started (logs/workflow-worker.log)"
 

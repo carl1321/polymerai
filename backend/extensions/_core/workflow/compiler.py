@@ -1083,7 +1083,78 @@ def compile_workflow_to_langgraph(
             # 循环体内的节点不添加到主图
             if node_id not in body_node_ids:
                 builder.add_node(node_id, node_functions[node_id])
-            
+
+        elif node_type == "output_parser":
+            # 终态输出解析节点：采集选中的上游节点输出，解析产出文件为统一结构并保存
+            def make_output_parser_node(nid: str, ndata: Any):
+                async def output_parser_node_func(state: WorkflowState):
+                    from extensions._core.workflow.terminal_output import (
+                        build_terminal_output,
+                        select_saved_node_ids,
+                    )
+
+                    state_manager = get_workflow_state_manager()
+                    if not state_manager:
+                        logger.warning(f"State manager is None for output_parser node {nid}, node execution may not be logged")
+
+                    if state_manager:
+                        state_manager.mark_node_running(nid)
+
+                    try:
+                        node_outputs = state.get("node_outputs", {})
+                        work_root = (state.get("workflow_inputs") or {}).get("work_root")
+
+                        # 读取节点配置：saveAll / saveNodeIds
+                        save_all = getattr(ndata, "save_all", None)
+                        save_node_ids = getattr(ndata, "save_node_ids", None)
+                        selected = select_saved_node_ids(node_outputs, nid, save_all, save_node_ids)
+
+                        # 组装选中节点的元信息（名称/类型/技能）
+                        node_meta: Dict[str, Dict[str, Any]] = {}
+                        for sid in selected:
+                            snode = node_map.get(sid)
+                            if not snode:
+                                continue
+                            sdata = snode.data
+                            node_meta[sid] = {
+                                "node_name": getattr(sdata, "node_name", None) or getattr(sdata, "label", None) or sid,
+                                "node_type": snode.type,
+                                "skill": getattr(sdata, "llm_skill", None),
+                            }
+
+                        parsed = build_terminal_output(selected, node_outputs, node_meta, work_root)
+
+                        new_node_outputs = dict(node_outputs)
+                        new_node_outputs[nid] = parsed
+
+                        if state_manager:
+                            term = parsed.get("__terminal__", {})
+                            # 追加一条语义明确的事件，便于外部对接识别
+                            if hasattr(state_manager, "append_event"):
+                                state_manager.append_event(
+                                    "terminal_output_parsed",
+                                    {
+                                        "node_id": nid,
+                                        "saved_node_ids": term.get("saved_node_ids", []),
+                                        "file_count": term.get("file_count", 0),
+                                    },
+                                )
+                            state_manager.mark_node_success(nid, parsed)
+
+                        return {"node_outputs": new_node_outputs}
+                    except Exception as exc:
+                        error_msg = f"Output parser node {nid} failed: {exc}"
+                        logger.error(error_msg, exc_info=True)
+                        if state_manager:
+                            state_manager.mark_node_error(nid, error_msg)
+                        raise RuntimeError(f"Workflow stopped due to node {nid} failure: {exc}") from exc
+                return output_parser_node_func
+
+            node_functions[node_id] = make_output_parser_node(node_id, node_data)
+            # 循环体内的节点不添加到主图
+            if node_id not in body_node_ids:
+                builder.add_node(node_id, node_functions[node_id])
+
         elif node_type == "llm":
             # LLM节点：调用大语言模型
             def make_llm_node(nid: str, ndata: Any):

@@ -4,7 +4,7 @@
 "use client";
 
 import { useCallback, useState, useMemo } from "react";
-import { Play, Square, Brain, Wrench, GitBranch, RotateCcw } from "lucide-react";
+import { Play, Square, Brain, Wrench, GitBranch, RotateCcw, Save } from "lucide-react";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
@@ -29,12 +29,20 @@ const nodeTemplates: NodeTemplate[] = [
     color: "text-green-600",
     category: "基础"
   },
-  { 
-    type: "end", 
-    label: "结束", 
+  {
+    type: "end",
+    label: "结束",
     description: "工作流的结束节点",
-    icon: Square, 
+    icon: Square,
     color: "text-red-600",
+    category: "基础"
+  },
+  {
+    type: "output_parser",
+    label: "结果保存",
+    description: "保存并解析上游节点输出",
+    icon: Save,
+    color: "text-teal-600",
     category: "基础"
   },
   { 

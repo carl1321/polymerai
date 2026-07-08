@@ -10,7 +10,7 @@
     "demo:save": "node scripts/save-demo.js",
     "build": "node scripts/next-with-root-env.mjs next build",
     "check": "eslint . --ext .ts,.tsx && tsc --noEmit",
-    "dev": "node scripts/next-with-root-env.mjs next dev --turbo -p 18083",
+    "dev": "node scripts/next-with-root-env.mjs next dev --webpack -p 18083",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "lint": "eslint . --ext .ts,.tsx",

@@ -67,3 +67,7 @@ skills/public/sam-generator/lib/property_predictor/**/*.pth
 skills/public/sam-generator/lib/property_predictor/**/*.pt
 skills/public/sam-generator/lib/weights/*.pt
 skills/public/pot5.4/**/*.tar.gz
+
+# 本地 config 备份（含 API Key，绝不提交）
+config.yaml.*.bak
+config.yaml.bak

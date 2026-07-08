@@ -102,6 +102,9 @@ class WorkflowNodeData(BaseModel):
     relative_y: Optional[float] = Field(None, alias="relativeY")  # 节点相对于循环体的 Y 位置
     # 超时配置
     timeout_seconds: Optional[int] = Field(None, alias="timeoutSeconds")  # 节点超时时间（秒）
+    # 终态输出解析节点（output_parser）专用字段
+    save_all: Optional[bool] = Field(None, alias="saveAll")  # 是否保存全部上游节点输出
+    save_node_ids: Optional[List[str]] = Field(None, alias="saveNodeIds")  # 指定要保存的上游节点 id 列表
 
 
 class WorkflowNode(BaseModel):

@@ -1,0 +1,96 @@
+// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// SPDX-License-Identifier: MIT
+
+"use client";
+
+import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
+import { Save, Loader2, CheckCircle2, XCircle } from "lucide-react";
+
+import { cn } from "~/lib/utils";
+
+type ExecutionStatus = "pending" | "ready" | "running" | "success" | "error" | "skipped" | "cancelled";
+
+type OutputParserNodeData = {
+  executionStatus?: ExecutionStatus;
+  executionResult?: {
+    startTime?: number | string;
+    endTime?: number | string;
+    outputs?: unknown;
+    error?: unknown;
+  };
+  displayName?: string;
+  label?: string;
+  saveAll?: boolean;
+  saveNodeIds?: string[];
+};
+type OutputParserNodeType = Node<OutputParserNodeData>;
+
+export function OutputParserNode({ data, selected }: NodeProps<OutputParserNodeType>) {
+  const executionStatus: ExecutionStatus = data.executionStatus ?? "pending";
+  const statusColors = {
+    pending: "border-teal-500",
+    // ready：默认初始态，不闪烁
+    ready: "border-blue-500",
+    running: "border-yellow-500",
+    success: "border-green-500",
+    error: "border-red-500",
+    skipped: "border-gray-400",
+    cancelled: "border-gray-500",
+  };
+
+  const borderColor = selected
+    ? "border-primary shadow-md"
+    : `${statusColors[executionStatus] || statusColors.pending} hover:border-teal-600`;
+
+  const statusIcons = {
+    pending: null,
+    ready: null,
+    running: <Loader2 className="h-2.5 w-2.5 animate-spin text-yellow-500" />,
+    success: <CheckCircle2 className="h-2.5 w-2.5 text-green-500" />,
+    error: <XCircle className="h-2.5 w-2.5 text-red-500" />,
+    skipped: <span className="text-[10px] text-gray-500">⏭</span>,
+    cancelled: <span className="text-[10px] text-gray-500">✕</span>,
+  };
+
+  const result = data.executionResult;
+  const duration =
+    result?.startTime && result?.endTime
+      ? ((new Date(result.endTime).getTime() - new Date(result.startTime).getTime()) / 1000).toFixed(2) + "s"
+      : null;
+
+  const scope = data.saveAll === false ? `保存 ${data.saveNodeIds?.length ?? 0} 个节点` : "保存全部";
+  const title = data.displayName ?? data.label ?? "结果保存";
+
+  return (
+    <div
+      className={cn("rounded-lg border-2 p-1.5 shadow-sm transition-all bg-card", borderColor)}
+      style={{ width: "160px" }}
+    >
+      <div className="flex items-center gap-1.5">
+        <div className="flex h-5 w-5 items-center justify-center rounded bg-teal-100 dark:bg-teal-900/30">
+          <Save className="h-2.5 w-2.5 text-teal-600 dark:text-teal-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-1">
+            <div className="font-semibold text-xs truncate text-foreground flex-1">{title}</div>
+            {statusIcons[executionStatus]}
+          </div>
+          <div className="text-[10px] text-muted-foreground truncate flex justify-between">
+            <span>{scope}</span>
+            {duration && <span>{duration}</span>}
+          </div>
+        </div>
+      </div>
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!bg-muted-foreground !w-2.5 !h-2.5 !border-2 !border-card !cursor-crosshair"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="!bg-muted-foreground !w-2.5 !h-2.5 !border-2 !border-card !cursor-crosshair"
+      />
+    </div>
+  );
+}

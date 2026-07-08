@@ -24,6 +24,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Badge } from "~/components/ui/badge";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { Switch } from "~/components/ui/switch";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "~/components/ui/accordion";
 import { SkillPicker } from "~/components/skills/SkillPicker";
 import { KnowledgeSelector } from "./components/KnowledgeSelector";
@@ -34,6 +36,8 @@ import { OutputSchemaEditor, type OutputFormatType, type OutputField } from "./c
 import {
   buildDefaultLlmPromptFromUpstream,
   resolveLlmPromptSource,
+  getTransitiveUpstreamNodes,
+  getNodeIdentifier,
 } from "./utils/upstream";
 
 interface NodeConfigPanelProps {
@@ -542,12 +546,22 @@ export function NodeConfigPanel({
         );
       case "loop":
         return (
-          <LoopNodeConfig 
-            node={node} 
-            nodeData={nodeData} 
+          <LoopNodeConfig
+            node={node}
+            nodeData={nodeData}
             nodes={nodes}
             edges={edges}
-            onUpdate={onUpdate} 
+            onUpdate={onUpdate}
+          />
+        );
+      case "output_parser":
+        return (
+          <OutputParserNodeConfig
+            node={node}
+            nodeData={nodeData}
+            nodes={nodes}
+            edges={edges}
+            onUpdate={onUpdate}
           />
         );
       default:
@@ -1346,6 +1360,80 @@ function ToolNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
           }}
         />
       </div>
+    </div>
+  );
+}
+
+function OutputParserNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: NodeConfigProps) {
+  const saveAll = nodeData.saveAll !== false; // 默认全部保存
+  const saveNodeIds: string[] = Array.isArray(nodeData.saveNodeIds) ? nodeData.saveNodeIds : [];
+
+  const upstreamNodes = useMemo(
+    () => getTransitiveUpstreamNodes(node.id, nodes, edges).filter((n) => n.type !== "end"),
+    [node.id, nodes, edges]
+  );
+
+  const handleSaveAllChange = useCallback(
+    (checked: boolean) => {
+      onUpdate(node.id, { ...nodeData, saveAll: checked });
+    },
+    [node.id, nodeData, onUpdate]
+  );
+
+  const toggleNode = useCallback(
+    (id: string, checked: boolean) => {
+      const next = checked ? [...saveNodeIds, id] : saveNodeIds.filter((x) => x !== id);
+      onUpdate(node.id, { ...nodeData, saveNodeIds: Array.from(new Set(next)) });
+    },
+    [node.id, nodeData, onUpdate, saveNodeIds]
+  );
+
+  const nodeLabel = (n: Node): string => {
+    const d: any = n.data;
+    return (typeof d?.displayName === "string" && d.displayName) || (typeof d?.label === "string" && d.label) || getNodeIdentifier(n);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <Label>保存全部上游节点</Label>
+          <p className="mt-1 text-xs text-muted-foreground">开启后保存链路上所有上游节点的输出</p>
+        </div>
+        <Switch checked={saveAll} onCheckedChange={handleSaveAllChange} />
+      </div>
+
+      {saveAll ? (
+        <div className="text-xs text-muted-foreground rounded-md border border-dashed border-border p-3">
+          当前保存全部上游节点。关闭上方开关可手动勾选要保存的节点。
+        </div>
+      ) : upstreamNodes.length === 0 ? (
+        <div className="text-xs text-muted-foreground rounded-md border border-dashed border-border p-3">
+          暂无上游节点。请先把该节点连接到上游节点之后。
+        </div>
+      ) : (
+        <div>
+          <Label className="mb-2 block">选择要保存的上游节点</Label>
+          <ScrollArea className="max-h-64 rounded-md border border-border">
+            <div className="p-2 space-y-1">
+              {upstreamNodes.map((n) => {
+                const checked = saveNodeIds.includes(n.id);
+                return (
+                  <label
+                    key={n.id}
+                    className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent cursor-pointer"
+                  >
+                    <Checkbox checked={checked} onCheckedChange={(v) => toggleNode(n.id, v === true)} />
+                    <span className="text-sm truncate flex-1">{nodeLabel(n)}</span>
+                    <span className="text-[10px] text-muted-foreground">{n.type}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </ScrollArea>
+          <p className="mt-1 text-xs text-muted-foreground">已选 {saveNodeIds.length} 个节点</p>
+        </div>
+      )}
     </div>
   );
 }
