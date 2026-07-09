@@ -79,7 +79,10 @@ def _ensure_shared_venv() -> Path:
     if not python_bin.exists():
         venv_dir = python_bin.parent.parent
         logger.info("Creating shared sandbox venv at %s", venv_dir)
-        venv.EnvBuilder(with_pip=True).create(str(venv_dir))
+        # symlinks=True 必需：uv 安装的 CPython 依赖 @rpath/libpython3.12.dylib，默认的 --copies 模式
+        # 只拷贝 python 可执行文件而不拷贝该 dylib，导致沙盒解释器一启动就 dyld 崩溃
+        # (Library not loaded: @rpath/libpython3.12.dylib)。symlinks 让解释器指回原 Python 目录，dylib 可解析。
+        venv.EnvBuilder(with_pip=True, symlinks=True).create(str(venv_dir))
     _ensure_pip(python_bin)
     return python_bin
 

@@ -1602,6 +1602,30 @@ def compile_workflow_to_langgraph(
                             }
                             new_node_outputs[nid] = node_output_with_inputs
                             result_state: WorkflowState = {"node_outputs": new_node_outputs}
+                            # skill 执行失败（脚本非零退出 / success=false）必须让节点失败，
+                            # 否则失败输出会被误标 success 并污染下游（下游会把失败 JSON 当路径解析）。
+                            # detach 分支已在上方 return，不会走到这里；此处仅覆盖同步 skill 结果。
+                            if llm_skill_name:
+                                _skill_failed = False
+                                if isinstance(out_data, dict):
+                                    if out_data.get("success") is False:
+                                        _skill_failed = True
+                                    else:
+                                        _exit_code = out_data.get("exit_code")
+                                        try:
+                                            if _exit_code is not None and int(_exit_code) != 0:
+                                                _skill_failed = True
+                                        except (TypeError, ValueError):
+                                            pass
+                                if _skill_failed:
+                                    _stderr = ""
+                                    if isinstance(out_data, dict):
+                                        _stderr = str(out_data.get("stderr") or out_data.get("errors") or "").strip()
+                                    _detail = _stderr[:500] if _stderr else "skill reported success=false"
+                                    error_msg = f"Skill '{llm_skill_name}' failed in node {nid}: {_detail}"
+                                    logger.error(f"[LLM_NODE] {error_msg}")
+                                    # 交给下方 except 统一 mark_node_error + 包装停止消息，避免重复标记/前缀
+                                    raise RuntimeError(error_msg)
                             if state_manager:
                                 state_manager.mark_node_success(
                                     nid, node_output_with_inputs, loop_id=loop_id, iteration=iteration
