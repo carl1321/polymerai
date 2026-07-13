@@ -56,6 +56,7 @@ web/
 # Deployment artifacts
 backend/Dockerfile.langgraph
 config.yaml.bak
+config.yaml.*.bak
 .playwright-mcp
 /frontend/test-results/
 /frontend/playwright-report/
@@ -67,3 +68,6 @@ skills/public/sam-generator/lib/property_predictor/**/*.pth
 skills/public/sam-generator/lib/property_predictor/**/*.pt
 skills/public/sam-generator/lib/weights/*.pt
 skills/public/pot5.4/**/*.tar.gz
+
+# 本地方案文档（NL2SQL 数据库检索问答，个人文件，不提交）
+/plan/nl2sql/
