@@ -57,7 +57,8 @@ export const skills: SkillConfig[] = [
   {
     id: "sam_generator",
     name: "SAM分子能力集",
-    description: "分子生成、分子可视化、性质预测（HOMO/LUMO/DM）。通过 skill 脚本执行：generate.py / visualize.py / predict.py，无专用工具。",
+    description:
+      "分子生成、分子可视化、性质预测（HOMO/LUMO/DM）。通过 skill 脚本执行：generate.py / visualize.py / predict.py，无专用工具。",
     category: "molecular",
     icon: Atom,
     // 执行方式：bash 运行 scripts/generate.py、visualize.py、predict.py（见 SKILL.md）
@@ -76,7 +77,13 @@ export const skills: SkillConfig[] = [
         required: true,
         default: "O=P(O)(O)",
       },
-      { name: "gen_size", type: "number", description: "生成数量", required: false, default: 10 },
+      {
+        name: "gen_size",
+        type: "number",
+        description: "生成数量",
+        required: false,
+        default: 10,
+      },
     ],
   },
   {
@@ -87,9 +94,26 @@ export const skills: SkillConfig[] = [
     icon: Microscope,
     toolName: "visualize_molecules_tool",
     parameters: [
-      { name: "smiles", type: "string", description: "SMILES字符串", required: true },
-      { name: "width", type: "number", description: "图片宽度", required: false, default: 800 },
-      { name: "height", type: "number", description: "图片高度", required: false, default: 600 },
+      {
+        name: "smiles",
+        type: "string",
+        description: "SMILES字符串",
+        required: true,
+      },
+      {
+        name: "width",
+        type: "number",
+        description: "图片宽度",
+        required: false,
+        default: 800,
+      },
+      {
+        name: "height",
+        type: "number",
+        description: "图片高度",
+        required: false,
+        default: 600,
+      },
     ],
   },
   {
@@ -118,13 +142,25 @@ export const skills: SkillConfig[] = [
   {
     id: "phase_diagram",
     name: "相图分析",
-    description: "基于 Materials Project 的 0 K 能量凸包分析化学体系的稳定相与亚稳相",
+    description:
+      "基于 Materials Project 的 0 K 能量凸包分析化学体系的稳定相与亚稳相",
     category: "molecular",
     icon: Globe,
     toolName: "phase_diagram_tool",
     parameters: [
-      { name: "chemical_system", type: "string", description: "化学体系，如 Li-Fe-P-O", required: true },
-      { name: "max_entries", type: "number", description: "最多条目数", required: false, default: 128 },
+      {
+        name: "chemical_system",
+        type: "string",
+        description: "化学体系，如 Li-Fe-P-O",
+        required: true,
+      },
+      {
+        name: "max_entries",
+        type: "number",
+        description: "最多条目数",
+        required: false,
+        default: 128,
+      },
     ],
   },
   {
@@ -134,7 +170,14 @@ export const skills: SkillConfig[] = [
     category: "molecular",
     icon: FlaskConical,
     toolName: "molecular_analysis_tool",
-    parameters: [{ name: "smiles", type: "string", description: "SMILES字符串", required: true }],
+    parameters: [
+      {
+        name: "smiles",
+        type: "string",
+        description: "SMILES字符串",
+        required: true,
+      },
+    ],
   },
   {
     id: "literature_search",
@@ -144,8 +187,19 @@ export const skills: SkillConfig[] = [
     icon: Search,
     toolName: "literature_search_tool",
     parameters: [
-      { name: "query", type: "string", description: "搜索查询", required: true },
-      { name: "limit", type: "number", description: "返回数量", required: false, default: 10 },
+      {
+        name: "query",
+        type: "string",
+        description: "搜索查询",
+        required: true,
+      },
+      {
+        name: "limit",
+        type: "number",
+        description: "返回数量",
+        required: false,
+        default: 10,
+      },
     ],
   },
   {
@@ -155,7 +209,14 @@ export const skills: SkillConfig[] = [
     category: "general",
     icon: Code,
     toolName: "python_repl_tool",
-    parameters: [{ name: "code", type: "string", description: "Python代码", required: true }],
+    parameters: [
+      {
+        name: "code",
+        type: "string",
+        description: "Python代码",
+        required: true,
+      },
+    ],
   },
   {
     id: "tts",
@@ -165,8 +226,20 @@ export const skills: SkillConfig[] = [
     icon: Volume2,
     toolName: "tts_tool",
     parameters: [
-      { name: "text", type: "string", description: "要转换的文本", required: true },
-      { name: "voice", type: "string", description: "语音类型", required: false, default: "female", enum: ["male", "female"] },
+      {
+        name: "text",
+        type: "string",
+        description: "要转换的文本",
+        required: true,
+      },
+      {
+        name: "voice",
+        type: "string",
+        description: "语音类型",
+        required: false,
+        default: "female",
+        enum: ["male", "female"],
+      },
     ],
   },
   {
@@ -177,23 +250,60 @@ export const skills: SkillConfig[] = [
     icon: Sparkles,
     toolName: "prompt_optimizer_tool",
     parameters: [
-      { name: "prompt", type: "string", description: "系统提示词", required: true },
-      { name: "question", type: "string", description: "用户问题", required: true },
-      { name: "model_name", type: "string", description: "模型名称（可选）", required: false },
+      {
+        name: "prompt",
+        type: "string",
+        description: "系统提示词",
+        required: true,
+      },
+      {
+        name: "question",
+        type: "string",
+        description: "用户问题",
+        required: true,
+      },
+      {
+        name: "model_name",
+        type: "string",
+        description: "模型名称（可选）",
+        required: false,
+      },
     ],
   },
   {
     id: "data_extraction",
     name: "数据抽取",
-    description: "从PDF或XML文件中提取结构化数据，支持提示词抽取和材料数据抽取两种模式",
+    description:
+      "从PDF或XML文件中提取结构化数据，支持提示词抽取和材料数据抽取两种模式",
     category: "general",
     icon: FileText,
     toolName: "data_extraction_tool",
     parameters: [
-      { name: "extraction_type", type: "string", description: "prompt_extraction 或 material_extraction", required: false, default: "prompt_extraction" },
-      { name: "extraction_prompt", type: "string", description: "抽取提示词", required: false },
-      { name: "json_schema", type: "string", description: "JSON格式定义", required: false },
-      { name: "model_name", type: "string", description: "模型名称（可选）", required: false },
+      {
+        name: "extraction_type",
+        type: "string",
+        description: "prompt_extraction 或 material_extraction",
+        required: false,
+        default: "prompt_extraction",
+      },
+      {
+        name: "extraction_prompt",
+        type: "string",
+        description: "抽取提示词",
+        required: false,
+      },
+      {
+        name: "json_schema",
+        type: "string",
+        description: "JSON格式定义",
+        required: false,
+      },
+      {
+        name: "model_name",
+        type: "string",
+        description: "模型名称（可选）",
+        required: false,
+      },
     ],
   },
   {
@@ -204,23 +314,64 @@ export const skills: SkillConfig[] = [
     icon: ImageIcon,
     toolName: "image_gen_tool",
     parameters: [
-      { name: "prompt", type: "string", description: "图片描述", required: true },
-      { name: "size", type: "string", description: "图片尺寸", required: false, default: "1024x1024" },
+      {
+        name: "prompt",
+        type: "string",
+        description: "图片描述",
+        required: true,
+      },
+      {
+        name: "size",
+        type: "string",
+        description: "图片尺寸",
+        required: false,
+        default: "1024x1024",
+      },
     ],
   },
   {
     id: "ppt_generator",
     name: "PPT生成",
-    description: "一句话生成PPT：默认 baoyu 风格整页图幻灯片（大纲→图片→PPTX/PDF），可选文字型 PPT",
+    description:
+      "一句话生成PPT：默认 baoyu 风格整页图幻灯片（大纲→图片→PPTX/PDF），可选文字型 PPT",
     category: "general",
     icon: FileText,
     toolName: "generate_ppt_tool",
     parameters: [
-      { name: "engine", type: "string", description: "simple 或 slide_deck", required: false, default: "slide_deck", enum: ["simple", "slide_deck"] },
-      { name: "topic", type: "string", description: "一句话主题", required: false },
-      { name: "content", type: "string", description: "长文/Markdown（与 topic 二选一）", required: false },
-      { name: "style", type: "string", description: "风格", required: false, default: "blueprint" },
-      { name: "slides", type: "number", description: "目标页数", required: false, default: 8 },
+      {
+        name: "engine",
+        type: "string",
+        description: "simple 或 slide_deck",
+        required: false,
+        default: "slide_deck",
+        enum: ["simple", "slide_deck"],
+      },
+      {
+        name: "topic",
+        type: "string",
+        description: "一句话主题",
+        required: false,
+      },
+      {
+        name: "content",
+        type: "string",
+        description: "长文/Markdown（与 topic 二选一）",
+        required: false,
+      },
+      {
+        name: "style",
+        type: "string",
+        description: "风格",
+        required: false,
+        default: "blueprint",
+      },
+      {
+        name: "slides",
+        type: "number",
+        description: "目标页数",
+        required: false,
+        default: 8,
+      },
     ],
   },
   {
@@ -230,7 +381,9 @@ export const skills: SkillConfig[] = [
     category: "general",
     icon: Search,
     toolName: "web_search",
-    parameters: [{ name: "query", type: "string", description: "搜索词", required: true }],
+    parameters: [
+      { name: "query", type: "string", description: "搜索词", required: true },
+    ],
   },
   {
     id: "web_fetch",
@@ -239,7 +392,9 @@ export const skills: SkillConfig[] = [
     category: "general",
     icon: Globe,
     toolName: "web_fetch",
-    parameters: [{ name: "url", type: "string", description: "网页 URL", required: true }],
+    parameters: [
+      { name: "url", type: "string", description: "网页 URL", required: true },
+    ],
   },
   {
     id: "image_search",
@@ -248,7 +403,14 @@ export const skills: SkillConfig[] = [
     category: "general",
     icon: ImageIcon,
     toolName: "image_search",
-    parameters: [{ name: "query", type: "string", description: "图片关键词", required: true }],
+    parameters: [
+      {
+        name: "query",
+        type: "string",
+        description: "图片关键词",
+        required: true,
+      },
+    ],
   },
   {
     id: "ls",
@@ -257,7 +419,15 @@ export const skills: SkillConfig[] = [
     category: "general",
     icon: FolderOpen,
     toolName: "ls",
-    parameters: [{ name: "path", type: "string", description: "目录路径", required: false, default: "." }],
+    parameters: [
+      {
+        name: "path",
+        type: "string",
+        description: "目录路径",
+        required: false,
+        default: ".",
+      },
+    ],
   },
   {
     id: "read_file",
@@ -266,7 +436,9 @@ export const skills: SkillConfig[] = [
     category: "general",
     icon: FileInput,
     toolName: "read_file",
-    parameters: [{ name: "path", type: "string", description: "文件路径", required: true }],
+    parameters: [
+      { name: "path", type: "string", description: "文件路径", required: true },
+    ],
   },
   {
     id: "write_file",
@@ -277,7 +449,12 @@ export const skills: SkillConfig[] = [
     toolName: "write_file",
     parameters: [
       { name: "path", type: "string", description: "文件路径", required: true },
-      { name: "content", type: "string", description: "文件内容", required: true },
+      {
+        name: "content",
+        type: "string",
+        description: "文件内容",
+        required: true,
+      },
     ],
   },
   {
@@ -289,7 +466,12 @@ export const skills: SkillConfig[] = [
     toolName: "str_replace",
     parameters: [
       { name: "path", type: "string", description: "文件路径", required: true },
-      { name: "old", type: "string", description: "被替换字符串", required: true },
+      {
+        name: "old",
+        type: "string",
+        description: "被替换字符串",
+        required: true,
+      },
       { name: "new", type: "string", description: "新字符串", required: true },
     ],
   },
@@ -300,15 +482,34 @@ export const skills: SkillConfig[] = [
     category: "general",
     icon: Terminal,
     toolName: "bash",
-    parameters: [{ name: "command", type: "string", description: "Shell 命令", required: true }],
+    parameters: [
+      {
+        name: "command",
+        type: "string",
+        description: "Shell 命令",
+        required: true,
+      },
+    ],
   },
 ];
 
 /** 常用技能（快捷按钮）：工作流、文献搜索、数据抽取、文生图、PPT生成 */
-export const COMMON_SKILL_IDS = ["workflow", "literature_search", "data_extraction", "image_gen", "ppt_generator"] as const;
+export const COMMON_SKILL_IDS = [
+  "workflow",
+  "literature_search",
+  "data_extraction",
+  "image_gen",
+  "ppt_generator",
+] as const;
 
 /** 置顶技能（卡片，与 agentic_workflow 一致）：工作流 + 文献搜索 + 数据抽取 + 文生图 + PPT生成 */
-export const PINNED_SKILL_IDS = ["workflow", "literature_search", "data_extraction", "image_gen", "ppt_generator"] as const;
+export const PINNED_SKILL_IDS = [
+  "workflow",
+  "literature_search",
+  "data_extraction",
+  "image_gen",
+  "ppt_generator",
+] as const;
 
 /** 置顶入口：包含独立页面（工作流/文库/SAM/VASP）与工具（文生图） */
 export interface PinnedEntry {
@@ -321,8 +522,20 @@ export interface PinnedEntry {
 }
 
 export const PINNED_ENTRIES: PinnedEntry[] = [
-  { id: "workflow", name: "工作流", description: "编排与运行工作流", icon: Workflow, href: "/workspace/workflows" },
-  { id: "image_gen", name: "文生图", description: "根据文本描述生成图片", icon: ImageIcon, href: "/workspace/toolbox/image_gen" },
+  {
+    id: "workflow",
+    name: "工作流",
+    description: "编排与运行工作流",
+    icon: Workflow,
+    href: "/workspace/workflows",
+  },
+  {
+    id: "image_gen",
+    name: "文生图",
+    description: "根据文本描述生成图片",
+    icon: ImageIcon,
+    href: "/workspace/toolbox/image_gen",
+  },
 ];
 
 const categoryLabels: Record<SkillCategory, string> = {
@@ -331,7 +544,10 @@ const categoryLabels: Record<SkillCategory, string> = {
   general: "通用技能",
 };
 
-export const SKILL_CATEGORIES: Array<{ id: SkillCategory | "all"; label: string }> = [
+export const SKILL_CATEGORIES: Array<{
+  id: SkillCategory | "all";
+  label: string;
+}> = [
   { id: "all", label: "全部" },
   { id: "molecular", label: categoryLabels.molecular },
   { id: "literature", label: categoryLabels.literature },

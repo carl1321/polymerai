@@ -3,7 +3,6 @@
 import json
 import logging
 from typing import Any
-from uuid import UUID
 
 from extensions._core.app_db import get_app_db_connection
 

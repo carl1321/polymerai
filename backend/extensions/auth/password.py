@@ -8,9 +8,7 @@ try:
     import bcrypt
 except ImportError:
     bcrypt = None
-    logger.warning(
-        "bcrypt not installed. Using INSECURE plain-text fallback. Install bcrypt for production."
-    )
+    logger.warning("bcrypt not installed. Using INSECURE plain-text fallback. Install bcrypt for production.")
 
 
 def _plain_tag(password: str) -> str:

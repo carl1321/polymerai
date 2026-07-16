@@ -1,5 +1,5 @@
-import { getBackendBaseURL } from "@/core/config";
 import { getAuthHeaders } from "@/core/auth";
+import { getBackendBaseURL } from "@/core/config";
 
 const base = () => getBackendBaseURL() || "";
 
@@ -46,15 +46,23 @@ export async function listWorkflows(params?: {
   status?: string;
   limit?: number;
   offset?: number;
-}): Promise<{ workflows: Workflow[]; total: number; limit: number; offset: number }> {
+}): Promise<{
+  workflows: Workflow[];
+  total: number;
+  limit: number;
+  offset: number;
+}> {
   const qp = new URLSearchParams();
   if (params?.status) qp.set("status", params.status);
   if (params?.limit != null) qp.set("limit", String(params.limit));
   if (params?.offset != null) qp.set("offset", String(params.offset));
-  const res = await fetch(`${base()}/api/workflows${qp.toString() ? `?${qp}` : ""}`, {
-    headers: getAuthHeaders(),
-  });
-  const data = (await res.json().catch(() => ({}))) as any;
+  const res = await fetch(
+    `${base()}/api/workflows${qp.toString() ? `?${qp}` : ""}`,
+    {
+      headers: getAuthHeaders(),
+    },
+  );
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.detail ?? res.statusText);
   return data;
 }
@@ -69,14 +77,16 @@ export async function createWorkflow(data: {
     headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify(data),
   });
-  const json = (await res.json().catch(() => ({}))) as any;
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return json as Workflow;
 }
 
 export async function getWorkflow(workflowId: string): Promise<Workflow> {
-  const res = await fetch(`${base()}/api/workflows/${workflowId}`, { headers: getAuthHeaders() });
-  const json = (await res.json().catch(() => ({}))) as any;
+  const res = await fetch(`${base()}/api/workflows/${workflowId}`, {
+    headers: getAuthHeaders(),
+  });
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return json as Workflow;
 }
@@ -90,17 +100,19 @@ export async function updateWorkflow(
     headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify(data),
   });
-  const json = (await res.json().catch(() => ({}))) as any;
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return json as Workflow;
 }
 
-export async function deleteWorkflow(workflowId: string): Promise<{ success: boolean }> {
+export async function deleteWorkflow(
+  workflowId: string,
+): Promise<{ success: boolean }> {
   const res = await fetch(`${base()}/api/workflows/${workflowId}`, {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
-  const json = (await res.json().catch(() => ({}))) as any;
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return json as { success: boolean };
 }
@@ -112,27 +124,40 @@ export async function saveDraft(
   const res = await fetch(`${base()}/api/workflows/${workflowId}/draft`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-    body: JSON.stringify({ graph: data.graph, is_autosave: data.is_autosave ?? false }),
+    body: JSON.stringify({
+      graph: data.graph,
+      is_autosave: data.is_autosave ?? false,
+    }),
   });
-  const json = (await res.json().catch(() => ({}))) as any;
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return (json.draft ?? json) as WorkflowDraft;
 }
 
-export async function getDraft(workflowId: string, version?: number): Promise<WorkflowDraft> {
+export async function getDraft(
+  workflowId: string,
+  version?: number,
+): Promise<WorkflowDraft> {
   const qp = new URLSearchParams();
   if (version != null) qp.set("version", String(version));
-  const res = await fetch(`${base()}/api/workflows/${workflowId}/draft${qp.toString() ? `?${qp}` : ""}`, {
-    headers: getAuthHeaders(),
-  });
-  const json = (await res.json().catch(() => ({}))) as any;
+  const res = await fetch(
+    `${base()}/api/workflows/${workflowId}/draft${qp.toString() ? `?${qp}` : ""}`,
+    {
+      headers: getAuthHeaders(),
+    },
+  );
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return (json.draft ?? json) as WorkflowDraft;
 }
 
-export async function listReleases(workflowId: string): Promise<WorkflowRelease[]> {
-  const res = await fetch(`${base()}/api/workflows/${workflowId}/releases`, { headers: getAuthHeaders() });
-  const json = (await res.json().catch(() => ({}))) as any;
+export async function listReleases(
+  workflowId: string,
+): Promise<WorkflowRelease[]> {
+  const res = await fetch(`${base()}/api/workflows/${workflowId}/releases`, {
+    headers: getAuthHeaders(),
+  });
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return (json.releases ?? []) as WorkflowRelease[];
 }
@@ -146,7 +171,7 @@ export async function createRelease(
     headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify(data),
   });
-  const json = (await res.json().catch(() => ({}))) as any;
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return (json.release ?? json) as WorkflowRelease;
 }
@@ -165,24 +190,33 @@ export async function createRun(
       thread_id: opts?.threadId,
     }),
   });
-  const json = (await res.json().catch(() => ({}))) as any;
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return json as { run_id: string; status: string; work_root?: string };
 }
 
-export async function uploadRunInputs(workflowId: string, runId: string, files: File[]) {
+export async function uploadRunInputs(
+  workflowId: string,
+  runId: string,
+  files: File[],
+) {
   const form = new FormData();
   for (const f of files) {
     form.append("files", f);
   }
-  const res = await fetch(`${base()}/api/workflows/${workflowId}/runs/${runId}/inputs`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: form,
-  });
-  const json = (await res.json().catch(() => ({}))) as any;
+  const res = await fetch(
+    `${base()}/api/workflows/${workflowId}/runs/${runId}/inputs`,
+    {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: form,
+    },
+  );
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
-  return json as { files: { filename: string; path: string; relative: string }[] };
+  return json as {
+    files: { filename: string; path: string; relative: string }[];
+  };
 }
 
 export async function patchRunInput(
@@ -190,12 +224,15 @@ export async function patchRunInput(
   runId: string,
   inputs: Record<string, unknown>,
 ) {
-  const res = await fetch(`${base()}/api/workflows/${workflowId}/runs/${runId}/input`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-    body: JSON.stringify({ inputs }),
-  });
-  const json = (await res.json().catch(() => ({}))) as any;
+  const res = await fetch(
+    `${base()}/api/workflows/${workflowId}/runs/${runId}/input`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({ inputs }),
+    },
+  );
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return json as { input: Record<string, unknown>; work_root?: string };
 }
@@ -237,24 +274,40 @@ export interface WorkflowRunDetail {
   release_spec?: { nodes?: unknown[]; edges?: unknown[] } | null;
   node_index?: Record<
     string,
-    { node_name: string; display_name?: string; type?: string; skill?: string | null }
+    {
+      node_name: string;
+      display_name?: string;
+      type?: string;
+      skill?: string | null;
+    }
   >;
   nodes: WorkflowRunNodeExecution[];
   async_tasks: WorkflowRunAsyncTask[];
 }
 
 export async function getRun(workflowId: string, runId: string) {
-  const res = await fetch(`${base()}/api/workflows/${workflowId}/runs/${runId}`, { headers: getAuthHeaders() });
-  const json = (await res.json().catch(() => ({}))) as any;
+  const res = await fetch(
+    `${base()}/api/workflows/${workflowId}/runs/${runId}`,
+    { headers: getAuthHeaders() },
+  );
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return json.run ?? json;
 }
 
-export async function getRunDetail(workflowId: string, runId: string): Promise<WorkflowRunDetail> {
-  const res = await fetch(`${base()}/api/workflows/${workflowId}/runs/${runId}/detail`, {
-    headers: getAuthHeaders(),
-  });
-  const json = (await res.json().catch(() => ({}))) as WorkflowRunDetail & { detail?: string };
+export async function getRunDetail(
+  workflowId: string,
+  runId: string,
+): Promise<WorkflowRunDetail> {
+  const res = await fetch(
+    `${base()}/api/workflows/${workflowId}/runs/${runId}/detail`,
+    {
+      headers: getAuthHeaders(),
+    },
+  );
+  const json = (await res.json().catch(() => ({}))) as WorkflowRunDetail & {
+    detail?: string;
+  };
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return json;
 }
@@ -265,12 +318,18 @@ export async function getRunAsyncTasks(workflowId: string, runId: string) {
     `${base()}/api/workflows/${workflowId}/runs/${runId}/async-tasks`,
     { headers: getAuthHeaders() },
   );
-  const json = (await res.json().catch(() => ({}))) as { async_tasks?: Record<string, unknown>[]; detail?: string };
+  const json = (await res.json().catch(() => ({}))) as {
+    async_tasks?: Record<string, unknown>[];
+    detail?: string;
+  };
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return json.async_tasks ?? [];
 }
 
-function durationMsFromTask(startedAt: unknown, finishedAt: unknown): number | null {
+function durationMsFromTask(
+  startedAt: unknown,
+  finishedAt: unknown,
+): number | null {
   if (!startedAt || !finishedAt) return null;
   try {
     const start = new Date(String(startedAt)).getTime();
@@ -285,14 +344,18 @@ function durationMsFromTask(startedAt: unknown, finishedAt: unknown): number | n
 function hasNonemptyTaskInput(taskInput: unknown): boolean {
   if (taskInput == null || taskInput === "") return false;
   if (typeof taskInput === "object" && !Array.isArray(taskInput)) {
-    return Object.keys(taskInput as object).length > 0;
+    return Object.keys(taskInput).length > 0;
   }
   return true;
 }
 
 function effectiveNodeInput(taskInput: unknown, taskOutput: unknown): unknown {
   if (hasNonemptyTaskInput(taskInput)) return taskInput;
-  if (taskOutput && typeof taskOutput === "object" && !Array.isArray(taskOutput)) {
+  if (
+    taskOutput &&
+    typeof taskOutput === "object" &&
+    !Array.isArray(taskOutput)
+  ) {
     const resolved = (taskOutput as Record<string, unknown>).resolved_inputs;
     if (resolved != null) return resolved;
   }
@@ -362,40 +425,53 @@ export function mapRunAsyncTasks(
 }
 
 export async function getRunTasks(workflowId: string, runId: string) {
-  const res = await fetch(`${base()}/api/workflows/${workflowId}/runs/${runId}/tasks`, { headers: getAuthHeaders() });
-  const json = (await res.json().catch(() => ({}))) as any;
+  const res = await fetch(
+    `${base()}/api/workflows/${workflowId}/runs/${runId}/tasks`,
+    { headers: getAuthHeaders() },
+  );
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return json.tasks ?? [];
 }
 
-export async function getRunLogs(workflowId: string, runId: string, nodeId?: string) {
+export async function getRunLogs(
+  workflowId: string,
+  runId: string,
+  nodeId?: string,
+) {
   const qp = new URLSearchParams();
   if (nodeId) qp.set("node_id", nodeId);
   const res = await fetch(
     `${base()}/api/workflows/${workflowId}/runs/${runId}/logs${qp.toString() ? `?${qp}` : ""}`,
     { headers: getAuthHeaders() },
   );
-  const json = (await res.json().catch(() => ({}))) as any;
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return json.logs ?? [];
 }
 
 export async function cancelRun(workflowId: string, runId: string) {
-  const res = await fetch(`${base()}/api/workflows/${workflowId}/runs/${runId}/cancel`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-  });
-  const json = (await res.json().catch(() => ({}))) as any;
+  const res = await fetch(
+    `${base()}/api/workflows/${workflowId}/runs/${runId}/cancel`,
+    {
+      method: "POST",
+      headers: getAuthHeaders(),
+    },
+  );
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return json as { success: boolean };
 }
 
 export async function retryRun(workflowId: string, runId: string) {
-  const res = await fetch(`${base()}/api/workflows/${workflowId}/runs/${runId}/retry`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-  });
-  const json = (await res.json().catch(() => ({}))) as any;
+  const res = await fetch(
+    `${base()}/api/workflows/${workflowId}/runs/${runId}/retry`,
+    {
+      method: "POST",
+      headers: getAuthHeaders(),
+    },
+  );
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return json as { success: boolean; status: string };
 }
@@ -407,4 +483,3 @@ export async function sha256Hex(text: string): Promise<string> {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
-

@@ -66,6 +66,7 @@ def test_make_lead_agent_forces_plan_mode_for_swarm_by_default(monkeypatch):
             ],
         ),
     )
+
     def _fake_apply_prompt_template(**kwargs):
         captured["prompt_kwargs"] = kwargs
         return "PROMPT"
@@ -102,6 +103,7 @@ def test_make_lead_agent_respects_swarm_force_plan_mode_override(monkeypatch):
     monkeypatch.setattr(lead_agent_module, "make_rag_retrieve_tool", lambda kb_ids: None)
     monkeypatch.setattr(tools_module, "get_available_tools", lambda **kwargs: [])
     monkeypatch.setattr(builtins_tools_module, "build_delegate_db_agent_tool", lambda **kwargs: SimpleNamespace(name="delegate_agent"))
+
     def _fake_build_middlewares(config, model_name, agent_name=None, custom_middlewares=None):
         captured["middleware_config"] = config
         return []

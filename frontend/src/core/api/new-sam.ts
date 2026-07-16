@@ -2,8 +2,12 @@
 // Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
 // SPDX-License-Identifier: MIT
 
+import type {
+  DesignObjective,
+  Constraint,
+  Molecule,
+} from "@/app/workspace/new-sam/types";
 import { apiRequest } from "@/core/api/api-client";
-import type { DesignObjective, Constraint, Molecule } from "@/app/workspace/new-sam/types";
 
 /**
  * 执行历史记录接口
@@ -140,62 +144,79 @@ export async function saveExecutionHistory(
     };
   }
 
-  return apiRequest<{ success: boolean; id: string }>("workflows/new-sam/save-execution-history", {
-    method: "POST",
-    body: JSON.stringify({
-      runId,
-      workflowId,
-      name,
-      objective,
-      constraints,
-      executionState,
-      startedAt,
-      finishedAt,
-      executionLogs,
-      nodeOutputs,
-      iterationNodeOutputs: iterationNodeOutputsObj,
-      iterationSnapshots,
-      workflowGraph,
-      iterationAnalytics: iterationAnalyticsObj,
-      candidateMolecules,
-    }),
-  });
+  return apiRequest<{ success: boolean; id: string }>(
+    "workflows/new-sam/save-execution-history",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        runId,
+        workflowId,
+        name,
+        objective,
+        constraints,
+        executionState,
+        startedAt,
+        finishedAt,
+        executionLogs,
+        nodeOutputs,
+        iterationNodeOutputs: iterationNodeOutputsObj,
+        iterationSnapshots,
+        workflowGraph,
+        iterationAnalytics: iterationAnalyticsObj,
+        candidateMolecules,
+      }),
+    },
+  );
 }
 
 /**
  * 获取执行历史记录列表
  */
 export async function listExecutionHistory(
-  limit: number = 100,
-  offset: number = 0,
+  limit = 100,
+  offset = 0,
 ): Promise<{ success: boolean; history: ExecutionHistoryListItem[] }> {
   return apiRequest<{ success: boolean; history: ExecutionHistoryListItem[] }>(
-    `workflows/new-sam/execution-history?limit=${limit}&offset=${offset}`
+    `workflows/new-sam/execution-history?limit=${limit}&offset=${offset}`,
   );
 }
 
 /**
  * 获取单个执行历史记录详情
  */
-export async function getExecutionHistory(historyId: string): Promise<{ success: boolean; history: ExecutionHistory }> {
-  return apiRequest<{ success: boolean; history: ExecutionHistory }>(`workflows/new-sam/execution-history/${historyId}`);
+export async function getExecutionHistory(
+  historyId: string,
+): Promise<{ success: boolean; history: ExecutionHistory }> {
+  return apiRequest<{ success: boolean; history: ExecutionHistory }>(
+    `workflows/new-sam/execution-history/${historyId}`,
+  );
 }
 
 /**
  * 删除执行历史记录
  */
-export async function deleteExecutionHistory(historyId: string): Promise<{ success: boolean }> {
-  return apiRequest<{ success: boolean }>(`workflows/new-sam/execution-history/${historyId}`, {
-    method: "DELETE",
-  });
+export async function deleteExecutionHistory(
+  historyId: string,
+): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>(
+    `workflows/new-sam/execution-history/${historyId}`,
+    {
+      method: "DELETE",
+    },
+  );
 }
 
 /**
  * 根据 SMILES 按需生成 3D SDF 内容（点击「3D 结构」时调用）
  */
-export async function generate3DSdf(smiles: string): Promise<{ success: boolean; sdf: string }> {
-  return apiRequest<{ success: boolean; sdf: string }>("workflows/new-sam/generate-3d-sdf", {
-    method: "POST",
-    body: JSON.stringify({ smiles: smiles.trim() }),
-  });
+export async function generate3DSdf(
+  smiles: string,
+): Promise<{ success: boolean; sdf: string }> {
+  return apiRequest<{ success: boolean; sdf: string }>(
+    "workflows/new-sam/generate-3d-sdf",
+    {
+      method: "POST",
+      body: JSON.stringify({ smiles: smiles.trim() }),
+    },
+  );
 }

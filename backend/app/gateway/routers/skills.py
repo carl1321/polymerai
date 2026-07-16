@@ -20,7 +20,6 @@ from deerflow.config.app_config import AppConfig
 from deerflow.config.extensions_config import ExtensionsConfig, SkillStateConfig, get_extensions_config, reload_extensions_config
 from deerflow.skills import Skill, load_skills
 from deerflow.skills.installer import SkillAlreadyExistsError
-from deerflow.skills.storage import get_or_new_skill_storage
 from deerflow.skills.manager import (
     append_history,
     atomic_write,
@@ -34,6 +33,7 @@ from deerflow.skills.manager import (
     validate_skill_markdown_content,
 )
 from deerflow.skills.security_scanner import scan_skill_content
+from deerflow.skills.storage import get_or_new_skill_storage
 from deerflow.skills.types import SKILL_MD_FILE, SkillCategory
 from extensions._core.app_db import get_app_db_connection
 from extensions._core.db_errors import is_undefined_table

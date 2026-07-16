@@ -1,18 +1,28 @@
 "use client";
 
+import {
+  CheckCircle2,
+  Download,
+  FileUp,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Upload,
+  X,
+  XCircle,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, Download, FileUp, Loader2, Plus, RefreshCw, Trash2, Upload, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { WorkflowToolCodeEditor } from "@/components/workflow-tools/WorkflowToolCodeEditor";
-import { parsePythonErrorLine } from "@/lib/parse-python-error-line";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { WorkflowToolCodeEditor } from "@/components/workflow-tools/WorkflowToolCodeEditor";
 import {
   createWorkflowTool,
   deleteWorkflowTool,
@@ -28,8 +38,10 @@ import {
   type WorkflowToolItem,
   type WorkflowToolOutputFile,
 } from "@/core/api/workflow-tools";
-import { CreateWorkflowToolDialog } from "../workflows/CreateWorkflowToolDialog";
 import { useIsAppAdmin } from "@/hooks/use-is-app-admin";
+import { parsePythonErrorLine } from "@/lib/parse-python-error-line";
+
+import { CreateWorkflowToolDialog } from "../workflows/CreateWorkflowToolDialog";
 
 type TestParamRow = { id: string; name: string; value: string };
 
@@ -47,7 +59,10 @@ function rowsToInvokeParams(rows: TestParamRow[]): Record<string, unknown> {
   return out;
 }
 
-function defaultTestParamRows(prev: TestParamRow[], keepValues: boolean): TestParamRow[] {
+function defaultTestParamRows(
+  prev: TestParamRow[],
+  keepValues: boolean,
+): TestParamRow[] {
   if (keepValues && prev.length > 0) return prev;
   return [newTestParamRow("query", "")];
 }
@@ -106,7 +121,7 @@ export default function WorkflowToolsPage() {
 
   const selected =
     tools.find((t) => t.id === selectedId) ??
-    (detailMeta && detailMeta.id === selectedId ? detailMeta : null);
+    (detailMeta?.id === selectedId ? detailMeta : null);
 
   const loadTools = useCallback(async () => {
     setLoading(true);
@@ -142,7 +157,9 @@ export default function WorkflowToolsPage() {
           setTestResult(null);
           setErrorLine(null);
         }
-        setTestParamRows((prev) => defaultTestParamRows(prev, Boolean(opts?.keepTestOutput)));
+        setTestParamRows((prev) =>
+          defaultTestParamRows(prev, Boolean(opts?.keepTestOutput)),
+        );
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "加载工具详情失败");
       }
@@ -155,7 +172,7 @@ export default function WorkflowToolsPage() {
   }, [selectedId, loadDetail]);
 
   const handleSave = async () => {
-    if (!selectedId || !selected || selected.source !== "script") return;
+    if (!selectedId || selected?.source !== "script") return;
     setSaving(true);
     try {
       await updateWorkflowTool(selectedId, { script });
@@ -179,7 +196,9 @@ export default function WorkflowToolsPage() {
       const res = await testWorkflowTool(selectedId, params);
       const logsText = res.logs ?? res.error ?? "";
       const line =
-        res.errorLine ?? parsePythonErrorLine(logsText) ?? parsePythonErrorLine(res.error ?? "");
+        res.errorLine ??
+        parsePythonErrorLine(logsText) ??
+        parsePythonErrorLine(res.error ?? "");
       setTestResult({
         success: res.success,
         output: res.output,
@@ -196,7 +215,9 @@ export default function WorkflowToolsPage() {
       } else {
         setErrorLine(line);
         toast.error(
-          line != null ? `试跑失败（第 ${line} 行）` : res.depsMessage || res.error || "试跑失败",
+          line != null
+            ? `试跑失败（第 ${line} 行）`
+            : res.depsMessage || res.error || "试跑失败",
         );
       }
     } catch (e) {
@@ -212,7 +233,12 @@ export default function WorkflowToolsPage() {
 
   const handleDelete = async (tool: WorkflowToolItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`确定删除工具「${tool.displayName || tool.name}」吗？此操作不可恢复。`)) return;
+    if (
+      !confirm(
+        `确定删除工具「${tool.displayName || tool.name}」吗？此操作不可恢复。`,
+      )
+    )
+      return;
     try {
       await deleteWorkflowTool(tool.id);
       toast.success("已删除");
@@ -280,31 +306,37 @@ export default function WorkflowToolsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#F5F5F5] dark:bg-slate-900">
-      <div className="px-6 py-4 shrink-0">
+      <div className="shrink-0 px-6 py-4">
         <div
-          className="rounded-xl overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#1e3a5f] to-[#0f172a] dark:from-slate-900 dark:via-blue-950/50 dark:to-slate-900 p-6 text-white shadow-lg"
+          className="overflow-hidden rounded-xl bg-gradient-to-br from-[#0f172a] via-[#1e3a5f] to-[#0f172a] p-6 text-white shadow-lg dark:from-slate-900 dark:via-blue-950/50 dark:to-slate-900"
           style={{ minHeight: "100px" }}
         >
-          <h2 className="text-xl font-bold mb-2">工作流工具库</h2>
-          <p className="text-sm text-white/90 max-w-2xl">
-            管理你创建的自定义工具（@tool 脚本）；试跑并发布后在 Tool 节点选用。系统内置工具不在此列表展示。
-            <Link href="/workspace/workflows" className="underline ml-2 text-white">
+          <h2 className="mb-2 text-xl font-bold">工作流工具库</h2>
+          <p className="max-w-2xl text-sm text-white/90">
+            管理你创建的自定义工具（@tool 脚本）；试跑并发布后在 Tool
+            节点选用。系统内置工具不在此列表展示。
+            <Link
+              href="/workspace/workflows"
+              className="ml-2 text-white underline"
+            >
               返回工作流
             </Link>
           </p>
         </div>
       </div>
 
-      <div className="px-6 py-2 shrink-0">
-        <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">操作</div>
+      <div className="shrink-0 px-6 py-2">
+        <div className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+          操作
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => void loadTools()}
-            className="rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+            className="rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
           >
-            <RefreshCw className="h-4 w-4 mr-1.5" />
+            <RefreshCw className="mr-1.5 h-4 w-4" />
             刷新
           </Button>
           {isAdmin && (
@@ -313,17 +345,17 @@ export default function WorkflowToolsPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => void handleImportSystem()}
-                className="rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                className="rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
               >
-                <Upload className="h-4 w-4 mr-1.5" />
+                <Upload className="mr-1.5 h-4 w-4" />
                 导入系统工具
               </Button>
               <Button
                 size="sm"
                 onClick={() => setCreateOpen(true)}
-                className="rounded-lg bg-[#1890FF] hover:bg-[#1890FF]/90 text-white"
+                className="rounded-lg bg-[#1890FF] text-white hover:bg-[#1890FF]/90"
               >
-                <Plus className="h-4 w-4 mr-1.5" />
+                <Plus className="mr-1.5 h-4 w-4" />
                 新建工具
               </Button>
             </>
@@ -345,7 +377,11 @@ export default function WorkflowToolsPage() {
             }
           }}
           onCreate={async ({ name, display_name, description }) => {
-            const created = await createWorkflowTool({ name, display_name, description });
+            const created = await createWorkflowTool({
+              name,
+              display_name,
+              description,
+            });
             await loadTools();
             setSelectedId(created.id);
             await loadDetail(created.id);
@@ -355,13 +391,13 @@ export default function WorkflowToolsPage() {
         />
       )}
 
-      <div className="flex flex-1 min-h-0">
+      <div className="flex min-h-0 flex-1">
         <ScrollArea className="w-72 border-r">
-          <div className="p-2 space-y-1">
+          <div className="space-y-1 p-2">
             {loading ? (
-              <p className="text-sm text-muted-foreground p-4">加载中…</p>
+              <p className="text-muted-foreground p-4 text-sm">加载中…</p>
             ) : tools.length === 0 ? (
-              <p className="text-sm text-muted-foreground p-4">暂无工具</p>
+              <p className="text-muted-foreground p-4 text-sm">暂无工具</p>
             ) : (
               tools.map((tool) => (
                 <div
@@ -375,14 +411,23 @@ export default function WorkflowToolsPage() {
                       setSelectedId(tool.id);
                     }
                   }}
-                  className={`w-full text-left rounded-md px-3 py-2 text-sm border flex items-start gap-1 cursor-pointer ${
-                    selectedId === tool.id ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted"
+                  className={`flex w-full cursor-pointer items-start gap-1 rounded-md border px-3 py-2 text-left text-sm ${
+                    selectedId === tool.id
+                      ? "border-primary bg-primary/5"
+                      : "hover:bg-muted border-transparent"
                   }`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{tool.displayName || tool.name}</div>
-                    <div className="flex gap-1 mt-1 flex-wrap items-center">
-                      <Badge variant={tool.status === "published" ? "default" : "secondary"} className="text-[10px]">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">
+                      {tool.displayName || tool.name}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      <Badge
+                        variant={
+                          tool.status === "published" ? "default" : "secondary"
+                        }
+                        className="text-[10px]"
+                      >
                         {tool.status === "published" ? "已发布" : "草稿"}
                       </Badge>
                       {tool.source === "script" && tool.lastTestOk && (
@@ -395,7 +440,7 @@ export default function WorkflowToolsPage() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 shrink-0 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                      className="h-7 w-7 shrink-0 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
                       onClick={(e) => void handleDelete(tool, e)}
                       aria-label="删除工具"
                     >
@@ -408,36 +453,58 @@ export default function WorkflowToolsPage() {
           </div>
         </ScrollArea>
 
-        <div className="flex-1 flex flex-col min-w-0 p-4 gap-4 overflow-auto">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-auto p-4">
           {!selected ? (
             <p className="text-muted-foreground text-sm">
-              {toolIdFromUrl && loading ? "正在加载工具…" : "请选择左侧工具，或点击「新建工具」"}
+              {toolIdFromUrl && loading
+                ? "正在加载工具…"
+                : "请选择左侧工具，或点击「新建工具」"}
             </p>
           ) : selected.source === "script" ? (
             <>
-              <div className="flex items-center gap-2 flex-wrap shrink-0">
-                <h2 className="font-semibold">{selected.displayName || selected.name}</h2>
-                <code className="text-xs bg-muted px-2 py-0.5 rounded border">{selected.name}</code>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <h2 className="font-semibold">
+                  {selected.displayName || selected.name}
+                </h2>
+                <code className="bg-muted rounded border px-2 py-0.5 text-xs">
+                  {selected.name}
+                </code>
                 {isAdmin && (
                   <>
-                    <Button size="sm" variant="outline" disabled={saving} onClick={() => void handleSave()}>
-                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "保存"}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={saving}
+                      onClick={() => void handleSave()}
+                    >
+                      {saving ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "保存"
+                      )}
                     </Button>
-                    <Button size="sm" onClick={() => void handlePublish()} disabled={!selected.lastTestOk}>
+                    <Button
+                      size="sm"
+                      onClick={() => void handlePublish()}
+                      disabled={!selected.lastTestOk}
+                    >
                       发布
                     </Button>
                   </>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4 flex-1 min-h-0">
-                <div className="flex flex-col gap-3 min-h-[360px] min-w-0">
-                  <div className="flex flex-col flex-1 min-h-[320px] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 shadow-sm overflow-hidden ring-1 ring-slate-100 dark:ring-slate-800">
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/90">
+              <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
+                <div className="flex min-h-[360px] min-w-0 flex-col gap-3">
+                  <div className="flex min-h-[320px] flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm ring-1 ring-slate-100 dark:border-slate-700 dark:bg-slate-950 dark:ring-slate-800">
+                    <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900/90">
                       <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
                         tool.py · LangChain @tool
                       </span>
-                      <span className="text-[10px] text-slate-400">Python · @tool 需含 &quot;&quot;&quot;说明&quot;&quot;&quot;</span>
+                      <span className="text-[10px] text-slate-400">
+                        Python · @tool 需含
+                        &quot;&quot;&quot;说明&quot;&quot;&quot;
+                      </span>
                     </div>
                     <WorkflowToolCodeEditor
                       value={script}
@@ -452,56 +519,76 @@ export default function WorkflowToolsPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 min-h-0 lg:max-h-[calc(100vh-220px)] h-full">
-                  <div className="shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
-                    <div className="flex items-center justify-between px-3 py-1.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/90">
-                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Input</Label>
+                <div className="flex h-full min-h-0 flex-col gap-2 lg:max-h-[calc(100vh-220px)]">
+                  <div className="shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
+                    <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900/90">
+                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                        Input
+                      </Label>
                       {isAdmin && (
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-slate-600 hover:text-[#1890FF]"
-                          onClick={() => setTestParamRows((prev) => [...prev, newTestParamRow()])}
+                          onClick={() =>
+                            setTestParamRows((prev) => [
+                              ...prev,
+                              newTestParamRow(),
+                            ])
+                          }
                           aria-label="添加参数"
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
-                    <div className="p-2 space-y-2 max-h-[280px] overflow-y-auto">
+                    <div className="max-h-[280px] space-y-2 overflow-y-auto p-2">
                       {testParamRows.length === 0 ? (
-                        <p className="text-xs text-slate-400 px-1 py-2">点击右上角 + 添加试跑参数</p>
+                        <p className="px-1 py-2 text-xs text-slate-400">
+                          点击右上角 + 添加试跑参数
+                        </p>
                       ) : (
                         testParamRows.map((row) => {
                           const key = row.name.trim();
-                          const paramDef = (selected?.parameters ?? detailMeta?.parameters ?? []).find(
-                            (p) => p.name === key,
-                          );
-                          const showFile = key ? isFileParam(key, paramDef?.type) : false;
+                          const paramDef = (
+                            selected?.parameters ??
+                            detailMeta?.parameters ??
+                            []
+                          ).find((p) => p.name === key);
+                          const showFile = key
+                            ? isFileParam(key, paramDef?.type)
+                            : false;
                           const uploadKey = key || row.id;
                           return (
-                            <div key={row.id} className="flex gap-1 items-center">
+                            <div
+                              key={row.id}
+                              className="flex items-center gap-1"
+                            >
                               <Input
                                 value={row.name}
                                 onChange={(e) =>
                                   setTestParamRows((prev) =>
                                     prev.map((r) =>
-                                      r.id === row.id ? { ...r, name: e.target.value } : r,
+                                      r.id === row.id
+                                        ? { ...r, name: e.target.value }
+                                        : r,
                                     ),
                                   )
                                 }
                                 readOnly={!isAdmin}
                                 placeholder="变量名"
                                 aria-label="变量名"
-                                className="h-8 text-sm bg-slate-50 dark:bg-slate-900 w-[88px] shrink-0 font-mono text-xs"
+                                className="h-8 w-[88px] shrink-0 bg-slate-50 font-mono text-sm text-xs dark:bg-slate-900"
                               />
                               <Input
                                 value={row.value}
                                 onChange={(e) =>
                                   setTestParamRows((prev) =>
                                     prev.map((r) =>
-                                      r.id === row.id ? { ...r, value: e.target.value } : r,
+                                      r.id === row.id
+                                        ? { ...r, value: e.target.value }
+                                        : r,
                                     ),
                                   )
                                 }
@@ -514,13 +601,13 @@ export default function WorkflowToolsPage() {
                                     : "值"
                                 }
                                 aria-label={key ? `${key} 的值` : "参数值"}
-                                className="h-8 text-sm bg-slate-50 dark:bg-slate-900 flex-1 min-w-0"
+                                className="h-8 min-w-0 flex-1 bg-slate-50 text-sm dark:bg-slate-900"
                               />
                               {isAdmin && showFile && key && (
                                 <label
                                   className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800 ${
                                     uploadingField === uploadKey
-                                      ? "opacity-50 pointer-events-none"
+                                      ? "pointer-events-none opacity-50"
                                       : "cursor-pointer"
                                   }`}
                                 >
@@ -548,7 +635,9 @@ export default function WorkflowToolsPage() {
                                   size="icon"
                                   className="h-8 w-8 shrink-0 text-slate-400 hover:text-red-600"
                                   onClick={() =>
-                                    setTestParamRows((prev) => prev.filter((r) => r.id !== row.id))
+                                    setTestParamRows((prev) =>
+                                      prev.filter((r) => r.id !== row.id),
+                                    )
                                   }
                                   aria-label="删除参数"
                                 >
@@ -560,7 +649,7 @@ export default function WorkflowToolsPage() {
                         })
                       )}
                       {isAdmin && selectedId && (
-                        <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 pt-1">
+                        <label className="flex cursor-pointer items-center gap-2 pt-1 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
                           <input
                             type="file"
                             className="sr-only"
@@ -572,7 +661,9 @@ export default function WorkflowToolsPage() {
                             }}
                           />
                           <FileUp className="h-3.5 w-3.5 shrink-0" />
-                          {uploadingField === "__general__" ? "上传中…" : "上传文件到 inputs/（填入路径）"}
+                          {uploadingField === "__general__"
+                            ? "上传中…"
+                            : "上传文件到 inputs/（填入路径）"}
                         </label>
                       )}
                     </div>
@@ -580,13 +671,13 @@ export default function WorkflowToolsPage() {
 
                   {isAdmin && (
                     <Button
-                      className="w-full shrink-0 h-9 bg-[#1890FF] hover:bg-[#1890FF]/90 text-white"
+                      className="h-9 w-full shrink-0 bg-[#1890FF] text-white hover:bg-[#1890FF]/90"
                       disabled={testing}
                       onClick={() => void handleTest()}
                     >
                       {testing ? (
                         <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           试运行中…
                         </>
                       ) : (
@@ -597,13 +688,13 @@ export default function WorkflowToolsPage() {
 
                   {testResult && (
                     <div
-                      className={`flex flex-col flex-1 min-h-[140px] rounded-lg border shadow-sm overflow-hidden ${
+                      className={`flex min-h-[140px] flex-1 flex-col overflow-hidden rounded-lg border shadow-sm ${
                         testResult.success
-                          ? "border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20"
-                          : "border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20"
+                          ? "border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20"
+                          : "border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/20"
                       }`}
                     >
-                      <div className="flex items-center gap-2 px-3 py-2 border-b border-inherit bg-white/60 dark:bg-slate-950/40">
+                      <div className="flex items-center gap-2 border-b border-inherit bg-white/60 px-3 py-2 dark:bg-slate-950/40">
                         <Label className="text-xs font-medium">Output</Label>
                         {testResult.success ? (
                           <span className="ml-auto flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
@@ -611,13 +702,13 @@ export default function WorkflowToolsPage() {
                             成功
                           </span>
                         ) : (
-                          <span className="ml-auto flex items-center gap-1 text-xs text-destructive">
+                          <span className="text-destructive ml-auto flex items-center gap-1 text-xs">
                             <XCircle className="h-3.5 w-3.5" />
                             {testResult.depsError ? "依赖冲突" : "失败"}
                           </span>
                         )}
                       </div>
-                      <pre className="flex-1 overflow-auto p-3 text-xs font-mono whitespace-pre-wrap break-all text-slate-800 dark:text-slate-200">
+                      <pre className="flex-1 overflow-auto p-3 font-mono text-xs break-all whitespace-pre-wrap text-slate-800 dark:text-slate-200">
                         {testResult.success
                           ? formatTestOutput(testResult.output)
                           : testResult.logs || testResult.error || "无输出"}
@@ -625,8 +716,8 @@ export default function WorkflowToolsPage() {
                       {testResult.success &&
                         testResult.outputFiles &&
                         testResult.outputFiles.length > 0 && (
-                          <div className="px-3 pb-3 border-t border-inherit space-y-1">
-                            <p className="text-xs font-medium text-slate-600 dark:text-slate-400 pt-2">
+                          <div className="space-y-1 border-t border-inherit px-3 pb-3">
+                            <p className="pt-2 text-xs font-medium text-slate-600 dark:text-slate-400">
                               输出文件
                             </p>
                             <ul className="space-y-1">
@@ -644,13 +735,17 @@ export default function WorkflowToolsPage() {
                                         f.relativePath,
                                         f.filename,
                                       ).catch((err) =>
-                                        toast.error(err instanceof Error ? err.message : "下载失败"),
+                                        toast.error(
+                                          err instanceof Error
+                                            ? err.message
+                                            : "下载失败",
+                                        ),
                                       );
                                     }}
                                   >
-                                    <Download className="h-3.5 w-3.5 mr-1" />
+                                    <Download className="mr-1 h-3.5 w-3.5" />
                                     {f.filename}
-                                    <span className="ml-1 text-slate-400 font-normal">
+                                    <span className="ml-1 font-normal text-slate-400">
                                       ({f.relativePath})
                                     </span>
                                   </Button>
@@ -658,13 +753,14 @@ export default function WorkflowToolsPage() {
                               ))}
                             </ul>
                             <p className="text-[10px] text-slate-400">
-                              输出文件默认写在 outputs/ 下；可直接写文件名（如 result.POSCAR），或设置环境变量
+                              输出文件默认写在 outputs/ 下；可直接写文件名（如
+                              result.POSCAR），或设置环境变量
                               WORKFLOW_TOOL_OUTPUT_DIR
                             </p>
                           </div>
                         )}
                       {!testResult.success && (
-                        <div className="px-3 pb-2 space-y-1 border-t border-inherit">
+                        <div className="space-y-1 border-t border-inherit px-3 pb-2">
                           {errorLine != null && (
                             <p className="text-xs text-red-600 dark:text-red-400">
                               错误位置：第 {errorLine} 行（已在左侧代码中标红）
@@ -674,7 +770,8 @@ export default function WorkflowToolsPage() {
                             .toLowerCase()
                             .includes("docstring") && (
                             <p className="text-xs text-amber-700 dark:text-amber-400">
-                              LangChain 要求 @tool 函数必须有文档字符串，请在函数下方添加三引号说明，例如：
+                              LangChain 要求 @tool
+                              函数必须有文档字符串，请在函数下方添加三引号说明，例如：
                               <code className="ml-1">{`"""工具说明"""`}</code>
                             </p>
                           )}
@@ -687,8 +784,12 @@ export default function WorkflowToolsPage() {
             </>
           ) : (
             <div className="space-y-4">
-              <h2 className="font-semibold">{selected.displayName || selected.name}</h2>
-              <p className="text-sm text-muted-foreground">{selected.description}</p>
+              <h2 className="font-semibold">
+                {selected.displayName || selected.name}
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                {selected.description}
+              </p>
               <div className="flex items-center gap-2">
                 <Label>在工作流目录中启用</Label>
                 {isAdmin ? (

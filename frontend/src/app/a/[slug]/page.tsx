@@ -179,7 +179,8 @@ function PublicAgentGate() {
 
   useEffect(() => {
     if (!slug || !token) {
-      if (!token) setMetaError("缺少访问令牌：请在分享链接中带上 ?token=… 参数。");
+      if (!token)
+        setMetaError("缺少访问令牌：请在分享链接中带上 ?token=… 参数。");
       return;
     }
     let cancelled = false;
@@ -206,7 +207,7 @@ function PublicAgentGate() {
 
   if (!token) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+      <div className="bg-background flex min-h-screen items-center justify-center p-6">
         <p className="text-muted-foreground max-w-md text-center text-sm">
           {metaError ?? "正在检查链接…"}
         </p>
@@ -216,7 +217,7 @@ function PublicAgentGate() {
 
   if (metaError || !meta) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+      <div className="bg-background flex min-h-screen items-center justify-center p-6">
         <p className="text-destructive max-w-md text-center text-sm">
           {metaError ?? "加载中…"}
         </p>

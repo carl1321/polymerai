@@ -4,21 +4,33 @@
 // Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
 // SPDX-License-Identifier: MIT
 
-import { useState, useEffect, useRef } from "react";
-import { ExecutionHistoryDialog } from "@/app/workspace/new-sam/components/ExecutionHistoryDialog";
-import { getExecutionHistory, saveExecutionHistory } from "@/core/api/new-sam";
-import { extractIterationAnalytics } from "@/app/workspace/new-sam/utils/molecule";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { History, Edit2 } from "lucide-react";
-import type { DesignObjective, Constraint, ExecutionResult, DesignHistory, Molecule } from "../types";
-import { ExecutionLogPanel } from "./ExecutionLogPanel";
-import { WorkflowRunnerPanel } from "./WorkflowRunnerPanel";
-import { WorkflowGraphView } from "./WorkflowGraphView";
-import { IterationAnalyticsPanel } from "./IterationAnalyticsPanel";
-import { CandidateListPanel } from "./CandidateListPanel";
-import { extractMoleculesFromWorkflowResult, parseDimensionScoresFromOptDes } from "@/app/workspace/new-sam/utils/molecule";
+import { useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
+
+import { ExecutionHistoryDialog } from "@/app/workspace/new-sam/components/ExecutionHistoryDialog";
+import { extractIterationAnalytics } from "@/app/workspace/new-sam/utils/molecule";
+import {
+  extractMoleculesFromWorkflowResult,
+  parseDimensionScoresFromOptDes,
+} from "@/app/workspace/new-sam/utils/molecule";
+import { Button } from "@/components/ui/button";
+import { getExecutionHistory, saveExecutionHistory } from "@/core/api/new-sam";
+
+import type {
+  DesignObjective,
+  Constraint,
+  ExecutionResult,
+  DesignHistory,
+  Molecule,
+} from "../types";
 import type { MoleculeScore } from "../types";
+
+import { CandidateListPanel } from "./CandidateListPanel";
+import { ExecutionLogPanel } from "./ExecutionLogPanel";
+import { IterationAnalyticsPanel } from "./IterationAnalyticsPanel";
+import { WorkflowGraphView } from "./WorkflowGraphView";
+import { WorkflowRunnerPanel } from "./WorkflowRunnerPanel";
 
 interface SamDesignUnifiedPageProps {
   objective: DesignObjective;
@@ -39,32 +51,48 @@ export function SamDesignUnifiedPage({
   onEditObjective,
 }: SamDesignUnifiedPageProps) {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
-  const [executionState, setExecutionState] = useState<"idle" | "running" | "completed" | "failed">("idle");
-  const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
+  const [executionState, setExecutionState] = useState<
+    "idle" | "running" | "completed" | "failed"
+  >("idle");
+  const [executionResult, setExecutionResult] =
+    useState<ExecutionResult | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
   const [nodeOutputs, setNodeOutputs] = useState<Record<string, any>>({});
   const [molecules, setMolecules] = useState<Molecule[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>("");
-  const [workflowGraph, setWorkflowGraph] = useState<{ nodes: any[]; edges: any[] } | null>(null);
+  const [workflowGraph, setWorkflowGraph] = useState<{
+    nodes: any[];
+    edges: any[];
+  } | null>(null);
   const [logLines, setLogLines] = useState<string[]>([]);
-  const [historyMolecules, setHistoryMolecules] = useState<Molecule[] | undefined>(undefined);
+  const [historyMolecules, setHistoryMolecules] = useState<
+    Molecule[] | undefined
+  >(undefined);
   const [runningNodeIds, setRunningNodeIds] = useState<Set<string>>(new Set());
-  const [iterationNodeOutputs, setIterationNodeOutputs] = useState<Map<number, Record<string, any>>>(new Map());
-  
+  const [iterationNodeOutputs, setIterationNodeOutputs] = useState<
+    Map<number, Record<string, any>>
+  >(new Map());
+
   // 迭代快照：每轮迭代的分子数据
-  const [iterationSnapshots, setIterationSnapshots] = useState<Array<{
-    iter: number;
-    passed: Partial<Molecule>[];
-    pending: Partial<Molecule>[];
-    best: Partial<Molecule> | null;
-  }>>([]);
+  const [iterationSnapshots, setIterationSnapshots] = useState<
+    Array<{
+      iter: number;
+      passed: Partial<Molecule>[];
+      pending: Partial<Molecule>[];
+      best: Partial<Molecule> | null;
+    }>
+  >([]);
 
   // 用于跟踪是否已经保存过历史（避免重复保存）
   const hasSavedHistoryRef = useRef(false);
   const executionStartTimeRef = useRef<Date | null>(null);
 
   // 处理执行完成
-  const handleExecutionComplete = (result: ExecutionResult, finalMolecules: Molecule[], finalNodeOutputs: Record<string, any>) => {
+  const handleExecutionComplete = (
+    result: ExecutionResult,
+    finalMolecules: Molecule[],
+    finalNodeOutputs: Record<string, any>,
+  ) => {
     setExecutionResult(result);
     setMolecules(finalMolecules);
     setNodeOutputs(finalNodeOutputs);
@@ -76,7 +104,12 @@ export function SamDesignUnifiedPage({
   useEffect(() => {
     const saveHistory = async () => {
       // 只在执行完成且尚未保存时保存
-      if (executionState !== "completed" || hasSavedHistoryRef.current || !runId || !selectedWorkflowId) {
+      if (
+        executionState !== "completed" ||
+        hasSavedHistoryRef.current ||
+        !runId ||
+        !selectedWorkflowId
+      ) {
         return;
       }
 
@@ -89,7 +122,7 @@ export function SamDesignUnifiedPage({
           molecules,
           iterationSnapshots,
           iterationNodeOutputs,
-          workflowGraph
+          workflowGraph,
         );
 
         // 保存执行历史
@@ -111,9 +144,14 @@ export function SamDesignUnifiedPage({
           molecules,
         );
 
-        console.log("[SamDesignUnifiedPage] Execution history saved automatically");
+        console.log(
+          "[SamDesignUnifiedPage] Execution history saved automatically",
+        );
       } catch (error: any) {
-        console.error("[SamDesignUnifiedPage] Failed to save execution history:", error);
+        console.error(
+          "[SamDesignUnifiedPage] Failed to save execution history:",
+          error,
+        );
         hasSavedHistoryRef.current = false; // 保存失败，允许重试
         // 不显示错误提示，避免干扰用户
       }
@@ -122,7 +160,19 @@ export function SamDesignUnifiedPage({
     // 延迟保存，确保所有状态都已更新
     const timer = setTimeout(saveHistory, 500);
     return () => clearTimeout(timer);
-  }, [executionState, runId, selectedWorkflowId, molecules, nodeOutputs, iterationNodeOutputs, iterationSnapshots, workflowGraph, logLines, objective, constraints]);
+  }, [
+    executionState,
+    runId,
+    selectedWorkflowId,
+    molecules,
+    nodeOutputs,
+    iterationNodeOutputs,
+    iterationSnapshots,
+    workflowGraph,
+    logLines,
+    objective,
+    constraints,
+  ]);
 
   // 处理执行开始
   const handleExecutionStart = (workflowId: string, runId: string) => {
@@ -138,25 +188,31 @@ export function SamDesignUnifiedPage({
     hasSavedHistoryRef.current = false; // 重置保存标志
     executionStartTimeRef.current = new Date(); // 记录开始时间
   };
-  
+
   // 处理节点开始执行
   const handleNodeStart = (nodeId: string) => {
     setRunningNodeIds((prev) => new Set(prev).add(nodeId));
   };
-  
+
   // 处理节点执行完成
-  const handleNodeEnd = (nodeId: string, iteration?: number, loopId?: string) => {
+  const handleNodeEnd = (
+    nodeId: string,
+    iteration?: number,
+    loopId?: string,
+  ) => {
     setRunningNodeIds((prev) => {
       const next = new Set(prev);
       next.delete(nodeId);
       return next;
     });
   };
-  
+
   // 处理迭代节点输出更新
-  const handleIterationNodeOutputsUpdate = (newIterationNodeOutputs: Map<number, Record<string, any>>) => {
+  const handleIterationNodeOutputsUpdate = (
+    newIterationNodeOutputs: Map<number, Record<string, any>>,
+  ) => {
     setIterationNodeOutputs(newIterationNodeOutputs);
-    
+
     // 从迭代节点输出中提取迭代快照
     const snapshots: Array<{
       iter: number;
@@ -164,36 +220,46 @@ export function SamDesignUnifiedPage({
       pending: Partial<Molecule>[];
       best: Partial<Molecule> | null;
     }> = [];
-    
+
     // 按迭代轮次排序
-    const sortedIterations = Array.from(newIterationNodeOutputs.keys()).sort((a, b) => a - b);
-    
+    const sortedIterations = Array.from(newIterationNodeOutputs.keys()).sort(
+      (a, b) => a - b,
+    );
+
     for (const iter of sortedIterations) {
       const iterOutputs = newIterationNodeOutputs.get(iter);
       if (!iterOutputs) continue;
-      
+
       const passed: Partial<Molecule>[] = [];
       const pending: Partial<Molecule>[] = [];
-      
+
       // 遍历该迭代的所有节点输出，查找分子和评分
       for (const [nodeId, nodeOutput] of Object.entries(iterOutputs)) {
         if (!nodeOutput || typeof nodeOutput !== "object") continue;
-        
+
         // 检查是否是循环节点输出（有 passed_items/pending_items）
-        if ("passed_items" in nodeOutput && Array.isArray(nodeOutput.passed_items)) {
+        if (
+          "passed_items" in nodeOutput &&
+          Array.isArray(nodeOutput.passed_items)
+        ) {
           for (const item of nodeOutput.passed_items) {
             if (item && typeof item === "object" && item.smiles) {
               const mol: Partial<Molecule> = {
                 smiles: item.smiles,
                 index: item.id || passed.length + 1,
               };
-              
+
               // 解析分数
               if (item.opt_des && typeof item.opt_des === "string") {
                 const dimScores = parseDimensionScoresFromOptDes(item.opt_des);
                 if (dimScores) {
-                  const totalScore = typeof item.score === "number" ? item.score :
-                    (dimScores.surfaceAnchoring + dimScores.energyLevel + dimScores.packingDensity) / 3;
+                  const totalScore =
+                    typeof item.score === "number"
+                      ? item.score
+                      : (dimScores.surfaceAnchoring +
+                          dimScores.energyLevel +
+                          dimScores.packingDensity) /
+                        3;
                   mol.score = {
                     total: totalScore,
                     surfaceAnchoring: dimScores.surfaceAnchoring,
@@ -206,7 +272,7 @@ export function SamDesignUnifiedPage({
               } else if (typeof item.score === "number") {
                 mol.score = { total: item.score } as MoleculeScore;
               }
-              
+
               // 解析分析描述
               if (item.opt_des && typeof item.opt_des === "string") {
                 mol.analysis = {
@@ -214,26 +280,34 @@ export function SamDesignUnifiedPage({
                   explanation: item.opt_des,
                 };
               }
-              
+
               passed.push(mol);
             }
           }
         }
-        
-        if ("pending_items" in nodeOutput && Array.isArray(nodeOutput.pending_items)) {
+
+        if (
+          "pending_items" in nodeOutput &&
+          Array.isArray(nodeOutput.pending_items)
+        ) {
           for (const item of nodeOutput.pending_items) {
             if (item && typeof item === "object" && item.smiles) {
               const mol: Partial<Molecule> = {
                 smiles: item.smiles,
                 index: item.id || pending.length + 1,
               };
-              
+
               // 解析分数
               if (item.opt_des && typeof item.opt_des === "string") {
                 const dimScores = parseDimensionScoresFromOptDes(item.opt_des);
                 if (dimScores) {
-                  const totalScore = typeof item.score === "number" ? item.score :
-                    (dimScores.surfaceAnchoring + dimScores.energyLevel + dimScores.packingDensity) / 3;
+                  const totalScore =
+                    typeof item.score === "number"
+                      ? item.score
+                      : (dimScores.surfaceAnchoring +
+                          dimScores.energyLevel +
+                          dimScores.packingDensity) /
+                        3;
                   mol.score = {
                     total: totalScore,
                     surfaceAnchoring: dimScores.surfaceAnchoring,
@@ -246,7 +320,7 @@ export function SamDesignUnifiedPage({
               } else if (typeof item.score === "number") {
                 mol.score = { total: item.score } as MoleculeScore;
               }
-              
+
               // 解析分析描述
               if (item.opt_des && typeof item.opt_des === "string") {
                 mol.analysis = {
@@ -254,27 +328,32 @@ export function SamDesignUnifiedPage({
                   explanation: item.opt_des,
                 };
               }
-              
+
               pending.push(mol);
             }
           }
         }
-        
+
         // 检查节点输出中是否有 output 字段（生成节点的输出）
         if ("output" in nodeOutput && Array.isArray(nodeOutput.output)) {
           for (const item of nodeOutput.output) {
             if (item && typeof item === "object" && item.smiles) {
               const mol: Partial<Molecule> = {
                 smiles: item.smiles,
-                index: item.id || (passed.length + pending.length + 1),
+                index: item.id || passed.length + pending.length + 1,
               };
-              
+
               // 解析分数
               if (item.opt_des && typeof item.opt_des === "string") {
                 const dimScores = parseDimensionScoresFromOptDes(item.opt_des);
                 if (dimScores) {
-                  const totalScore = typeof item.score === "number" ? item.score :
-                    (dimScores.surfaceAnchoring + dimScores.energyLevel + dimScores.packingDensity) / 3;
+                  const totalScore =
+                    typeof item.score === "number"
+                      ? item.score
+                      : (dimScores.surfaceAnchoring +
+                          dimScores.energyLevel +
+                          dimScores.packingDensity) /
+                        3;
                   mol.score = {
                     total: totalScore,
                     surfaceAnchoring: dimScores.surfaceAnchoring,
@@ -287,7 +366,7 @@ export function SamDesignUnifiedPage({
               } else if (typeof item.score === "number") {
                 mol.score = { total: item.score } as MoleculeScore;
               }
-              
+
               // 解析分析描述
               if (item.opt_des && typeof item.opt_des === "string") {
                 mol.analysis = {
@@ -295,7 +374,7 @@ export function SamDesignUnifiedPage({
                   explanation: item.opt_des,
                 };
               }
-              
+
               // 根据是否在 passed_items 中决定添加到 passed 还是 pending
               const isInPassed = passed.some((m) => m.smiles === item.smiles);
               if (!isInPassed) {
@@ -305,18 +384,21 @@ export function SamDesignUnifiedPage({
           }
         }
       }
-      
+
       // 找到最佳分子
       const allMolecules = [...passed, ...pending];
-      const best = allMolecules.reduce((bestMol, mol) => {
-        const bestScore = bestMol?.score?.total || 0;
-        const molScore = mol?.score?.total || 0;
-        return molScore > bestScore ? mol : bestMol;
-      }, null as Partial<Molecule> | null);
-      
+      const best = allMolecules.reduce(
+        (bestMol, mol) => {
+          const bestScore = bestMol?.score?.total || 0;
+          const molScore = mol?.score?.total || 0;
+          return molScore > bestScore ? mol : bestMol;
+        },
+        null as Partial<Molecule> | null,
+      );
+
       snapshots.push({ iter, passed, pending, best });
     }
-    
+
     setIterationSnapshots(snapshots);
   };
 
@@ -342,59 +424,67 @@ export function SamDesignUnifiedPage({
       const result = await getExecutionHistory(historyId);
       if (result.success && result.history) {
         const history = result.history;
-        
+
         // 标记为已保存，避免从历史记录加载时触发自动保存
         hasSavedHistoryRef.current = true;
-        
+
         // 还原基本信息
         onObjectiveChange(history.objective);
         onConstraintsChange(history.constraints);
         setRunId(history.runId);
         setSelectedWorkflowId(history.workflowId);
-        
+
         // 还原执行状态
         setExecutionState(history.executionState);
-        
+
         // 还原执行日志
         if (history.executionLogs) {
           setLogLines(history.executionLogs);
         }
-        
+
         // 还原节点输出
         if (history.nodeOutputs) {
           setNodeOutputs(history.nodeOutputs);
         }
-        
+
         // 还原迭代节点输出（将对象转换回 Map）
         if (history.iterationNodeOutputs) {
-          const iterationNodeOutputsMap = new Map<number, Record<string, any>>();
-          for (const [iterStr, outputs] of Object.entries(history.iterationNodeOutputs)) {
+          const iterationNodeOutputsMap = new Map<
+            number,
+            Record<string, any>
+          >();
+          for (const [iterStr, outputs] of Object.entries(
+            history.iterationNodeOutputs,
+          )) {
             const iter = parseInt(iterStr, 10);
             if (!isNaN(iter)) {
-              iterationNodeOutputsMap.set(iter, outputs as Record<string, any>);
+              iterationNodeOutputsMap.set(iter, outputs);
             }
           }
           setIterationNodeOutputs(iterationNodeOutputsMap);
         }
-        
+
         // 还原迭代快照
         if (history.iterationSnapshots) {
           setIterationSnapshots(history.iterationSnapshots);
         }
-        
+
         // 还原工作流图
         if (history.workflowGraph) {
           setWorkflowGraph(history.workflowGraph);
         }
-        
+
         // 还原候选分子
         if (history.candidateMolecules) {
           setMolecules(history.candidateMolecules);
           setHistoryMolecules(history.candidateMolecules);
         }
-        
+
         // 构建 executionResult（用于兼容性）
-        if (history.executionState === "completed" && history.candidateMolecules) {
+        if (
+          history.executionState === "completed" &&
+          history.candidateMolecules
+        ) {
           setExecutionResult({
             mode: "workflow",
             workflowResult: {
@@ -405,7 +495,7 @@ export function SamDesignUnifiedPage({
             },
           });
         }
-        
+
         toast.success("历史记录加载成功");
       } else {
         toast.error("加载历史记录失败");
@@ -438,23 +528,28 @@ export function SamDesignUnifiedPage({
         <div className="container mx-auto max-w-[1920px] px-4 py-3">
           <div className="flex items-center gap-4">
             {/* 研究目标摘要 */}
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">研究目标：</span>
-                <span className="truncate text-sm text-slate-900 dark:text-slate-100" title={objective.text}>
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  研究目标：
+                </span>
+                <span
+                  className="truncate text-sm text-slate-900 dark:text-slate-100"
+                  title={objective.text}
+                >
                   {formatObjectiveSummary()}
                 </span>
-                    {onEditObjective && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={onEditObjective}
-                        title="编辑研究目标"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                      </Button>
-                    )}
+                {onEditObjective && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={onEditObjective}
+                    title="编辑研究目标"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -529,14 +624,14 @@ export function SamDesignUnifiedPage({
 
           {/* 迭代分析面板 */}
           <div className="flex-1 overflow-hidden">
-          <IterationAnalyticsPanel
-            nodeOutputs={nodeOutputs}
-            molecules={molecules}
-            iterationSnapshots={iterationSnapshots}
-            iterationNodeOutputs={iterationNodeOutputs}
-            workflowGraph={workflowGraph}
-            executionState={executionState}
-          />
+            <IterationAnalyticsPanel
+              nodeOutputs={nodeOutputs}
+              molecules={molecules}
+              iterationSnapshots={iterationSnapshots}
+              iterationNodeOutputs={iterationNodeOutputs}
+              workflowGraph={workflowGraph}
+              executionState={executionState}
+            />
           </div>
         </div>
 
@@ -548,7 +643,9 @@ export function SamDesignUnifiedPage({
             executionState={executionState}
             initialMolecules={historyMolecules}
             objective={objective}
-            evaluationModel={executionResult?.evaluationModel || executionResult?.selectedModel}
+            evaluationModel={
+              executionResult?.evaluationModel || executionResult?.selectedModel
+            }
             iterationSnapshots={iterationSnapshots}
             iterationNodeOutputs={iterationNodeOutputs}
             workflowGraph={workflowGraph}

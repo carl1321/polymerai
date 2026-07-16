@@ -18,11 +18,7 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const locale = await detectLocaleServer();
   return (
-    <html
-      lang={locale}
-      suppressContentEditableWarning
-      suppressHydrationWarning
-    >
+    <html lang={locale} suppressContentEditableWarning suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" enableSystem disableTransitionOnChange>
           <I18nProvider initialLocale={locale}>

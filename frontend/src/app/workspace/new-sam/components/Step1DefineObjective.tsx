@@ -4,14 +4,23 @@
 // Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
 // SPDX-License-Identifier: MIT
 
-import { useState } from "react";
 import { ArrowRight, Lightbulb } from "lucide-react";
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ConstraintEditor } from "./ConstraintEditor";
+import { Textarea } from "@/components/ui/textarea";
+
 import type { Constraint, DesignObjective } from "../types";
+
+import { ConstraintEditor } from "./ConstraintEditor";
 
 interface Step1DefineObjectiveProps {
   /** 研究目标 */
@@ -89,7 +98,7 @@ export function Step1DefineObjective({
       {/* 顶部：标题 */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100 sm:text-xl">
+          <h1 className="text-lg font-semibold text-slate-900 sm:text-xl dark:text-slate-100">
             指导分子生成
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400">
@@ -197,4 +206,3 @@ export function Step1DefineObjective({
     </div>
   );
 }
-

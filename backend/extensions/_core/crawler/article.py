@@ -35,4 +35,3 @@ class Article:
                 content.append({"type": "text", "text": part.strip()})
 
         return content
-

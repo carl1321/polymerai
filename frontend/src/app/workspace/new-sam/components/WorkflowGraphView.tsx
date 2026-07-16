@@ -4,15 +4,26 @@
 // Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
 // SPDX-License-Identifier: MIT
 
+import {
+  ReactFlow,
+  type Node,
+  type Edge,
+  useNodesState,
+  useEdgesState,
+  Controls,
+  Background,
+  BackgroundVariant,
+  ReactFlowProvider,
+} from "@xyflow/react";
 import { useState, useEffect, useCallback } from "react";
-import { ReactFlow, Node, Edge, useNodesState, useEdgesState, Controls, Background, BackgroundVariant, ReactFlowProvider } from "@xyflow/react";
+
 import "@xyflow/react/dist/style.css";
-import { StartNode } from "@/components/workflow/editor/nodes/StartNode";
+import { ConditionNode } from "@/components/workflow/editor/nodes/ConditionNode";
 import { EndNode } from "@/components/workflow/editor/nodes/EndNode";
 import { LLMNode } from "@/components/workflow/editor/nodes/LLMNode";
-import { ToolNode } from "@/components/workflow/editor/nodes/ToolNode";
-import { ConditionNode } from "@/components/workflow/editor/nodes/ConditionNode";
 import { LoopNode } from "@/components/workflow/editor/nodes/LoopNode";
+import { StartNode } from "@/components/workflow/editor/nodes/StartNode";
+import { ToolNode } from "@/components/workflow/editor/nodes/ToolNode";
 
 const nodeTypes = {
   start: StartNode,
@@ -43,27 +54,37 @@ function WorkflowGraphViewInner({
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   // 更新节点执行状态（参考 Step2RunDesignLab 的实现）
-  const updateNodeExecutionStatus = useCallback((
-    nodeId: string,
-    status: "pending" | "ready" | "running" | "success" | "error" | "skipped" | "cancelled",
-    data?: any
-  ) => {
-    setNodes((nds) =>
-      nds.map((node) => {
-        if (node.id === nodeId) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              executionStatus: status,
-              executionResult: data,
-            },
-          };
-        }
-        return node;
-      })
-    );
-  }, [setNodes]);
+  const updateNodeExecutionStatus = useCallback(
+    (
+      nodeId: string,
+      status:
+        | "pending"
+        | "ready"
+        | "running"
+        | "success"
+        | "error"
+        | "skipped"
+        | "cancelled",
+      data?: any,
+    ) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === nodeId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                executionStatus: status,
+                executionResult: data,
+              },
+            };
+          }
+          return node;
+        }),
+      );
+    },
+    [setNodes],
+  );
 
   // 加载图形
   useEffect(() => {
@@ -76,7 +97,7 @@ function WorkflowGraphViewInner({
         },
       }));
       const workflowEdges: Edge[] = graph.edges || [];
-      
+
       setNodes(workflowNodes);
       setEdges(workflowEdges);
     }
@@ -109,7 +130,7 @@ function WorkflowGraphViewInner({
         }
         // 保持当前状态（如果已经是 success，不重置为 pending）
         return node;
-      })
+      }),
     );
   }, [nodeOutputs, runningNodeIds, setNodes]);
 

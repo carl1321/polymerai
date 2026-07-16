@@ -1,6 +1,6 @@
 import { fetch } from "@/core/api/fetcher";
-import { getBackendBaseURL } from "@/core/config";
 import { getAuthHeaders } from "@/core/auth";
+import { getBackendBaseURL } from "@/core/config";
 
 import type { Skill } from "./type";
 
@@ -9,7 +9,8 @@ export async function loadSkills(): Promise<Skill[]> {
     headers: getAuthHeaders(),
   });
   const json = (await res.json().catch(() => ({}))) as { skills?: Skill[] };
-  if (!res.ok) throw new Error((json as { detail?: string }).detail ?? res.statusText);
+  if (!res.ok)
+    throw new Error((json as { detail?: string }).detail ?? res.statusText);
   return json.skills ?? [];
 }
 
@@ -160,7 +161,7 @@ export async function updateSkillMetadata(
   }
   return {
     success: Boolean(data.success),
-    skill: data.skill as Skill,
+    skill: data.skill!,
   };
 }
 
@@ -171,7 +172,9 @@ export async function getSkillByName(skillName: string): Promise<Skill> {
       headers: getAuthHeaders(),
     },
   );
-  const data = (await response.json().catch(() => ({}))) as Skill & { detail?: string };
+  const data = (await response.json().catch(() => ({}))) as Skill & {
+    detail?: string;
+  };
   if (!response.ok) {
     throw new Error(data.detail ?? response.statusText);
   }

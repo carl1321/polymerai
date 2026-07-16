@@ -7,15 +7,13 @@ import os
 import re
 import uuid
 from pathlib import Path
-from typing import Literal, Optional
-
-from pydantic import BaseModel, Field
+from typing import Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import StructuredTool
+from pydantic import BaseModel, Field
 
 from extensions._core.llms.llm import get_llm_by_type
-
 from extensions.toolbox.agentic_tools.image_gen_tool import generate_image_to_path, is_image_gen_configured
 
 # slide_deck 流程（engine=slide_deck 时委托）
@@ -165,12 +163,12 @@ def _generate_pptx_from_outline(outline: str, with_images: bool = False) -> str:
         return json.dumps({"error": "无法从大纲解析出幻灯片内容，请检查格式（# 标题，## 页标题，- 要点）"}, ensure_ascii=False)
 
     use_images = with_images and is_image_gen_configured()
-    image_paths: list[Optional[str]] = []
+    image_paths: list[str | None] = []
     if use_images:
         for i, slide_data in enumerate(slides_data):
             title = (slide_data.get("title") or "").strip() or ""
             bullets = slide_data.get("bullets") or []
-            path_rel: Optional[str] = None
+            path_rel: str | None = None
             try:
                 prompt = _slide_image_prompt(title, bullets)
                 if prompt:

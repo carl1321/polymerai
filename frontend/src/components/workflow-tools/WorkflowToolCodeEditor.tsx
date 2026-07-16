@@ -83,7 +83,9 @@ export function WorkflowToolCodeEditor({
     if (!view) return;
     view.dispatch({ effects: setErrorLineEffect.of(errorLine ?? null) });
     if (errorLine != null && errorLine >= 1) {
-      const line = view.state.doc.line(Math.min(errorLine, view.state.doc.lines));
+      const line = view.state.doc.line(
+        Math.min(errorLine, view.state.doc.lines),
+      );
       view.dispatch({
         effects: EditorView.scrollIntoView(line.from, { y: "center" }),
       });
@@ -100,7 +102,7 @@ export function WorkflowToolCodeEditor({
       className={cn(
         "h-full min-h-[280px] overflow-auto font-mono text-sm",
         "[&_.cm-editor]:min-h-[280px] [&_.cm-scroller]:min-h-[280px]",
-        errorLine != null && "ring-2 ring-red-500/60 ring-inset rounded-sm",
+        errorLine != null && "rounded-sm ring-2 ring-red-500/60 ring-inset",
         className,
       )}
       basicSetup={{

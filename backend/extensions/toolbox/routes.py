@@ -22,10 +22,7 @@ router = APIRouter(prefix="/api", tags=["toolbox"])
 async def api_list_tools(_user: CurrentUser = Depends(get_current_user)) -> dict[str, Any]:
     """List available tools from config (name, group). For toolbox catalog UI."""
     config = get_app_config()
-    items = [
-        {"name": t.name, "group": t.group}
-        for t in config.tools
-    ]
+    items = [{"name": t.name, "group": t.group} for t in config.tools]
     return {"tools": items}
 
 

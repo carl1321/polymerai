@@ -4,8 +4,8 @@
  * Requires app_database and toolbox routes to be enabled on the backend.
  */
 
-import { getBackendBaseURL } from "@/core/config";
 import { getAuthHeaders } from "@/core/auth";
+import { getBackendBaseURL } from "@/core/config";
 
 const base = () => getBackendBaseURL() || "";
 

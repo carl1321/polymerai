@@ -5,9 +5,17 @@
 
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { GitBranch, Loader2, CheckCircle2, XCircle } from "lucide-react";
+
 import { cn } from "~/lib/utils";
 
-type ExecutionStatus = "pending" | "ready" | "running" | "success" | "error" | "skipped" | "cancelled";
+type ExecutionStatus =
+  | "pending"
+  | "ready"
+  | "running"
+  | "success"
+  | "error"
+  | "skipped"
+  | "cancelled";
 
 type ConditionNodeData = {
   executionStatus?: ExecutionStatus;
@@ -17,7 +25,10 @@ type ConditionNodeData = {
 
 type ConditionNodeType = Node<ConditionNodeData>;
 
-export function ConditionNode({ data, selected }: NodeProps<ConditionNodeType>) {
+export function ConditionNode({
+  data,
+  selected,
+}: NodeProps<ConditionNodeType>) {
   const executionStatus: ExecutionStatus = data.executionStatus ?? "pending";
   const statusColors = {
     pending: "border-yellow-500",
@@ -29,7 +40,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeType>) 
     skipped: "border-gray-400",
     cancelled: "border-gray-500",
   };
-  
+
   const borderColor = selected
     ? "border-primary shadow-md"
     : `${statusColors[executionStatus] || statusColors.pending} hover:border-yellow-600`;
@@ -47,8 +58,8 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeType>) 
   return (
     <div
       className={cn(
-        "rounded-lg border-2 p-1.5 shadow-sm transition-all bg-card",
-        borderColor
+        "bg-card rounded-lg border-2 p-1.5 shadow-sm transition-all",
+        borderColor,
       )}
       style={{ width: "140px" }}
     >
@@ -56,31 +67,32 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeType>) 
         <div className="flex h-5 w-5 items-center justify-center rounded bg-yellow-100 dark:bg-yellow-900/30">
           <GitBranch className="h-2.5 w-2.5 text-yellow-600 dark:text-yellow-400" />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1">
-            <div className="font-semibold text-xs truncate text-foreground">{data.displayName || data.label || "条件"}</div>
+            <div className="text-foreground truncate text-xs font-semibold">
+              {data.displayName || data.label || "条件"}
+            </div>
             {statusIcons[executionStatus]}
           </div>
         </div>
       </div>
-      <Handle 
-        type="target" 
+      <Handle
+        type="target"
         position={Position.Left}
-        className="!bg-muted-foreground !w-2.5 !h-2.5 !border-2 !border-card !cursor-crosshair" 
+        className="!bg-muted-foreground !border-card !h-2.5 !w-2.5 !cursor-crosshair !border-2"
       />
-      <Handle 
-        type="source" 
+      <Handle
+        type="source"
         position={Position.Top}
         id="true"
-        className="!bg-muted-foreground !w-2.5 !h-2.5 !border-2 !border-card !cursor-crosshair" 
+        className="!bg-muted-foreground !border-card !h-2.5 !w-2.5 !cursor-crosshair !border-2"
       />
-      <Handle 
-        type="source" 
+      <Handle
+        type="source"
         position={Position.Bottom}
         id="false"
-        className="!bg-muted-foreground !w-2.5 !h-2.5 !border-2 !border-card !cursor-crosshair" 
+        className="!bg-muted-foreground !border-card !h-2.5 !w-2.5 !cursor-crosshair !border-2"
       />
     </div>
   );
 }
-

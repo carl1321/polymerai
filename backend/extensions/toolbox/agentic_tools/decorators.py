@@ -3,7 +3,8 @@
 
 import functools
 import logging
-from typing import Any, Callable, Type, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ def log_io(func: Callable) -> Callable:
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         # Log input parameters (compressed for data_extraction_tool)
         func_name = func.__name__
-        
+
         # Compress parameters for data_extraction_tool to avoid logging large base64 data
         if func_name == "data_extraction_tool":
             compressed_params = []
@@ -43,9 +44,7 @@ def log_io(func: Callable) -> Callable:
                     compressed_params.append(f"{k}={v}")
             params = ", ".join(compressed_params)
         else:
-            params = ", ".join(
-                [*(str(arg) for arg in args), *(f"{k}={v}" for k, v in kwargs.items())]
-            )
+            params = ", ".join([*(str(arg) for arg in args), *(f"{k}={v}" for k, v in kwargs.items())])
         logger.info(f"Tool {func_name} called with parameters: {params}")
 
         # Execute the function
@@ -58,11 +57,12 @@ def log_io(func: Callable) -> Callable:
                 if len(result) > 500:
                     try:
                         import json
+
                         result_json = json.loads(result)
                         if isinstance(result_json, dict) and "table_data" in result_json:
                             table_data = result_json.get("table_data", [])
                             table_count = len(table_data) if isinstance(table_data, list) else 0
-                            
+
                             # Compress categories to only show counts
                             categories = result_json.get("categories")
                             categories_summary = None
@@ -72,7 +72,7 @@ def log_io(func: Callable) -> Callable:
                                     "processes_count": len(categories.get("processes", [])),
                                     "properties_count": len(categories.get("properties", [])),
                                 }
-                            
+
                             # Compress selected_categories to only show counts
                             selected_categories = result_json.get("selected_categories")
                             selected_categories_summary = None
@@ -82,16 +82,13 @@ def log_io(func: Callable) -> Callable:
                                     "processes_count": len(selected_categories.get("processes", [])),
                                     "properties_count": len(selected_categories.get("properties", [])),
                                 }
-                            
+
                             # Compress metadata (remove large fields)
                             metadata = result_json.get("metadata")
                             metadata_summary = None
                             if metadata and isinstance(metadata, dict):
-                                metadata_summary = {
-                                    k: v for k, v in metadata.items() 
-                                    if not isinstance(v, str) or len(v) < 100
-                                }
-                            
+                                metadata_summary = {k: v for k, v in metadata.items() if not isinstance(v, str) or len(v) < 100}
+
                             # Create compressed result summary
                             compressed_result = {
                                 "step": result_json.get("step"),
@@ -140,22 +137,18 @@ class LoggedToolMixin:
     def _log_operation(self, method_name: str, *args: Any, **kwargs: Any) -> None:
         """Helper method to log tool operations."""
         tool_name = self.__class__.__name__.replace("Logged", "")
-        params = ", ".join(
-            [*(str(arg) for arg in args), *(f"{k}={v}" for k, v in kwargs.items())]
-        )
+        params = ", ".join([*(str(arg) for arg in args), *(f"{k}={v}" for k, v in kwargs.items())])
         logger.debug(f"Tool {tool_name}.{method_name} called with parameters: {params}")
 
     def _run(self, *args: Any, **kwargs: Any) -> Any:
         """Override _run method to add logging."""
         self._log_operation("_run", *args, **kwargs)
         result = super()._run(*args, **kwargs)
-        logger.debug(
-            f"Tool {self.__class__.__name__.replace('Logged', '')} returned: {result}"
-        )
+        logger.debug(f"Tool {self.__class__.__name__.replace('Logged', '')} returned: {result}")
         return result
 
 
-def create_logged_tool(base_tool_class: Type[T]) -> Type[T]:
+def create_logged_tool(base_tool_class: type[T]) -> type[T]:
     """
     Factory function to create a logged version of any tool class.
 

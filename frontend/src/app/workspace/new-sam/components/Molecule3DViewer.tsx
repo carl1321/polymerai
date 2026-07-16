@@ -9,8 +9,9 @@
  * 支持两种数据源：smiles（点击时按需调用后端生成 SDF）或 sdfUrl（从 URL 拉取 SDF）。
  */
 
-import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
+import { useEffect, useRef, useState } from "react";
+
 import { generate3DSdf } from "@/core/api/new-sam";
 
 const CDN_3DMOL = "https://3Dmol.org/build/3Dmol-min.js";
@@ -23,9 +24,15 @@ const SIZE_WAIT_TIMEOUT_MS = 5000;
 declare global {
   interface Window {
     $3Dmol?: {
-      createViewer: (element: HTMLElement, options?: Record<string, unknown>) => {
+      createViewer: (
+        element: HTMLElement,
+        options?: Record<string, unknown>,
+      ) => {
         addModel: (data: string, format: string) => void;
-        setStyle: (selection: Record<string, unknown>, style: Record<string, unknown>) => void;
+        setStyle: (
+          selection: Record<string, unknown>,
+          style: Record<string, unknown>,
+        ) => void;
         zoomTo: () => void;
         render: () => void;
         clear: () => void;
@@ -63,9 +70,13 @@ export function Molecule3DViewer({
   onError,
 }: Molecule3DViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const viewerRef = useRef<ReturnType<NonNullable<typeof window.$3Dmol>["createViewer"]> | null>(null);
+  const viewerRef = useRef<ReturnType<
+    NonNullable<typeof window.$3Dmol>["createViewer"]
+  > | null>(null);
   const [scriptReady, setScriptReady] = useState(false);
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
+    "idle",
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 若脚本已加载（例如再次打开弹窗时），直接标记就绪
@@ -76,7 +87,8 @@ export function Molecule3DViewer({
   }, []);
 
   useEffect(() => {
-    const hasInput = (smiles?.trim() ?? "") !== "" || (sdfUrl?.trim() ?? "") !== "";
+    const hasInput =
+      (smiles?.trim() ?? "") !== "" || (sdfUrl?.trim() ?? "") !== "";
     if (!hasInput || !containerRef.current || !scriptReady) return;
 
     let cancelled = false;
@@ -93,7 +105,8 @@ export function Molecule3DViewer({
 
     const initViewer = async () => {
       try {
-        const $3Dmol = typeof window !== "undefined" ? window.$3Dmol : undefined;
+        const $3Dmol =
+          typeof window !== "undefined" ? window.$3Dmol : undefined;
         const createViewer = $3Dmol?.createViewer;
         if (typeof createViewer !== "function") {
           throw new Error("3Dmol 尚未加载完成，请稍候再试");
@@ -107,13 +120,18 @@ export function Molecule3DViewer({
           // 注意：不要 trim() 掉开头空行。Mol/SDF 头部通常需要 3 行 header，
           // 用户侧常见返回是以 '\n' 开头（空行 + RDKit header + 空行 + counts line）。
           // 若 trim() 去掉开头空行，会导致 counts line 行号偏移，3Dmol 解析可能静默失败并显示空白。
-          if (!resp?.sdf || resp.sdf.trim().length === 0) throw new Error("后端未能生成 3D 结构");
+          if (!resp?.sdf || resp.sdf.trim().length === 0)
+            throw new Error("后端未能生成 3D 结构");
           sdfText = resp.sdf.trimEnd();
         } else if (sdfUrl?.trim()) {
-          const base = typeof window !== "undefined" ? window.location.origin : "";
+          const base =
+            typeof window !== "undefined" ? window.location.origin : "";
           const url = sdfUrl.startsWith("http") ? sdfUrl : `${base}${sdfUrl}`;
           const res = await fetch(url);
-          if (!res.ok) throw new Error(`加载 3D 结构失败: ${res.status}，请确认已生成 3D 结构`);
+          if (!res.ok)
+            throw new Error(
+              `加载 3D 结构失败: ${res.status}，请确认已生成 3D 结构`,
+            );
           const raw = await res.text();
           if (raw.trim().length === 0) throw new Error("3D 结构内容为空");
           sdfText = raw.trimEnd();
@@ -126,7 +144,8 @@ export function Molecule3DViewer({
         // 3Dmol 需要容器有明确尺寸（见官方文档）
         const el = containerRef.current;
         const heightPx = typeof height === "number" ? `${height}px` : height;
-        el.style.width = typeof width === "number" ? `${width}px` : String(width);
+        el.style.width =
+          typeof width === "number" ? `${width}px` : String(width);
         el.style.height = heightPx;
         el.style.minHeight = heightPx;
 
@@ -135,16 +154,21 @@ export function Molecule3DViewer({
           const done = (success: boolean) => {
             sizeWaitCleanup.resizeObserver?.disconnect();
             sizeWaitCleanup.resizeObserver = null;
-            if (sizeWaitCleanup.timeoutId) clearTimeout(sizeWaitCleanup.timeoutId);
+            if (sizeWaitCleanup.timeoutId)
+              clearTimeout(sizeWaitCleanup.timeoutId);
             sizeWaitCleanup.timeoutId = null;
-            if (sizeWaitCleanup.pollIntervalId) clearInterval(sizeWaitCleanup.pollIntervalId);
+            if (sizeWaitCleanup.pollIntervalId)
+              clearInterval(sizeWaitCleanup.pollIntervalId);
             sizeWaitCleanup.pollIntervalId = null;
             if (success) resolve();
             else reject(new Error("无法获取显示区域尺寸"));
           };
           const check = () => {
             const rect = el.getBoundingClientRect();
-            return rect.width >= MIN_CONTAINER_SIZE && rect.height >= MIN_CONTAINER_SIZE;
+            return (
+              rect.width >= MIN_CONTAINER_SIZE &&
+              rect.height >= MIN_CONTAINER_SIZE
+            );
           };
           if (check()) {
             done(true);
@@ -178,7 +202,10 @@ export function Molecule3DViewer({
           backgroundColor,
         }) as {
           addModel: (data: string, format: string) => void;
-          setStyle: (sel: Record<string, unknown>, style: Record<string, unknown>) => void;
+          setStyle: (
+            sel: Record<string, unknown>,
+            style: Record<string, unknown>,
+          ) => void;
           zoomTo: () => void;
           render: () => void;
           clear: () => void;
@@ -237,7 +264,8 @@ export function Molecule3DViewer({
       sizeWaitCleanup.resizeObserver = null;
       if (sizeWaitCleanup.timeoutId) clearTimeout(sizeWaitCleanup.timeoutId);
       sizeWaitCleanup.timeoutId = null;
-      if (sizeWaitCleanup.pollIntervalId) clearInterval(sizeWaitCleanup.pollIntervalId);
+      if (sizeWaitCleanup.pollIntervalId)
+        clearInterval(sizeWaitCleanup.pollIntervalId);
       sizeWaitCleanup.pollIntervalId = null;
       if (timeoutId) clearTimeout(timeoutId);
       if (timeoutId2) clearTimeout(timeoutId2);
@@ -252,7 +280,17 @@ export function Molecule3DViewer({
         viewerRef.current = null;
       }
     };
-  }, [sdfUrl, smiles, modelIndex, backgroundColor, scriptReady, width, height, onLoad, onError]);
+  }, [
+    sdfUrl,
+    smiles,
+    modelIndex,
+    backgroundColor,
+    scriptReady,
+    width,
+    height,
+    onLoad,
+    onError,
+  ]);
 
   const heightPx = typeof height === "number" ? `${height}px` : height;
   const widthStyle = typeof width === "number" ? `${width}px` : width;
@@ -264,16 +302,25 @@ export function Molecule3DViewer({
         strategy="lazyOnload"
         onLoad={() => setScriptReady(true)}
       />
-      <div className="relative rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 overflow-hidden" style={{ width: widthStyle, height: heightPx, minHeight: heightPx }}>
-        <div ref={containerRef} className="absolute inset-0 w-full h-full" style={{ width: "100%", height: "100%" }} />
+      <div
+        className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50"
+        style={{ width: widthStyle, height: heightPx, minHeight: heightPx }}
+      >
+        <div
+          ref={containerRef}
+          className="absolute inset-0 h-full w-full"
+          style={{ width: "100%", height: "100%" }}
+        />
         {status === "loading" && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-100/80 dark:bg-slate-800/80">
             <span className="text-sm text-slate-500">加载 3D 结构中…</span>
           </div>
         )}
         {status === "error" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-100/80 dark:bg-slate-800/80 p-4">
-            <span className="text-sm text-red-600 dark:text-red-400">{errorMessage ?? "加载失败"}</span>
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-100/80 p-4 dark:bg-slate-800/80">
+            <span className="text-sm text-red-600 dark:text-red-400">
+              {errorMessage ?? "加载失败"}
+            </span>
           </div>
         )}
         {status === "ready" && (

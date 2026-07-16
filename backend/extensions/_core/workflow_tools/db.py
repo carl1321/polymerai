@@ -74,9 +74,7 @@ def list_tools(
     if published_only:
         clauses.append("(status = 'published')")
     if catalog_only:
-        clauses.append(
-            "((source = 'script' AND status = 'published') OR (source IN ('builtin', 'mcp') AND enabled = TRUE AND status = 'published'))"
-        )
+        clauses.append("((source = 'script' AND status = 'published') OR (source IN ('builtin', 'mcp') AND enabled = TRUE AND status = 'published'))")
     sql = f"SELECT * FROM workflow_tools WHERE {' AND '.join(clauses)} ORDER BY display_name ASC"
     with conn.cursor() as cur:
         cur.execute(sql, params)

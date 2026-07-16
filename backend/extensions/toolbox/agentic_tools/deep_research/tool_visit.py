@@ -1,16 +1,12 @@
 import json
 import os
-import signal
-import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Union
+import time
+
 import requests
-from .base_tool import BaseTool
-from openai import OpenAI
-import random
-from urllib.parse import urlparse, unquote
-import time 
 import tiktoken
+from openai import OpenAI
+
+from .base_tool import BaseTool
 
 VISIT_SERVER_TIMEOUT = int(os.getenv("VISIT_SERVER_TIMEOUT", 200))
 WEBCONTENT_MAXLENGTH = int(os.getenv("WEBCONTENT_MAXLENGTH", 150000))
@@ -38,13 +34,14 @@ EXTRACTOR_PROMPT = """Please process the following webpage content and user goal
 @staticmethod
 def truncate_to_tokens(text: str, max_tokens: int = 95000) -> str:
     encoding = tiktoken.get_encoding("cl100k_base")
-    
+
     tokens = encoding.encode(text)
     if len(tokens) <= max_tokens:
         return text
-    
+
     truncated_tokens = tokens[:max_tokens]
     return encoding.decode(truncated_tokens)
+
 
 OSS_JSON_FORMAT = """# Response Formats
 ## visit_content
@@ -53,29 +50,20 @@ OSS_JSON_FORMAT = """# Response Formats
 
 class Visit(BaseTool):
     # The `description` tells the agent the functionality of this tool.
-    name = 'visit'
-    description = 'Visit webpage(s) and return the summary of the content.'
+    name = "visit"
+    description = "Visit webpage(s) and return the summary of the content."
     # The `parameters` tell the agent what input parameters the tool has.
     parameters = {
         "type": "object",
         "properties": {
-            "url": {
-                "type": ["string", "array"],
-                "items": {
-                    "type": "string"
-                    },
-                "minItems": 1,
-                "description": "The URL(s) of the webpage(s) to visit. Can be a single URL or an array of URLs."
+            "url": {"type": ["string", "array"], "items": {"type": "string"}, "minItems": 1, "description": "The URL(s) of the webpage(s) to visit. Can be a single URL or an array of URLs."},
+            "goal": {"type": "string", "description": "The goal of the visit for webpage(s)."},
         },
-        "goal": {
-                "type": "string",
-                "description": "The goal of the visit for webpage(s)."
-        }
-        },
-        "required": ["url", "goal"]
+        "required": ["url", "goal"],
     }
+
     # The `call` method is the main function of the tool.
-    def call(self, params: Union[str, dict], **kwargs) -> str:
+    def call(self, params: str | dict, **kwargs) -> str:
         try:
             url = params["url"]
             goal = params["goal"]
@@ -83,7 +71,7 @@ class Visit(BaseTool):
             return "[Visit] Invalid request format: Input must be a JSON object containing 'url' and 'goal' fields"
 
         start_time = time.time()
-        
+
         # Create log folder if it doesn't exist
         log_folder = "log"
         os.makedirs(log_folder, exist_ok=True)
@@ -92,11 +80,11 @@ class Visit(BaseTool):
             response = self.readpage_jina(url, goal)
         else:
             response = []
-            assert isinstance(url, List)
+            assert isinstance(url, list)
             start_time = time.time()
-            for u in url: 
+            for u in url:
                 if time.time() - start_time > 900:
-                    cur_response = "The useful information in {url} for user goal {goal} as follows: \n\n".format(url=url, goal=goal)
+                    cur_response = f"The useful information in {url} for user goal {goal} as follows: \n\n"
                     cur_response += "Evidence in page: \n" + "The provided webpage content could not be accessed. Please check the URL or file format." + "\n\n"
                     cur_response += "Summary: \n" + "The webpage content could not be processed, and therefore, no information is available." + "\n\n"
                 else:
@@ -106,10 +94,10 @@ class Visit(BaseTool):
                         cur_response = f"Error fetching {u}: {str(e)}"
                 response.append(cur_response)
             response = "\n=======\n".join(response)
-        
-        print(f'Summary Length {len(response)}; Summary Content {response}')
+
+        print(f"Summary Length {len(response)}; Summary Content {response}")
         return response.strip()
-        
+
     def call_server(self, msgs, max_retries=2):
         api_key = os.environ.get("API_KEY")
         url_llm = os.environ.get("API_BASE")
@@ -120,98 +108,90 @@ class Visit(BaseTool):
         )
         for attempt in range(max_retries):
             try:
-                chat_response = client.chat.completions.create(
-                    model=model_name,
-                    messages=msgs,
-                    temperature=0.7
-                )
+                chat_response = client.chat.completions.create(model=model_name, messages=msgs, temperature=0.7)
                 content = chat_response.choices[0].message.content
                 if content:
                     try:
                         json.loads(content)
                     except:
-                        # extract json from string 
-                        left = content.find('{')
-                        right = content.rfind('}') 
-                        if left != -1 and right != -1 and left <= right: 
-                            content = content[left:right+1]
+                        # extract json from string
+                        left = content.find("{")
+                        right = content.rfind("}")
+                        if left != -1 and right != -1 and left <= right:
+                            content = content[left : right + 1]
                     return content
-            except Exception as e:
+            except Exception:
                 # print(e)
                 if attempt == (max_retries - 1):
                     return ""
                 continue
 
-
     def jina_readpage(self, url: str) -> str:
         """
         Read webpage content using Jina service.
-        
+
         Args:
             url: The URL to read
-            
+
         Returns:
             str: The webpage content or error message
         """
         # 动态获取API密钥
-        jina_api_key = os.environ.get('JINA_API_KEYS')
+        jina_api_key = os.environ.get("JINA_API_KEYS")
         if not jina_api_key:
             return "[visit] Error: JINA_API_KEYS environment variable not set"
-        
+
         # URL验证和预处理
         if not self._is_valid_url(url):
             return f"[visit] Error: Invalid URL format: {url}"
-        
+
         # 检查是否是PDF或其他特殊文件类型
         if self._is_special_file_type(url):
             return f"[visit] Error: Cannot process special file type (PDF, DOC, etc.): {url}"
-        
+
         max_retries = 3
         timeout = 50  # 增加超时时间，与原始DeepResearch一致
-        
+
         for attempt in range(max_retries):
             headers = {
                 "Authorization": f"Bearer {jina_api_key}",
             }
             try:
-                response = requests.get(
-                    f"https://r.jina.ai/{url}",
-                    headers=headers,
-                    timeout=timeout
-                )
+                response = requests.get(f"https://r.jina.ai/{url}", headers=headers, timeout=timeout)
                 if response.status_code == 200:
                     webpage_content = response.text
                     return webpage_content
                 else:
                     print(response.text)
                     raise ValueError("jina readpage error")
-            except Exception as e:
+            except Exception:
                 time.sleep(0.5)  # 减少重试间隔，与原始DeepResearch一致
                 if attempt == max_retries - 1:
                     return "[visit] Failed to read page."
-                
+
         return "[visit] Failed to read page."
-    
+
     def _is_valid_url(self, url: str) -> bool:
         """验证URL格式是否有效"""
         try:
             from urllib.parse import urlparse
+
             result = urlparse(url)
             return all([result.scheme, result.netloc])
         except:
             return False
-    
+
     def _is_special_file_type(self, url: str) -> bool:
         """检查是否是特殊文件类型（PDF、DOC等）"""
-        special_extensions = ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.zip', '.rar']
+        special_extensions = [".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx", ".zip", ".rar"]
         url_lower = url.lower()
-        return any(url_lower.endswith(ext) for ext in special_extensions) or 'download' in url_lower
+        return any(url_lower.endswith(ext) for ext in special_extensions) or "download" in url_lower
 
     def html_readpage_jina(self, url: str) -> str:
         max_attempts = 8  # 增加重试次数，与原始DeepResearch一致
         for attempt in range(max_attempts):
             content = self.jina_readpage(url)
-            service = "jina"     
+            service = "jina"
             print(service)
             # 检查是否是错误消息 - 使用与原始DeepResearch相同的条件
             if content and not content.startswith("[visit] Failed to read page.") and content != "[visit] Empty content." and not content.startswith("[document_parser]"):
@@ -221,43 +201,36 @@ class Visit(BaseTool):
     def readpage_jina(self, url: str, goal: str) -> str:
         """
         Attempt to read webpage content by alternating between jina and aidata services.
-        
+
         Args:
             url: The URL to read
             goal: The goal/purpose of reading the page
-            
+
         Returns:
             str: The webpage content or error message
         """
-   
+
         summary_page_func = self.call_server
-        max_retries = int(os.getenv('VISIT_SERVER_MAX_RETRIES', 1))
+        max_retries = int(os.getenv("VISIT_SERVER_MAX_RETRIES", 1))
 
         content = self.html_readpage_jina(url)
 
         if content and not content.startswith("[visit] Failed to read page.") and content != "[visit] Empty content." and not content.startswith("[document_parser]"):
             content = truncate_to_tokens(content, max_tokens=95000)
-            messages = [{"role":"user","content": EXTRACTOR_PROMPT.format(webpage_content=content, goal=goal)}]
+            messages = [{"role": "user", "content": EXTRACTOR_PROMPT.format(webpage_content=content, goal=goal)}]
             parse_retry_times = 0
             raw = summary_page_func(messages, max_retries=max_retries)
             summary_retries = 3
             while len(raw) < 10 and summary_retries >= 0:
                 truncate_length = int(0.7 * len(content)) if summary_retries > 0 else 25000
                 status_msg = (
-                    f"[visit] Summary url[{url}] " 
-                    f"attempt {3 - summary_retries + 1}/3, "
-                    f"content length: {len(content)}, "
-                    f"truncating to {truncate_length} chars"
-                ) if summary_retries > 0 else (
-                    f"[visit] Summary url[{url}] failed after 3 attempts, "
-                    f"final truncation to 25000 chars"
+                    (f"[visit] Summary url[{url}] attempt {3 - summary_retries + 1}/3, content length: {len(content)}, truncating to {truncate_length} chars")
+                    if summary_retries > 0
+                    else (f"[visit] Summary url[{url}] failed after 3 attempts, final truncation to 25000 chars")
                 )
                 print(status_msg)
                 content = content[:truncate_length]
-                extraction_prompt = EXTRACTOR_PROMPT.format(
-                    webpage_content=content,
-                    goal=goal
-                )
+                extraction_prompt = EXTRACTOR_PROMPT.format(webpage_content=content, goal=goal)
                 messages = [{"role": "user", "content": extraction_prompt}]
                 raw = summary_page_func(messages, max_retries=max_retries)
                 summary_retries -= 1
@@ -272,25 +245,25 @@ class Visit(BaseTool):
                 except:
                     raw = summary_page_func(messages, max_retries=max_retries)
                     parse_retry_times += 1
-            
+
             if parse_retry_times >= 3:
-                useful_information = "The useful information in {url} for user goal {goal} as follows: \n\n".format(url=url, goal=goal)
+                useful_information = f"The useful information in {url} for user goal {goal} as follows: \n\n"
                 useful_information += "Evidence in page: \n" + "The provided webpage content could not be accessed. Please check the URL or file format." + "\n\n"
                 useful_information += "Summary: \n" + "The webpage content could not be processed, and therefore, no information is available." + "\n\n"
             else:
-                useful_information = "The useful information in {url} for user goal {goal} as follows: \n\n".format(url=url, goal=goal)
+                useful_information = f"The useful information in {url} for user goal {goal} as follows: \n\n"
                 useful_information += "Evidence in page: \n" + str(raw["evidence"]) + "\n\n"
                 useful_information += "Summary: \n" + str(raw["summary"]) + "\n\n"
 
             if len(useful_information) < 10 and summary_retries < 0:
                 print("[visit] Could not generate valid summary after maximum retries")
                 useful_information = "[visit] Failed to read page"
-            
+
             return useful_information
 
         # If no valid content was obtained after all retries
         else:
-            useful_information = "The useful information in {url} for user goal {goal} as follows: \n\n".format(url=url, goal=goal)
+            useful_information = f"The useful information in {url} for user goal {goal} as follows: \n\n"
             useful_information += "Evidence in page: \n" + "The provided webpage content could not be accessed. Please check the URL or file format." + "\n\n"
             useful_information += "Summary: \n" + "The webpage content could not be processed, and therefore, no information is available." + "\n\n"
             return useful_information

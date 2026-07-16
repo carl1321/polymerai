@@ -3,7 +3,6 @@
 
 "use client";
 
-import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import {
   ReactFlow,
   addEdge,
@@ -17,23 +16,23 @@ import {
   ReactFlowProvider,
   useReactFlow,
 } from "@xyflow/react";
-import type { Node, Edge, Connection, NodeTypes, EdgeChange } from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
-import { Button } from "~/components/ui/button";
+import type {
+  Node,
+  Edge,
+  Connection,
+  NodeTypes,
+  EdgeChange,
+} from "@xyflow/react";
 import { ArrowLeft, Save, Play, Copy, Loader2 } from "lucide-react";
-import { useDebouncedCallback } from "use-debounce";
-import {
-  LOOP_PADDING,
-  normalizeNodesData,
-  processNodesLayout,
-  mapRunTaskStatusToExecutionStatus,
-} from "../graph/workflow-graph-utils";
-import { workflowNodeTypes } from "../graph/workflow-node-types";
-import { NodeConfigPanel } from "./NodeConfigPanel";
-import { EdgeConfigPanel } from "./EdgeConfigPanel";
-import { NodePalette } from "./NodePalette";
 import { nanoid } from "nanoid";
 import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useState, useRef, useEffect } from "react";
+
+import "@xyflow/react/dist/style.css";
+import { toast } from "sonner";
+import { useDebouncedCallback } from "use-debounce";
+
+import { Button } from "~/components/ui/button";
 import {
   createRelease,
   createWorkflow,
@@ -47,17 +46,28 @@ import {
   uploadRunInputs,
   patchRunInput,
 } from "~/core/api/workflow";
+import { sha256Hex } from "~/core/utils/crypto";
+
+import {
+  LOOP_PADDING,
+  normalizeNodesData,
+  processNodesLayout,
+  mapRunTaskStatusToExecutionStatus,
+} from "../graph/workflow-graph-utils";
+import { workflowNodeTypes } from "../graph/workflow-node-types";
+
+import { EdgeConfigPanel } from "./EdgeConfigPanel";
+import { NodeConfigPanel } from "./NodeConfigPanel";
+import { NodePalette } from "./NodePalette";
+import {
+  llmNodeIdsAffectedByEdgeChange,
+  syncAutoLlmPromptsOnNodes,
+} from "./utils/upstream";
 import {
   WorkflowRunDialog,
   type StartInputFieldDef,
   type StartFilesDef,
 } from "./WorkflowRunDialog";
-import { sha256Hex } from "~/core/utils/crypto";
-import { toast } from "sonner";
-import {
-  llmNodeIdsAffectedByEdgeChange,
-  syncAutoLlmPromptsOnNodes,
-} from "./utils/upstream";
 
 const nodeTypes: NodeTypes = workflowNodeTypes;
 
@@ -66,7 +76,10 @@ interface WorkflowEditorProps {
   workflowName: string;
   initialNodes: Node[];
   initialEdges: Edge[];
-  onSave: (graph: { nodes: Node[]; edges: Edge[] }, isAutosave?: boolean) => Promise<any>;
+  onSave: (
+    graph: { nodes: Node[]; edges: Edge[] },
+    isAutosave?: boolean,
+  ) => Promise<any>;
   onBack: () => void;
 }
 
@@ -79,23 +92,31 @@ function WorkflowEditorInner({
   onBack,
 }: WorkflowEditorProps) {
   // 使用 useMemo 初始化节点状态，避免 useEffect 中的二次渲染导致的闪烁
-  const initialProcessedNodes = useMemo(() => processNodesLayout(initialNodes), [initialNodes]);
-  
-  const [nodes, setNodes, onNodesChangeRaw] = useNodesState(initialProcessedNodes);
+  const initialProcessedNodes = useMemo(
+    () => processNodesLayout(initialNodes),
+    [initialNodes],
+  );
+
+  const [nodes, setNodes, onNodesChangeRaw] = useNodesState(
+    initialProcessedNodes,
+  );
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  
+
   // 保持 normalizeNodes 引用以兼容旧代码（虽然现在主要使用 normalizeNodesData）
-  const normalizeNodes = useCallback((nodes: Node[]) => normalizeNodesData(nodes), []);
+  const normalizeNodes = useCallback(
+    (nodes: Node[]) => normalizeNodesData(nodes),
+    [],
+  );
 
   // 包装 setNodes，确保所有节点更新都经过规范化
   const setNodesNormalized = useCallback(
     (updater: Node[] | ((nodes: Node[]) => Node[])) => {
       setNodes((nds) => {
-        const newNodes = typeof updater === 'function' ? updater(nds) : updater;
+        const newNodes = typeof updater === "function" ? updater(nds) : updater;
         return normalizeNodesData(newNodes);
       });
     },
-    [setNodes]
+    [setNodes],
   );
 
   // 重置所有节点状态为初始 ready 状态（需在下方 useEffect 之前定义，避免 TDZ）
@@ -108,122 +129,144 @@ function WorkflowEditorInner({
           executionStatus: "ready" as const,
           executionResult: undefined,
         },
-      }))
+      })),
     );
   }, [setNodesNormalized]);
-  
+
   // 这里的 processNodes 仅仅是为了兼容可能的内部调用，实际逻辑已提取到 processNodesLayout
-  const processNodes = useCallback((nodes: Node[]) => processNodesLayout(nodes), []);
+  const processNodes = useCallback(
+    (nodes: Node[]) => processNodesLayout(nodes),
+    [],
+  );
 
   // 修改 onNodesChange 逻辑
   const onNodesChange = useCallback(
     (changes: any) => {
       onNodesChangeRaw(changes);
     },
-    [onNodesChangeRaw]
+    [onNodesChangeRaw],
   );
 
   // 处理拖拽结束，检测是否进入/离开循环
-  const onNodeDragStop = useCallback((_: React.MouseEvent, node: Node) => {
+  const onNodeDragStop = useCallback(
+    (_: React.MouseEvent, node: Node) => {
       // 获取最新的节点列表（包括位置更新后的）
       // 注意：这里需要通过回调获取最新 state，或者依赖 nodes
       // 但 onNodeDragStop 的 node 参数是拖拽后的最新状态
-      
-      setNodes((nds) => {
-          const currentNode = nds.find(n => n.id === node.id);
-          if (!currentNode) return nds;
-          
-          // 如果节点是 loop，更新其尺寸数据（如果被resize）
-          if (currentNode.type === "loop") return nds;
-          
-          // 查找所有循环节点
-          const loopNodes = nds.filter(n => n.type === "loop");
-          const nodeBounds = {
-              x: node.position.x,
-              y: node.position.y,
-              width: node.width || 160,
-              height: node.height || 60
-          };
-          
-          // 如果节点已经有 parentId，position 是相对的，需要转绝对来检测是否拖出
-          let absoluteX = node.position.x;
-          let absoluteY = node.position.y;
-          const currentParent = nds.find(n => n.id === node.parentId);
-          
-          if (currentParent) {
-              absoluteX += currentParent.position.x;
-              absoluteY += currentParent.position.y;
-          }
-          
-          const centerX = absoluteX + nodeBounds.width / 2;
-          const centerY = absoluteY + nodeBounds.height / 2;
 
-          // 检测是否在某个 loop 内
-          let targetLoop: Node | undefined;
-          for (const loop of loopNodes) {
-              const loopWRaw = loop.data?.loopWidth ?? loop.width;
-              const loopHRaw = loop.data?.loopHeight ?? loop.height;
-              const loopWNum = typeof loopWRaw === "number" ? loopWRaw : Number(loopWRaw);
-              const loopHNum = typeof loopHRaw === "number" ? loopHRaw : Number(loopHRaw);
-              const loopW = Number.isFinite(loopWNum) ? loopWNum : 600;
-              const loopH = Number.isFinite(loopHNum) ? loopHNum : 400;
-              
-              if (
-                  centerX >= loop.position.x + LOOP_PADDING.left &&
-                  centerX <= loop.position.x + loopW - LOOP_PADDING.right &&
-                  centerY >= loop.position.y + LOOP_PADDING.top &&
-                  centerY <= loop.position.y + loopH - LOOP_PADDING.bottom
-              ) {
-                  targetLoop = loop;
-                  break;
-              }
+      setNodes((nds) => {
+        const currentNode = nds.find((n) => n.id === node.id);
+        if (!currentNode) return nds;
+
+        // 如果节点是 loop，更新其尺寸数据（如果被resize）
+        if (currentNode.type === "loop") return nds;
+
+        // 查找所有循环节点
+        const loopNodes = nds.filter((n) => n.type === "loop");
+        const nodeBounds = {
+          x: node.position.x,
+          y: node.position.y,
+          width: node.width || 160,
+          height: node.height || 60,
+        };
+
+        // 如果节点已经有 parentId，position 是相对的，需要转绝对来检测是否拖出
+        let absoluteX = node.position.x;
+        let absoluteY = node.position.y;
+        const currentParent = nds.find((n) => n.id === node.parentId);
+
+        if (currentParent) {
+          absoluteX += currentParent.position.x;
+          absoluteY += currentParent.position.y;
+        }
+
+        const centerX = absoluteX + nodeBounds.width / 2;
+        const centerY = absoluteY + nodeBounds.height / 2;
+
+        // 检测是否在某个 loop 内
+        let targetLoop: Node | undefined;
+        for (const loop of loopNodes) {
+          const loopWRaw = loop.data?.loopWidth ?? loop.width;
+          const loopHRaw = loop.data?.loopHeight ?? loop.height;
+          const loopWNum =
+            typeof loopWRaw === "number" ? loopWRaw : Number(loopWRaw);
+          const loopHNum =
+            typeof loopHRaw === "number" ? loopHRaw : Number(loopHRaw);
+          const loopW = Number.isFinite(loopWNum) ? loopWNum : 600;
+          const loopH = Number.isFinite(loopHNum) ? loopHNum : 400;
+
+          if (
+            centerX >= loop.position.x + LOOP_PADDING.left &&
+            centerX <= loop.position.x + loopW - LOOP_PADDING.right &&
+            centerY >= loop.position.y + LOOP_PADDING.top &&
+            centerY <= loop.position.y + loopH - LOOP_PADDING.bottom
+          ) {
+            targetLoop = loop;
+            break;
           }
-          
-          // 状态更新
-          if (targetLoop) {
-              // 进入或仍在 Loop 中
-              if (currentNode.parentId !== targetLoop.id) {
-                  // 进入新 Loop
-                  const relativeX = absoluteX - targetLoop.position.x;
-                  const relativeY = absoluteY - targetLoop.position.y;
-                  
-                  return nds.map(n => n.id === node.id ? {
-                      ...n,
-                      parentId: targetLoop!.id,
-                      position: { x: relativeX, y: relativeY },
-                      extent: "parent",
-                      data: { ...n.data, loopId: targetLoop!.id, loop_id: targetLoop!.id }
-                  } : n);
-              }
-              // 仍在同一个 Loop 中，ReactFlow 已更新位置，不需要额外处理
-              // 但可以强制更新 data.relativeX 等如果需要
-              return nds; 
-          } else {
-              // 不在任何 Loop 中
-              if (currentNode.parentId) {
-                  // 刚刚拖出 Loop
-                  return nds.map(n => n.id === node.id ? {
-                      ...n,
-                      parentId: undefined,
-                      extent: undefined,
-                      position: { x: absoluteX, y: absoluteY }, // 恢复绝对坐标
-                      data: { 
-                          ...n.data, 
-                          loopId: undefined, 
-                          loop_id: undefined, 
-                          isLoopChild: undefined 
-                       }
-                  } : n);
-              }
+        }
+
+        // 状态更新
+        if (targetLoop) {
+          // 进入或仍在 Loop 中
+          if (currentNode.parentId !== targetLoop.id) {
+            // 进入新 Loop
+            const relativeX = absoluteX - targetLoop.position.x;
+            const relativeY = absoluteY - targetLoop.position.y;
+
+            return nds.map((n) =>
+              n.id === node.id
+                ? {
+                    ...n,
+                    parentId: targetLoop.id,
+                    position: { x: relativeX, y: relativeY },
+                    extent: "parent",
+                    data: {
+                      ...n.data,
+                      loopId: targetLoop.id,
+                      loop_id: targetLoop.id,
+                    },
+                  }
+                : n,
+            );
           }
-          
+          // 仍在同一个 Loop 中，ReactFlow 已更新位置，不需要额外处理
+          // 但可以强制更新 data.relativeX 等如果需要
           return nds;
+        } else {
+          // 不在任何 Loop 中
+          if (currentNode.parentId) {
+            // 刚刚拖出 Loop
+            return nds.map((n) =>
+              n.id === node.id
+                ? {
+                    ...n,
+                    parentId: undefined,
+                    extent: undefined,
+                    position: { x: absoluteX, y: absoluteY }, // 恢复绝对坐标
+                    data: {
+                      ...n.data,
+                      loopId: undefined,
+                      loop_id: undefined,
+                      isLoopChild: undefined,
+                    },
+                  }
+                : n,
+            );
+          }
+        }
+
+        return nds;
       });
-  }, [setNodes]);
+    },
+    [setNodes],
+  );
 
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveStatus, setSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
   const [nodeTypeToAdd, setNodeTypeToAdd] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [runDialogOpen, setRunDialogOpen] = useState(false);
@@ -236,42 +279,45 @@ function WorkflowEditorInner({
   const router = useRouter();
   const { screenToFlowPosition, addNodes, fitView } = useReactFlow();
 
-  const computeNextCopyName = useCallback(async (baseName: string): Promise<string> => {
-    // 需求：名称后面加 1；若已存在则自动递增，避免重名带来的创建失败
-    const trimmed = (baseName || "").trim() || "未命名工作流";
-    let stem = trimmed;
-    let startNum = 1;
-    const m = trimmed.match(/^(.*?)(\d+)$/);
-    if (m) {
-      stem = m[1] || trimmed;
-      startNum = (parseInt(m[2] ?? "0", 10) || 0) + 1;
-    }
-
-    const existing = new Set<string>();
-    try {
-      const res = await listWorkflows({ limit: 500 });
-      for (const w of res.workflows || []) {
-        if (w?.name) existing.add(String(w.name));
+  const computeNextCopyName = useCallback(
+    async (baseName: string): Promise<string> => {
+      // 需求：名称后面加 1；若已存在则自动递增，避免重名带来的创建失败
+      const trimmed = (baseName || "").trim() || "未命名工作流";
+      let stem = trimmed;
+      let startNum = 1;
+      const m = /^(.*?)(\d+)$/.exec(trimmed);
+      if (m) {
+        stem = m[1] || trimmed;
+        startNum = (parseInt(m[2] ?? "0", 10) || 0) + 1;
       }
-    } catch {
-      // 忽略：如果列表加载失败，就退化为最简单的 `${name}1`
-    }
 
-    // 优先满足“追加 1”的直觉：若原名不带数字，先尝试 `${name}1`
-    if (!m) {
-      const candidate = `${trimmed}1`;
-      if (!existing.has(candidate)) return candidate;
-      // 冲突则递增
-      let i = 2;
-      while (existing.has(`${trimmed}${i}`) && i < 1000) i += 1;
-      return `${trimmed}${i}`;
-    }
+      const existing = new Set<string>();
+      try {
+        const res = await listWorkflows({ limit: 500 });
+        for (const w of res.workflows || []) {
+          if (w?.name) existing.add(String(w.name));
+        }
+      } catch {
+        // 忽略：如果列表加载失败，就退化为最简单的 `${name}1`
+      }
 
-    // 原名本身带数字：使用递增后的数字
-    let i = startNum;
-    while (existing.has(`${stem}${i}`) && i < 1000) i += 1;
-    return `${stem}${i}`;
-  }, []);
+      // 优先满足“追加 1”的直觉：若原名不带数字，先尝试 `${name}1`
+      if (!m) {
+        const candidate = `${trimmed}1`;
+        if (!existing.has(candidate)) return candidate;
+        // 冲突则递增
+        let i = 2;
+        while (existing.has(`${trimmed}${i}`) && i < 1000) i += 1;
+        return `${trimmed}${i}`;
+      }
+
+      // 原名本身带数字：使用递增后的数字
+      let i = startNum;
+      while (existing.has(`${stem}${i}`) && i < 1000) i += 1;
+      return `${stem}${i}`;
+    },
+    [],
+  );
 
   const handleDuplicateWorkflow = useCallback(async () => {
     if (isDuplicating) return;
@@ -283,7 +329,9 @@ function WorkflowEditorInner({
 
       // 2) 读取当前工作流信息（用于复制 description/status）
       const wf = await getWorkflow(workflowId);
-      const newName = await computeNextCopyName(wf?.name || workflowName || "未命名工作流");
+      const newName = await computeNextCopyName(
+        wf?.name || workflowName || "未命名工作流",
+      );
 
       // 3) 创建新工作流
       const newWf = await createWorkflow({
@@ -308,8 +356,17 @@ function WorkflowEditorInner({
     } finally {
       setIsDuplicating(false);
     }
-  }, [isDuplicating, onSave, nodes, edges, workflowId, workflowName, computeNextCopyName, router]);
-  
+  }, [
+    isDuplicating,
+    onSave,
+    nodes,
+    edges,
+    workflowId,
+    workflowName,
+    computeNextCopyName,
+    router,
+  ]);
+
   // 初始化画布视图：等待布局稳定后显示
   useEffect(() => {
     // 延迟一帧执行 fitView，确保 ReactFlow 内部节点已挂载
@@ -321,7 +378,7 @@ function WorkflowEditorInner({
         setIsReady(true);
       }, 50);
     });
-    
+
     return () => cancelAnimationFrame(timer);
   }, [fitView]);
 
@@ -344,22 +401,22 @@ function WorkflowEditorInner({
         setTimeout(() => setSaveStatus("idle"), 3000);
       }
     },
-    2000 // 从 500ms 增加到 2000ms
+    2000, // 从 500ms 增加到 2000ms
   );
 
   // 当节点或边变化时，触发自动保存
   // 只在真正重要的变化时才保存（忽略位置变化）
-  const prevGraphRef = useRef<{ 
-    nodeIds: string[]; 
+  const prevGraphRef = useRef<{
+    nodeIds: string[];
     edgeIds: string[];
     nodes: Node[]; // 保存之前的节点数据用于比较
   } | null>(null);
-  
+
   useEffect(() => {
     // 计算当前图的结构（只关注节点和边的ID，忽略位置等）
     const currentGraph = {
-      nodeIds: nodes.map(n => n.id).sort(),
-      edgeIds: edges.map(e => `${e.source}-${e.target}`).sort(),
+      nodeIds: nodes.map((n) => n.id).sort(),
+      edgeIds: edges.map((e) => `${e.source}-${e.target}`).sort(),
       nodes: nodes, // 保存当前节点数据
     };
 
@@ -370,26 +427,37 @@ function WorkflowEditorInner({
     }
 
     // 检查是否有结构性的变化（添加/删除节点或边）
-    const hasStructuralChange = 
-      JSON.stringify(currentGraph.nodeIds) !== JSON.stringify(prevGraphRef.current.nodeIds) ||
-      JSON.stringify(currentGraph.edgeIds) !== JSON.stringify(prevGraphRef.current.edgeIds);
+    const hasStructuralChange =
+      JSON.stringify(currentGraph.nodeIds) !==
+        JSON.stringify(prevGraphRef.current.nodeIds) ||
+      JSON.stringify(currentGraph.edgeIds) !==
+        JSON.stringify(prevGraphRef.current.edgeIds);
 
     // 检查是否有节点配置变化（通过比较节点的关键属性）
     const hasConfigChange = nodes.some((node) => {
-      const prevNode = prevGraphRef.current?.nodes.find(n => n.id === node.id);
+      const prevNode = prevGraphRef.current?.nodes.find(
+        (n) => n.id === node.id,
+      );
       if (!prevNode) return true; // 新节点
-      
+
       // 比较关键配置属性（忽略位置、选择状态等）
       return (
         node.data?.taskName !== prevNode.data?.taskName ||
         node.data?.displayName !== prevNode.data?.displayName ||
-        JSON.stringify(node.data?.llmPrompt) !== JSON.stringify(prevNode.data?.llmPrompt) ||
-        JSON.stringify(node.data?.llmSystemPrompt) !== JSON.stringify(prevNode.data?.llmSystemPrompt) ||
-        JSON.stringify(node.data?.llmModel) !== JSON.stringify(prevNode.data?.llmModel) ||
-        JSON.stringify(node.data?.toolName) !== JSON.stringify(prevNode.data?.toolName) ||
-        JSON.stringify(node.data?.toolParams) !== JSON.stringify(prevNode.data?.toolParams) ||
-        JSON.stringify(node.data?.conditionExpression) !== JSON.stringify(prevNode.data?.conditionExpression) ||
-        JSON.stringify(node.data?.startInputInfo) !== JSON.stringify(prevNode.data?.startInputInfo)
+        JSON.stringify(node.data?.llmPrompt) !==
+          JSON.stringify(prevNode.data?.llmPrompt) ||
+        JSON.stringify(node.data?.llmSystemPrompt) !==
+          JSON.stringify(prevNode.data?.llmSystemPrompt) ||
+        JSON.stringify(node.data?.llmModel) !==
+          JSON.stringify(prevNode.data?.llmModel) ||
+        JSON.stringify(node.data?.toolName) !==
+          JSON.stringify(prevNode.data?.toolName) ||
+        JSON.stringify(node.data?.toolParams) !==
+          JSON.stringify(prevNode.data?.toolParams) ||
+        JSON.stringify(node.data?.conditionExpression) !==
+          JSON.stringify(prevNode.data?.conditionExpression) ||
+        JSON.stringify(node.data?.startInputInfo) !==
+          JSON.stringify(prevNode.data?.startInputInfo)
       );
     });
 
@@ -398,7 +466,7 @@ function WorkflowEditorInner({
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
-      
+
       // 增加延迟时间，从 1000ms 增加到 3000ms
       saveTimeoutRef.current = setTimeout(() => {
         debouncedSave({ nodes, edges });
@@ -431,99 +499,129 @@ function WorkflowEditorInner({
   }, [nodes, edges, onSave]);
 
   // 更新节点执行状态
-  const updateNodeExecutionStatus = useCallback((nodeId: string, status: "pending" | "ready" | "running" | "success" | "error" | "skipped" | "cancelled", resultData?: any) => {
-    setNodesNormalized((nds) => {
-      const nodeExists = nds.find(n => n.id === nodeId);
-      if (!nodeExists) {
-        console.warn(`节点 ${nodeId} 不存在于当前工作流中，无法更新状态`);
-        return nds; // 如果节点不存在，返回原数组
-      }
-      
-      return nds.map((node) => {
-        if (node.id === nodeId) {
+  const updateNodeExecutionStatus = useCallback(
+    (
+      nodeId: string,
+      status:
+        | "pending"
+        | "ready"
+        | "running"
+        | "success"
+        | "error"
+        | "skipped"
+        | "cancelled",
+      resultData?: any,
+    ) => {
+      setNodesNormalized((nds) => {
+        const nodeExists = nds.find((n) => n.id === nodeId);
+        if (!nodeExists) {
+          console.warn(`节点 ${nodeId} 不存在于当前工作流中，无法更新状态`);
+          return nds; // 如果节点不存在，返回原数组
+        }
+
+        return nds.map((node) => {
+          if (node.id === nodeId) {
+            const newData: any = {
+              ...node.data,
+              executionStatus: status,
+            };
+
+            if (resultData) {
+              const existingResult: any =
+                (node.data as any)?.executionResult ?? {};
+              const newResult: any = {
+                ...existingResult,
+                ...resultData,
+              };
+
+              // 如果是循环体内的节点，且payload包含iteration信息，需要合并iteration_outputs
+              if (
+                resultData.outputs?.iteration_outputs &&
+                Array.isArray(resultData.outputs.iteration_outputs)
+              ) {
+                // 合并iteration_outputs数组
+                const existingIterationOutputs =
+                  existingResult.outputs?.iteration_outputs || [];
+                newResult.outputs = {
+                  ...existingResult.outputs,
+                  ...resultData.outputs,
+                  iteration_outputs: [
+                    ...existingIterationOutputs,
+                    ...resultData.outputs.iteration_outputs,
+                  ],
+                };
+              } else if (resultData.outputs) {
+                // 普通更新
+                newResult.outputs = {
+                  ...existingResult.outputs,
+                  ...resultData.outputs,
+                };
+              }
+
+              newData.executionResult = newResult;
+            }
+
+            return {
+              ...node,
+              data: newData,
+            };
+          }
+          return node;
+        });
+      });
+      // 同时更新选中的节点
+      setSelectedNode((prev) => {
+        if (prev && prev.id === nodeId) {
           const newData: any = {
-            ...node.data,
+            ...prev.data,
             executionStatus: status,
           };
-          
+
           if (resultData) {
-            const existingResult: any = (node.data as any)?.executionResult ?? {};
+            const existingResult: any =
+              (prev.data as any)?.executionResult ?? {};
             const newResult: any = {
               ...existingResult,
-              ...resultData
+              ...resultData,
             };
-            
+
             // 如果是循环体内的节点，且payload包含iteration信息，需要合并iteration_outputs
-            if (resultData.outputs?.iteration_outputs && Array.isArray(resultData.outputs.iteration_outputs)) {
+            if (
+              resultData.outputs?.iteration_outputs &&
+              Array.isArray(resultData.outputs.iteration_outputs)
+            ) {
               // 合并iteration_outputs数组
-              const existingIterationOutputs = existingResult.outputs?.iteration_outputs || [];
+              const existingIterationOutputs =
+                existingResult.outputs?.iteration_outputs || [];
               newResult.outputs = {
                 ...existingResult.outputs,
                 ...resultData.outputs,
-                iteration_outputs: [...existingIterationOutputs, ...resultData.outputs.iteration_outputs]
+                iteration_outputs: [
+                  ...existingIterationOutputs,
+                  ...resultData.outputs.iteration_outputs,
+                ],
               };
             } else if (resultData.outputs) {
               // 普通更新
               newResult.outputs = {
                 ...existingResult.outputs,
-                ...resultData.outputs
+                ...resultData.outputs,
               };
             }
-            
+
             newData.executionResult = newResult;
           }
-          
+
           return {
-            ...node,
+            ...prev,
             data: newData,
           };
         }
-        return node;
+        return prev;
       });
-    });
-    // 同时更新选中的节点
-    setSelectedNode((prev) => {
-      if (prev && prev.id === nodeId) {
-        const newData: any = {
-          ...prev.data,
-          executionStatus: status,
-        };
-        
-        if (resultData) {
-          const existingResult: any = (prev.data as any)?.executionResult ?? {};
-          const newResult: any = {
-            ...existingResult,
-            ...resultData
-          };
-          
-          // 如果是循环体内的节点，且payload包含iteration信息，需要合并iteration_outputs
-          if (resultData.outputs?.iteration_outputs && Array.isArray(resultData.outputs.iteration_outputs)) {
-            // 合并iteration_outputs数组
-            const existingIterationOutputs = existingResult.outputs?.iteration_outputs || [];
-            newResult.outputs = {
-              ...existingResult.outputs,
-              ...resultData.outputs,
-              iteration_outputs: [...existingIterationOutputs, ...resultData.outputs.iteration_outputs]
-            };
-          } else if (resultData.outputs) {
-            // 普通更新
-            newResult.outputs = {
-              ...existingResult.outputs,
-              ...resultData.outputs
-            };
-          }
-          
-          newData.executionResult = newResult;
-        }
-        
-        return {
-          ...prev,
-          data: newData,
-        };
-      }
-      return prev;
-    });
-  }, [setNodesNormalized]);
+    },
+    [setNodesNormalized],
+  );
 
   const startNodeForRun = useMemo(
     () => nodes.find((n) => n.type === "start"),
@@ -560,7 +658,11 @@ function WorkflowEditorInner({
           })),
         };
         const checksum = await sha256Hex(JSON.stringify(spec));
-        await createRelease(workflowId, { source_draft_id: draft.id, spec, checksum });
+        await createRelease(workflowId, {
+          source_draft_id: draft.id,
+          spec,
+          checksum,
+        });
 
         const created = await createRun(workflowId, {}, { source: "ui" });
         const runId = created.run_id;
@@ -612,7 +714,9 @@ function WorkflowEditorInner({
             nds.map((n) => {
               const t = byNode[n.id];
               if (!t) return n;
-              const mapped = mapRunTaskStatusToExecutionStatus(String(t.status));
+              const mapped = mapRunTaskStatusToExecutionStatus(
+                String(t.status),
+              );
               return {
                 ...n,
                 data: {
@@ -634,12 +738,16 @@ function WorkflowEditorInner({
           const isSuspended =
             runStatus === "awaiting_external" ||
             tasks.some((t) => String(t.status) === "awaiting_external");
-          const anyTaskFailed = tasks.some((t) => String(t.status) === "failed");
+          const anyTaskFailed = tasks.some(
+            (t) => String(t.status) === "failed",
+          );
           const allTasksTerminal =
             tasks.length > 0 &&
             tasks.every((t) => terminalTaskStatuses.has(String(t.status)));
           const anyTaskActive = tasks.some((t) =>
-            ["pending", "ready", "running", "awaiting_external"].includes(String(t.status)),
+            ["pending", "ready", "running", "awaiting_external"].includes(
+              String(t.status),
+            ),
           );
           const runComplete =
             runStatus === "success" &&
@@ -679,7 +787,15 @@ function WorkflowEditorInner({
         setRunDialogOpen(false);
       }
     },
-    [nodes, edges, onSave, workflowId, workflowName, resetAllNodeStatuses, setNodesNormalized],
+    [
+      nodes,
+      edges,
+      onSave,
+      workflowId,
+      workflowName,
+      resetAllNodeStatuses,
+      setNodesNormalized,
+    ],
   );
 
   const handleRun = useCallback(() => {
@@ -693,13 +809,18 @@ function WorkflowEditorInner({
       fileFieldKeys: string[];
     }) => {
       setRunDialogSubmitting(true);
-      const startData = (startNodeForRun?.data ?? {}) as Record<string, unknown>;
+      const startData = startNodeForRun?.data ?? {};
       const startInputInfo =
-        typeof startData.startInputInfo === "string" ? startData.startInputInfo : "";
+        typeof startData.startInputInfo === "string"
+          ? startData.startInputInfo
+          : "";
       const runInputs: Record<string, unknown> = { ...payload.values };
       if (startInputInfo.trim()) {
         runInputs.input = startInputInfo.trim();
-      } else if (typeof payload.values.input === "string" && payload.values.input.trim()) {
+      } else if (
+        typeof payload.values.input === "string" &&
+        payload.values.input.trim()
+      ) {
         runInputs.input = payload.values.input.trim();
       }
       await executeWorkflowRun(runInputs, {
@@ -748,7 +869,7 @@ function WorkflowEditorInner({
       if (!params.target) return;
       setEdges((eds) => {
         const nextEds = addEdge(params, eds);
-        syncLlmPromptsAfterEdgeChange([params.target!], nextEds);
+        syncLlmPromptsAfterEdgeChange([params.target], nextEds);
         return nextEds;
       });
     },
@@ -778,10 +899,16 @@ function WorkflowEditorInner({
               ...data,
             };
             // 确保 nodeName 和 displayName 始终是字符串
-            if (updatedData.nodeName !== undefined && updatedData.nodeName !== null) {
+            if (
+              updatedData.nodeName !== undefined &&
+              updatedData.nodeName !== null
+            ) {
               updatedData.nodeName = String(updatedData.nodeName);
             }
-            if (updatedData.displayName !== undefined && updatedData.displayName !== null) {
+            if (
+              updatedData.displayName !== undefined &&
+              updatedData.displayName !== null
+            ) {
               updatedData.displayName = String(updatedData.displayName);
             }
             // 确保 label 也是字符串（如果存在）
@@ -791,7 +918,7 @@ function WorkflowEditorInner({
             return { ...node, data: updatedData };
           }
           return node;
-        })
+        }),
       );
       setSelectedNode((prev) => {
         if (prev && prev.id === nodeId) {
@@ -800,10 +927,16 @@ function WorkflowEditorInner({
             ...data,
           };
           // 确保 nodeName 和 displayName 始终是字符串
-          if (updatedData.taskName !== undefined && updatedData.taskName !== null) {
+          if (
+            updatedData.taskName !== undefined &&
+            updatedData.taskName !== null
+          ) {
             updatedData.taskName = String(updatedData.taskName);
           }
-          if (updatedData.displayName !== undefined && updatedData.displayName !== null) {
+          if (
+            updatedData.displayName !== undefined &&
+            updatedData.displayName !== null
+          ) {
             updatedData.displayName = String(updatedData.displayName);
           }
           if (updatedData.label !== undefined && updatedData.label !== null) {
@@ -814,90 +947,106 @@ function WorkflowEditorInner({
         return prev;
       });
     },
-    [setNodes]
+    [setNodes],
   );
 
   // 更新边数据
   const handleEdgeUpdate = useCallback(
     (edgeId: string, data: any) => {
       setEdges((eds) =>
-        eds.map((edge) => (edge.id === edgeId ? { ...edge, data } : edge))
+        eds.map((edge) => (edge.id === edgeId ? { ...edge, data } : edge)),
       );
-      setSelectedEdge((prev) => (prev && prev.id === edgeId ? { ...prev, data } : prev));
+      setSelectedEdge((prev) =>
+        prev && prev.id === edgeId ? { ...prev, data } : prev,
+      );
     },
-    [setEdges]
+    [setEdges],
   );
 
   // 删除节点和边
-  const onNodesDelete = useCallback((deleted: Node[]) => {
-    const deletedLoopIds = deleted.filter((n) => n.type === "loop").map((n) => n.id);
+  const onNodesDelete = useCallback(
+    (deleted: Node[]) => {
+      const deletedLoopIds = deleted
+        .filter((n) => n.type === "loop")
+        .map((n) => n.id);
 
-    setEdges((eds) => {
-      const nextEds = eds.filter(
-        (edge) =>
-          !deleted.find((d) => d.id === edge.source || d.id === edge.target),
-      );
-      setNodesNormalized((nds) => {
-        let nextNds: Node[];
-        if (deletedLoopIds.length > 0) {
-          const childNodeIds = new Set<string>();
-          deletedLoopIds.forEach((loopId) => {
-            nds.forEach((node) => {
-              const nodeLoopId = node.data?.loopId || node.data?.loop_id;
-              if (nodeLoopId === loopId) {
-                childNodeIds.add(node.id);
-              }
+      setEdges((eds) => {
+        const nextEds = eds.filter(
+          (edge) =>
+            !deleted.find((d) => d.id === edge.source || d.id === edge.target),
+        );
+        setNodesNormalized((nds) => {
+          let nextNds: Node[];
+          if (deletedLoopIds.length > 0) {
+            const childNodeIds = new Set<string>();
+            deletedLoopIds.forEach((loopId) => {
+              nds.forEach((node) => {
+                const nodeLoopId = node.data?.loopId || node.data?.loop_id;
+                if (nodeLoopId === loopId) {
+                  childNodeIds.add(node.id);
+                }
+              });
             });
-          });
-          const allDeletedIds = new Set([
-            ...deleted.map((n) => n.id),
-            ...Array.from(childNodeIds),
-          ]);
-          nextNds = nds.filter((node) => !allDeletedIds.has(node.id));
-        } else {
-          nextNds = nds.filter((node) => !deleted.find((d) => d.id === node.id));
-        }
-        const llmIds = nextNds.filter((n) => n.type === "llm").map((n) => n.id);
-        return syncAutoLlmPromptsOnNodes(nextNds, nextEds, llmIds);
+            const allDeletedIds = new Set([
+              ...deleted.map((n) => n.id),
+              ...Array.from(childNodeIds),
+            ]);
+            nextNds = nds.filter((node) => !allDeletedIds.has(node.id));
+          } else {
+            nextNds = nds.filter(
+              (node) => !deleted.find((d) => d.id === node.id),
+            );
+          }
+          const llmIds = nextNds
+            .filter((n) => n.type === "llm")
+            .map((n) => n.id);
+          return syncAutoLlmPromptsOnNodes(nextNds, nextEds, llmIds);
+        });
+        return nextEds;
       });
-      return nextEds;
-    });
-    // 清除选中状态
-    if (selectedNode && deleted.find((d) => d.id === selectedNode.id)) {
-      setSelectedNode(null);
-    }
-  }, [setNodesNormalized, setEdges, selectedNode]);
+      // 清除选中状态
+      if (selectedNode && deleted.find((d) => d.id === selectedNode.id)) {
+        setSelectedNode(null);
+      }
+    },
+    [setNodesNormalized, setEdges, selectedNode],
+  );
 
   // 添加键盘事件监听器处理 Delete 键和 Backspace 键
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // 检查是否在输入框、文本域等可编辑元素中
       const target = event.target as HTMLElement;
-      const isEditable = 
-        target.tagName === "INPUT" || 
-        target.tagName === "TEXTAREA" || 
+      const isEditable =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
         target.isContentEditable;
-      
+
       // 如果正在编辑文本，不处理删除操作
       if (isEditable) {
         return;
       }
-      
+
       // 检查是否按下了 Delete 键或 Backspace 键
       if (event.key === "Delete" || event.key === "Backspace") {
         // 检查是否有选中的节点或边
         if (selectedNode) {
           event.preventDefault();
           event.stopPropagation();
-          setNodesNormalized((nds) => nds.filter((node) => node.id !== selectedNode.id));
+          setNodesNormalized((nds) =>
+            nds.filter((node) => node.id !== selectedNode.id),
+          );
           setEdges((eds) => {
             const nextEds = eds.filter(
               (edge) =>
-                edge.source !== selectedNode.id && edge.target !== selectedNode.id,
+                edge.source !== selectedNode.id &&
+                edge.target !== selectedNode.id,
             );
             setNodesNormalized((nds) => {
               const nextNds = nds.filter((node) => node.id !== selectedNode.id);
-              const llmIds = nextNds.filter((n) => n.type === "llm").map((n) => n.id);
+              const llmIds = nextNds
+                .filter((n) => n.type === "llm")
+                .map((n) => n.id);
               return syncAutoLlmPromptsOnNodes(nextNds, nextEds, llmIds);
             });
             return nextEds;
@@ -918,13 +1067,19 @@ function WorkflowEditorInner({
         }
       }
     };
-    
+
     // 使用全局 window 监听，确保能捕获到键盘事件
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectedNode, selectedEdge, setNodesNormalized, setEdges, syncLlmPromptsAfterEdgeChange]);
+  }, [
+    selectedNode,
+    selectedEdge,
+    setNodesNormalized,
+    setEdges,
+    syncLlmPromptsAfterEdgeChange,
+  ]);
 
   // 在画布上添加节点
   const onPaneClick = useCallback(
@@ -934,82 +1089,96 @@ function WorkflowEditorInner({
           x: event.clientX,
           y: event.clientY,
         });
-        
-      // 检查新节点是否在某个循环节点内
-      let parentId: string | undefined;
-      let finalPosition = position;
-      let extent: 'parent' | undefined;
-      let loopId: string | undefined;
 
-      const loopNodes = nodes.filter(n => n.type === "loop");
-      for (const loopNode of loopNodes) {
-        const loopWidthRaw = loopNode.data?.loopWidth ?? loopNode.width;
-        const loopHeightRaw = loopNode.data?.loopHeight ?? loopNode.height;
-        const loopWidthNum =
-          typeof loopWidthRaw === "number" ? loopWidthRaw : Number(loopWidthRaw);
-        const loopHeightNum =
-          typeof loopHeightRaw === "number" ? loopHeightRaw : Number(loopHeightRaw);
-        const loopWidth = Number.isFinite(loopWidthNum) ? loopWidthNum : 600;
-        const loopHeight = Number.isFinite(loopHeightNum) ? loopHeightNum : 400;
-        
-        if (
+        // 检查新节点是否在某个循环节点内
+        let parentId: string | undefined;
+        let finalPosition = position;
+        let extent: "parent" | undefined;
+        let loopId: string | undefined;
+
+        const loopNodes = nodes.filter((n) => n.type === "loop");
+        for (const loopNode of loopNodes) {
+          const loopWidthRaw = loopNode.data?.loopWidth ?? loopNode.width;
+          const loopHeightRaw = loopNode.data?.loopHeight ?? loopNode.height;
+          const loopWidthNum =
+            typeof loopWidthRaw === "number"
+              ? loopWidthRaw
+              : Number(loopWidthRaw);
+          const loopHeightNum =
+            typeof loopHeightRaw === "number"
+              ? loopHeightRaw
+              : Number(loopHeightRaw);
+          const loopWidth = Number.isFinite(loopWidthNum) ? loopWidthNum : 600;
+          const loopHeight = Number.isFinite(loopHeightNum)
+            ? loopHeightNum
+            : 400;
+
+          if (
             position.x >= loopNode.position.x + LOOP_PADDING.left &&
-            position.x <= loopNode.position.x + loopWidth - LOOP_PADDING.right &&
+            position.x <=
+              loopNode.position.x + loopWidth - LOOP_PADDING.right &&
             position.y >= loopNode.position.y + LOOP_PADDING.top &&
             position.y <= loopNode.position.y + loopHeight - LOOP_PADDING.bottom
-        ) {
+          ) {
             parentId = loopNode.id;
             loopId = loopNode.id;
-            extent = 'parent';
-            
+            extent = "parent";
+
             // 计算相对位置
             finalPosition = {
-                x: Math.max(0, position.x - loopNode.position.x - LOOP_PADDING.left),
-                y: Math.max(0, position.y - loopNode.position.y - LOOP_PADDING.top)
+              x: Math.max(
+                0,
+                position.x - loopNode.position.x - LOOP_PADDING.left,
+              ),
+              y: Math.max(
+                0,
+                position.y - loopNode.position.y - LOOP_PADDING.top,
+              ),
             };
             break;
+          }
         }
-      }
 
-      const nodeName = generateNodeName(nodeTypeToAdd, nodes);
-      const newNode: Node = {
-        id: nanoid(),
-        type: nodeTypeToAdd,
-        position: finalPosition,
-        parentId,
-        extent,
-        data: { 
-          taskName: nodeName,
-          displayName:
-            nodeName === "start"
-              ? "开始"
-              : nodeName === "end"
-                ? "结束"
-                : nodeTypeToAdd === "tool"
-                  ? "工具"
-                  : nodeName,
-          label:
-            nodeName === "start"
-              ? "开始"
-              : nodeName === "end"
-                ? "结束"
-                : nodeTypeToAdd === "tool"
-                  ? "工具"
-                  : nodeName,
-          ...(nodeTypeToAdd === "loop" ? { loopCount: 3, loop_count: 3 } : {}),
-          loopId,
-          loop_id: loopId,
-          isLoopChild: !!loopId,
-        },
-        style: loopId ? { zIndex: 15, pointerEvents: "auto" } : undefined,
-      };
-        
-      addNodes(normalizeNodes([newNode]));
-      setNodeTypeToAdd(null);
+        const nodeName = generateNodeName(nodeTypeToAdd, nodes);
+        const newNode: Node = {
+          id: nanoid(),
+          type: nodeTypeToAdd,
+          position: finalPosition,
+          parentId,
+          extent,
+          data: {
+            taskName: nodeName,
+            displayName:
+              nodeName === "start"
+                ? "开始"
+                : nodeName === "end"
+                  ? "结束"
+                  : nodeTypeToAdd === "tool"
+                    ? "工具"
+                    : nodeName,
+            label:
+              nodeName === "start"
+                ? "开始"
+                : nodeName === "end"
+                  ? "结束"
+                  : nodeTypeToAdd === "tool"
+                    ? "工具"
+                    : nodeName,
+            ...(nodeTypeToAdd === "loop"
+              ? { loopCount: 3, loop_count: 3 }
+              : {}),
+            loopId,
+            loop_id: loopId,
+            isLoopChild: !!loopId,
+          },
+          style: loopId ? { zIndex: 15, pointerEvents: "auto" } : undefined,
+        };
 
+        addNodes(normalizeNodes([newNode]));
+        setNodeTypeToAdd(null);
       }
     },
-    [nodeTypeToAdd, screenToFlowPosition, addNodes]
+    [nodeTypeToAdd, screenToFlowPosition, addNodes],
   );
 
   // 处理拖放
@@ -1049,36 +1218,43 @@ function WorkflowEditorInner({
       // 检查新节点是否在某个循环节点内
       let parentId: string | undefined;
       let finalPosition = position;
-      let extent: 'parent' | undefined;
+      let extent: "parent" | undefined;
       let loopId: string | undefined;
 
-      const loopNodes = nodes.filter(n => n.type === "loop");
+      const loopNodes = nodes.filter((n) => n.type === "loop");
       for (const loopNode of loopNodes) {
         const loopWidthRaw = loopNode.data?.loopWidth ?? loopNode.width;
         const loopHeightRaw = loopNode.data?.loopHeight ?? loopNode.height;
         const loopWidthNum =
-          typeof loopWidthRaw === "number" ? loopWidthRaw : Number(loopWidthRaw);
+          typeof loopWidthRaw === "number"
+            ? loopWidthRaw
+            : Number(loopWidthRaw);
         const loopHeightNum =
-          typeof loopHeightRaw === "number" ? loopHeightRaw : Number(loopHeightRaw);
+          typeof loopHeightRaw === "number"
+            ? loopHeightRaw
+            : Number(loopHeightRaw);
         const loopWidth = Number.isFinite(loopWidthNum) ? loopWidthNum : 600;
         const loopHeight = Number.isFinite(loopHeightNum) ? loopHeightNum : 400;
-        
+
         if (
-            position.x >= loopNode.position.x + LOOP_PADDING.left &&
-            position.x <= loopNode.position.x + loopWidth - LOOP_PADDING.right &&
-            position.y >= loopNode.position.y + LOOP_PADDING.top &&
-            position.y <= loopNode.position.y + loopHeight - LOOP_PADDING.bottom
+          position.x >= loopNode.position.x + LOOP_PADDING.left &&
+          position.x <= loopNode.position.x + loopWidth - LOOP_PADDING.right &&
+          position.y >= loopNode.position.y + LOOP_PADDING.top &&
+          position.y <= loopNode.position.y + loopHeight - LOOP_PADDING.bottom
         ) {
-            parentId = loopNode.id;
-            loopId = loopNode.id;
-            extent = 'parent';
-            
-            // 计算相对位置
-            finalPosition = {
-                x: Math.max(0, position.x - loopNode.position.x - LOOP_PADDING.left),
-                y: Math.max(0, position.y - loopNode.position.y - LOOP_PADDING.top)
-            };
-            break;
+          parentId = loopNode.id;
+          loopId = loopNode.id;
+          extent = "parent";
+
+          // 计算相对位置
+          finalPosition = {
+            x: Math.max(
+              0,
+              position.x - loopNode.position.x - LOOP_PADDING.left,
+            ),
+            y: Math.max(0, position.y - loopNode.position.y - LOOP_PADDING.top),
+          };
+          break;
         }
       }
 
@@ -1089,7 +1265,7 @@ function WorkflowEditorInner({
         position: finalPosition,
         parentId,
         extent,
-        data: { 
+        data: {
           taskName: nodeName,
           displayName:
             nodeName === "start"
@@ -1116,38 +1292,40 @@ function WorkflowEditorInner({
       };
 
       addNodes(normalizeNodes([newNode]));
-
     },
-    [screenToFlowPosition, addNodes, nodes, normalizeNodes]
+    [screenToFlowPosition, addNodes, nodes, normalizeNodes],
   );
 
   // 生成节点名称（用于程序运行和记录）
-  const generateNodeName = useCallback((type: string, existingNodes: Node[]): string => {
-    // 开始和结束节点固定名称
-    if (type === "start") return "start";
-    if (type === "end") return "end";
-    
-    // 获取节点类型的中文名称映射
-    if (type === "tool") {
-      const count = existingNodes.filter((n) => n.type === "tool").length;
-      return count === 0 ? "tool" : `tool${count}`;
-    }
+  const generateNodeName = useCallback(
+    (type: string, existingNodes: Node[]): string => {
+      // 开始和结束节点固定名称
+      if (type === "start") return "start";
+      if (type === "end") return "end";
 
-    const typeLabels: Record<string, string> = {
-      llm: "LLM",
-      condition: "条件",
-      loop: "loop",
-    };
+      // 获取节点类型的中文名称映射
+      if (type === "tool") {
+        const count = existingNodes.filter((n) => n.type === "tool").length;
+        return count === 0 ? "tool" : `tool${count}`;
+      }
 
-    const baseName = typeLabels[type] || type;
-    
-    // 统计同类型节点的数量
-    const sameTypeNodes = existingNodes.filter(n => n.type === type);
-    const count = sameTypeNodes.length;
-    
-    // 第一个节点不加数字，后续加数字
-    return count === 0 ? baseName : `${baseName}${count}`;
-  }, []);
+      const typeLabels: Record<string, string> = {
+        llm: "LLM",
+        condition: "条件",
+        loop: "loop",
+      };
+
+      const baseName = typeLabels[type] || type;
+
+      // 统计同类型节点的数量
+      const sameTypeNodes = existingNodes.filter((n) => n.type === type);
+      const count = sameTypeNodes.length;
+
+      // 第一个节点不加数字，后续加数字
+      return count === 0 ? baseName : `${baseName}${count}`;
+    },
+    [],
+  );
 
   // 获取节点显示名称（用于界面显示）
   const getNodeDisplayName = (node: Node): string => {
@@ -1174,19 +1352,19 @@ function WorkflowEditorInner({
   }, [saveStatus]);
 
   const startDialogInputs = useMemo((): StartInputFieldDef[] => {
-    const raw = (startNodeForRun?.data as Record<string, unknown> | undefined)?.startInputs;
+    const raw = startNodeForRun?.data?.startInputs;
     return Array.isArray(raw) ? (raw as StartInputFieldDef[]) : [];
   }, [startNodeForRun]);
 
   const startDialogFiles = useMemo((): StartFilesDef | undefined => {
-    const raw = (startNodeForRun?.data as Record<string, unknown> | undefined)?.startFiles;
+    const raw = startNodeForRun?.data?.startFiles;
     if (raw === null || raw === false) return undefined;
     if (raw && typeof raw === "object") return raw as StartFilesDef;
     return { accept: ".vasp,.cif,.poscar,.POSCAR,.CONTCAR", maxCount: 5 };
   }, [startNodeForRun]);
 
   const startAllowFileUpload = useMemo(() => {
-    const raw = (startNodeForRun?.data as Record<string, unknown> | undefined)?.startFiles;
+    const raw = startNodeForRun?.data?.startFiles;
     return raw !== null && raw !== false;
   }, [startNodeForRun]);
 
@@ -1196,8 +1374,8 @@ function WorkflowEditorInner({
         open={runDialogOpen}
         onOpenChange={setRunDialogOpen}
         startInputInfo={
-          typeof (startNodeForRun?.data as Record<string, unknown>)?.startInputInfo === "string"
-            ? ((startNodeForRun?.data as Record<string, unknown>).startInputInfo as string)
+          typeof (startNodeForRun?.data)!?.startInputInfo === "string"
+            ? (startNodeForRun?.data)!.startInputInfo
             : undefined
         }
         startInputs={startDialogInputs}
@@ -1207,18 +1385,20 @@ function WorkflowEditorInner({
         onSubmit={handleRunDialogSubmit}
       />
       {/* 顶部工具栏 */}
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-4">
+      <div className="border-border bg-card flex h-14 shrink-0 items-center justify-between border-b px-4">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex flex-col">
-            <h1 className="text-lg font-semibold text-foreground">{workflowName}</h1>
-            <p className="text-xs text-muted-foreground">工作流编辑器</p>
+            <h1 className="text-foreground text-lg font-semibold">
+              {workflowName}
+            </h1>
+            <p className="text-muted-foreground text-xs">工作流编辑器</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="text-sm text-muted-foreground">{saveStatusText}</div>
+          <div className="text-muted-foreground text-sm">{saveStatusText}</div>
           <Button
             variant="outline"
             size="sm"
@@ -1227,28 +1407,32 @@ function WorkflowEditorInner({
           >
             {isDuplicating ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 复制中...
               </>
             ) : (
               <>
-                <Copy className="h-4 w-4 mr-2" />
+                <Copy className="mr-2 h-4 w-4" />
                 复制
               </>
             )}
           </Button>
-          <Button onClick={handleManualSave} size="sm" disabled={saveStatus === "saving"}>
-            <Save className="h-4 w-4 mr-2" />
+          <Button
+            onClick={handleManualSave}
+            size="sm"
+            disabled={saveStatus === "saving"}
+          >
+            <Save className="mr-2 h-4 w-4" />
             保存
           </Button>
-          <Button 
-            onClick={handleRun} 
-            size="sm" 
+          <Button
+            onClick={handleRun}
+            size="sm"
             variant="default"
             className="bg-blue-500 hover:bg-blue-600"
             disabled={isRunning || saveStatus === "saving"}
           >
-            <Play className="h-4 w-4 mr-2" />
+            <Play className="mr-2 h-4 w-4" />
             {isRunning ? "执行中..." : "执行"}
           </Button>
         </div>
@@ -1260,8 +1444,8 @@ function WorkflowEditorInner({
         <NodePalette onNodeTypeSelect={setNodeTypeToAdd} />
 
         {/* 画布 */}
-        <div 
-          className="relative flex-1 bg-app transition-opacity duration-300 ease-in-out"
+        <div
+          className="bg-app relative flex-1 transition-opacity duration-300 ease-in-out"
           style={{ opacity: isReady ? 1 : 0 }}
         >
           <ReactFlow
@@ -1281,7 +1465,6 @@ function WorkflowEditorInner({
             deleteKeyCode={["Delete", "Backspace"]} // 启用 Delete 和 Backspace 删除节点和边
             attributionPosition="bottom-left"
           >
-
             <Controls />
             <MiniMap />
             <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
@@ -1290,7 +1473,7 @@ function WorkflowEditorInner({
 
         {/* 配置面板：足够宽以完整显示中文，高度占满并支持内部滚动 */}
         {(selectedNode || selectedEdge) && (
-          <div className="w-[480px] min-w-[480px] flex-shrink-0 border-l border-border bg-card flex flex-col min-h-0">
+          <div className="border-border bg-card flex min-h-0 w-[480px] min-w-[480px] flex-shrink-0 flex-col border-l">
             {selectedNode && (
               <NodeConfigPanel
                 node={selectedNode}
@@ -1312,7 +1495,6 @@ function WorkflowEditorInner({
           </div>
         )}
       </div>
-
     </div>
   );
 }
@@ -1323,5 +1505,3 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
     </ReactFlowProvider>
   );
 }
-
-

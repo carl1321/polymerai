@@ -61,7 +61,6 @@ def _get_ragflow_config() -> dict[str, Any]:
     return out
 
 
-
 def _effective_ragflow_api_key(current_user: CurrentUser) -> str:
     row = UserDB.get_by_id(current_user.id)
     if row:

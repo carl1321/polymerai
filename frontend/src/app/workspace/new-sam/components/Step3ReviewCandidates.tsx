@@ -4,26 +4,53 @@
 // Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
 // SPDX-License-Identifier: MIT
 
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Loader2,
+  ChevronDown,
+  AlertCircle,
+  RotateCcw,
+  Save,
+} from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+
+import {
+  parseSMILESFromText,
+  extractMoleculesFromWorkflowResult,
+} from "@/app/workspace/new-sam/utils/molecule";
+import {
+  getScoreColor,
+  formatScore,
+} from "@/app/workspace/new-sam/utils/molecule";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ArrowLeft, CheckCircle2, Loader2, ChevronDown, AlertCircle, RotateCcw, Save } from "lucide-react";
-import { executeTool } from "@/core/api/tools";
-import { getWorkflowRun } from "@/core/api/workflow";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/core/api/api-client";
 import { saveDesignHistory } from "@/core/api/sam-design";
-import { parseSMILESFromText, extractMoleculesFromWorkflowResult } from "@/app/workspace/new-sam/utils/molecule";
-import { getScoreColor, formatScore } from "@/app/workspace/new-sam/utils/molecule";
-import type { ExecutionResult, Molecule, DesignObjective, Constraint } from "../types";
-import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
+import { executeTool } from "@/core/api/tools";
+import { getWorkflowRun } from "@/core/api/workflow";
+
+import type {
+  ExecutionResult,
+  Molecule,
+  DesignObjective,
+  Constraint,
+} from "../types";
 
 interface Step3ReviewCandidatesProps {
   /** 上一步回调 */
@@ -57,38 +84,49 @@ export function Step3ReviewCandidates({
   initialMolecules,
   headerRight,
 }: Step3ReviewCandidatesProps) {
-  const [molecules, setMolecules] = useState<Molecule[]>(initialMolecules || []);
+  const [molecules, setMolecules] = useState<Molecule[]>(
+    initialMolecules || [],
+  );
   const [loading, setLoading] = useState(!initialMolecules); // 如果有初始数据，不需要加载
   const [error, setError] = useState<string | null>(null);
-  const [expandedMolecules, setExpandedMolecules] = useState<Set<number>>(new Set());
+  const [expandedMolecules, setExpandedMolecules] = useState<Set<number>>(
+    new Set(),
+  );
   const [saving, setSaving] = useState(false);
   const [hasAutoSaved, setHasAutoSaved] = useState(!!initialMolecules); // 如果从历史记录加载，标记为已保存
   const hasLoadedRef = useRef(false); // 防止重复加载
   const loadingExecutionIdRef = useRef<string | null>(null); // 跟踪正在加载的执行ID
   const isProcessingRef = useRef(false); // 防止并发处理
   const processedMoleculeImagesRef = useRef<Set<string>>(new Set()); // 跟踪已处理的分子图像（基于SMILES）
-  
+
   // 获取预期的分子数量（用于显示加载骨架屏）
   const getExpectedMoleculeCount = (): number => {
     if (!executionResult) return 0;
-    
+
     // 优先使用预解析的molecules数组长度
-    if (executionResult.mode === "model" && executionResult.modelResult?.molecules) {
+    if (
+      executionResult.mode === "model" &&
+      executionResult.modelResult?.molecules
+    ) {
       return executionResult.modelResult.molecules.length;
     }
-    if (executionResult.mode === "workflow" && executionResult.workflowResult?.molecules) {
+    if (
+      executionResult.mode === "workflow" &&
+      executionResult.workflowResult?.molecules
+    ) {
       return executionResult.workflowResult.molecules.length;
     }
-    
+
     // 如果没有预解析的，尝试从原始结果中估算
     // 这里可以根据实际情况调整，暂时返回1作为默认值
     return 1;
   };
-  
+
   const expectedCount = getExpectedMoleculeCount();
 
   // 获取用于评估的模型（新字段优先，其次兼容旧字段 selectedModel）
-  const evaluationModel = executionResult?.evaluationModel || executionResult?.selectedModel;
+  const evaluationModel =
+    executionResult?.evaluationModel || executionResult?.selectedModel;
 
   /**
    * 保存历史记录
@@ -140,11 +178,19 @@ export function Step3ReviewCandidates({
     }
 
     // 生成执行ID，用于防止重复加载
-    const executionId = `${executionResult.mode}-${executionResult.modelResult?.result?.substring(0, 50) || executionResult.workflowResult?.workflowId || executionResult.workflowResult?.runId || 'unknown'}`;
-    
+    const executionId = `${executionResult.mode}-${executionResult.modelResult?.result?.substring(0, 50) || executionResult.workflowResult?.workflowId || executionResult.workflowResult?.runId || "unknown"}`;
+
     // 如果已经在加载相同的执行结果，跳过
-    if (loadingExecutionIdRef.current === executionId || isProcessingRef.current) {
-      console.log("Skipping duplicate load for executionId:", executionId, "isProcessing:", isProcessingRef.current);
+    if (
+      loadingExecutionIdRef.current === executionId ||
+      isProcessingRef.current
+    ) {
+      console.log(
+        "Skipping duplicate load for executionId:",
+        executionId,
+        "isProcessing:",
+        isProcessingRef.current,
+      );
       return;
     }
 
@@ -163,15 +209,26 @@ export function Step3ReviewCandidates({
         let moleculesData: Partial<Molecule>[] = [];
 
         // 优先使用ExecutionResult中预解析的molecules数组
-        if (executionResult.mode === "model" && executionResult.modelResult?.molecules) {
+        if (
+          executionResult.mode === "model" &&
+          executionResult.modelResult?.molecules
+        ) {
           moleculesData = executionResult.modelResult.molecules;
-        } else if (executionResult.mode === "workflow" && executionResult.workflowResult?.molecules) {
+        } else if (
+          executionResult.mode === "workflow" &&
+          executionResult.workflowResult?.molecules
+        ) {
           moleculesData = executionResult.workflowResult.molecules;
         } else {
           // 如果没有预解析的molecules，则从原始结果中解析
-          if (executionResult.mode === "model" && executionResult.modelResult?.result) {
+          if (
+            executionResult.mode === "model" &&
+            executionResult.modelResult?.result
+          ) {
             // 从模型执行结果中解析SMILES
-            const smilesList = parseSMILESFromText(executionResult.modelResult.result);
+            const smilesList = parseSMILESFromText(
+              executionResult.modelResult.result,
+            );
             moleculesData = smilesList.map((smiles, index) => ({
               index: index + 1,
               smiles,
@@ -184,7 +241,10 @@ export function Step3ReviewCandidates({
             // 从工作流执行结果中提取数据
             try {
               const workflowId = executionResult.workflowResult.workflowId;
-              const run = await getWorkflowRun(workflowId, executionResult.workflowResult.runId);
+              const run = await getWorkflowRun(
+                workflowId,
+                executionResult.workflowResult.runId,
+              );
               if (run.output) {
                 moleculesData = extractMoleculesFromWorkflowResult(run.output);
               } else {
@@ -216,9 +276,15 @@ export function Step3ReviewCandidates({
               v === undefined || v === null || Number.isNaN(v);
             const hasSurfaceAnchoring = !isMissing(mol.score?.surfaceAnchoring);
             const hasPackingDensity = !isMissing(mol.score?.packingDensity);
-            const hasHomoLumo = !isMissing(mol.properties?.HOMO) && !isMissing(mol.properties?.LUMO);
-            const hasCompleteEvaluation = hasSurfaceAnchoring && hasPackingDensity && hasHomoLumo && mol.analysis;
-            
+            const hasHomoLumo =
+              !isMissing(mol.properties?.HOMO) &&
+              !isMissing(mol.properties?.LUMO);
+            const hasCompleteEvaluation =
+              hasSurfaceAnchoring &&
+              hasPackingDensity &&
+              hasHomoLumo &&
+              mol.analysis;
+
             const molecule: Molecule = {
               index: mol.index || index + 1,
               smiles: mol.smiles || "",
@@ -230,33 +296,49 @@ export function Step3ReviewCandidates({
               score: hasCompleteEvaluation ? mol.score : undefined,
               analysis: hasCompleteEvaluation ? mol.analysis : undefined,
             };
-            
+
             // 如果没有图像，为每个分子单独生成图片
             // 使用SMILES作为唯一标识，防止重复生成
             const moleculeKey = molecule.smiles;
-            if (!molecule.imageUrl && molecule.smiles && !processedMoleculeImagesRef.current.has(moleculeKey)) {
+            if (
+              !molecule.imageUrl &&
+              molecule.smiles &&
+              !processedMoleculeImagesRef.current.has(moleculeKey)
+            ) {
               try {
                 // 标记为正在处理
                 processedMoleculeImagesRef.current.add(moleculeKey);
-                console.log(`Generating image for molecule ${molecule.index}: ${molecule.smiles.substring(0, 30)}...`);
-                const visResult = await executeTool("visualize_molecules_tool", {
-                  smiles_text: `${molecule.index}. SMILES: ${molecule.smiles}`,
-                });
-                
+                console.log(
+                  `Generating image for molecule ${molecule.index}: ${molecule.smiles.substring(0, 30)}...`,
+                );
+                const visResult = await executeTool(
+                  "visualize_molecules_tool",
+                  {
+                    smiles_text: `${molecule.index}. SMILES: ${molecule.smiles}`,
+                  },
+                );
+
                 // 从结果中提取图像URL（支持多种格式）
                 // 格式1: <!-- MOLECULAR_IMAGE_ID:uuid -->
-                const imageIdMatch = visResult.match(/<!--\s*MOLECULAR_IMAGE_ID:([a-f0-9\-]+)\s*-->/i);
+                const imageIdMatch =
+                  /<!--\s*MOLECULAR_IMAGE_ID:([a-f0-9\-]+)\s*-->/i.exec(
+                    visResult,
+                  );
                 if (imageIdMatch) {
                   molecule.imageUrl = `/molecular_images/${imageIdMatch[1]}.svg`;
                 } else {
                   // 格式2: /molecular_images/uuid.svg
-                  const imageUrlMatch = visResult.match(/\/molecular_images\/[a-f0-9\-]+\.svg/i);
+                  const imageUrlMatch =
+                    /\/molecular_images\/[a-f0-9\-]+\.svg/i.exec(visResult);
                   if (imageUrlMatch) {
                     molecule.imageUrl = imageUrlMatch[0];
                   }
                 }
               } catch (err) {
-                console.error(`Failed to visualize molecule ${molecule.index}:`, err);
+                console.error(
+                  `Failed to visualize molecule ${molecule.index}:`,
+                  err,
+                );
               }
             }
 
@@ -265,12 +347,16 @@ export function Step3ReviewCandidates({
               molecule.score = mol.score;
               molecule.analysis = mol.analysis;
               molecule.properties = mol.properties;
-              console.log(`Molecule ${molecule.index} already has complete evaluation, skipping re-evaluation`);
+              console.log(
+                `Molecule ${molecule.index} already has complete evaluation, skipping re-evaluation`,
+              );
             } else if (molecule.smiles) {
               // 只有在没有完整评估结果时才进行评估
               // 评估API会自动使用LLM预测性质（如果没有提供），所以不需要单独调用性质预测工具
               try {
-                console.log(`Evaluating molecule ${molecule.index}: ${molecule.smiles.substring(0, 30)}...`);
+                console.log(
+                  `Evaluating molecule ${molecule.index}: ${molecule.smiles.substring(0, 30)}...`,
+                );
                 const evalResult = await apiRequest<{
                   success: boolean;
                   score: {
@@ -305,12 +391,14 @@ export function Step3ReviewCandidates({
                   // 合并策略：已有字段优先保留，缺失字段用评估结果填充
                   const isMissing = (v: number | undefined) =>
                     v === undefined || v === null || Number.isNaN(v);
-                  
+
                   molecule.score = {
-                    total: !isMissing(molecule.score?.total) 
-                      ? molecule.score!.total 
+                    total: !isMissing(molecule.score?.total)
+                      ? molecule.score!.total
                       : evalResult.score.total,
-                    surfaceAnchoring: !isMissing(molecule.score?.surfaceAnchoring)
+                    surfaceAnchoring: !isMissing(
+                      molecule.score?.surfaceAnchoring,
+                    )
                       ? molecule.score!.surfaceAnchoring
                       : evalResult.score.surfaceAnchoring,
                     energyLevel: !isMissing(molecule.score?.energyLevel)
@@ -320,12 +408,12 @@ export function Step3ReviewCandidates({
                       ? molecule.score!.packingDensity
                       : evalResult.score.packingDensity,
                   };
-                  
+
                   molecule.analysis = molecule.analysis || {
                     description: evalResult.description,
                     explanation: evalResult.explanation,
                   };
-                  
+
                   // 合并 properties：已有字段保留，缺失字段填充
                   if (evalResult.properties) {
                     molecule.properties = {
@@ -342,12 +430,15 @@ export function Step3ReviewCandidates({
                   }
                 }
               } catch (err) {
-                console.error(`Failed to evaluate molecule ${molecule.index}:`, err);
+                console.error(
+                  `Failed to evaluate molecule ${molecule.index}:`,
+                  err,
+                );
               }
             }
 
             return molecule;
-          })
+          }),
         );
 
         setMolecules(processedMolecules);
@@ -369,7 +460,7 @@ export function Step3ReviewCandidates({
     };
 
     loadMolecules();
-    
+
     // 清理函数：如果组件卸载或依赖项变化，清除执行ID
     return () => {
       if (loadingExecutionIdRef.current === executionId) {
@@ -384,9 +475,15 @@ export function Step3ReviewCandidates({
     if (initialMolecules && initialMolecules.length > 0) {
       return;
     }
-    
+
     // 只有在分子数据加载完成且不为空时才自动保存，且只保存一次
-    if (molecules.length > 0 && executionResult && !loading && !saving && !hasAutoSaved) {
+    if (
+      molecules.length > 0 &&
+      executionResult &&
+      !loading &&
+      !saving &&
+      !hasAutoSaved
+    ) {
       // 延迟保存，避免频繁保存
       const autoSaveTimer = setTimeout(async () => {
         try {
@@ -394,7 +491,7 @@ export function Step3ReviewCandidates({
             moleculesCount: molecules.length,
             executionMode: executionResult.mode,
           });
-          
+
           setSaving(true);
           const result = await saveDesignHistory(
             undefined, // 使用自动生成的名称
@@ -421,7 +518,16 @@ export function Step3ReviewCandidates({
 
       return () => clearTimeout(autoSaveTimer);
     }
-  }, [molecules, executionResult, loading, saving, hasAutoSaved, objective, constraints, initialMolecules]);
+  }, [
+    molecules,
+    executionResult,
+    loading,
+    saving,
+    hasAutoSaved,
+    objective,
+    constraints,
+    initialMolecules,
+  ]);
 
   const toggleExpanded = (index: number) => {
     setExpandedMolecules((prev) => {
@@ -440,7 +546,7 @@ export function Step3ReviewCandidates({
       {/* 顶部：标题 */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100 sm:text-xl">
+          <h1 className="text-lg font-semibold text-slate-900 sm:text-xl dark:text-slate-100">
             审查与比较候选
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400">
@@ -490,15 +596,19 @@ export function Step3ReviewCandidates({
               )}
             </div>
           ) : error ? (
-            <div className="flex items-center gap-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+            <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
               <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-red-900 dark:text-red-100">加载失败</p>
-                <p className="text-xs text-red-700 dark:text-red-300 mt-1">{error}</p>
+                <p className="text-sm font-medium text-red-900 dark:text-red-100">
+                  加载失败
+                </p>
+                <p className="mt-1 text-xs text-red-700 dark:text-red-300">
+                  {error}
+                </p>
               </div>
             </div>
           ) : molecules.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 py-12 text-center">
+            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 py-12 text-center dark:border-slate-600 dark:bg-slate-800/50">
               <CheckCircle2 className="mx-auto h-12 w-12 text-slate-400 dark:text-slate-500" />
               <p className="mt-4 text-sm font-medium text-slate-600 dark:text-slate-400">
                 未找到候选分子
@@ -512,35 +622,43 @@ export function Step3ReviewCandidates({
               {molecules.map((molecule) => (
                 <Card key={molecule.index} className="overflow-hidden">
                   <CardContent className="p-6">
-                    <div className="flex flex-col lg:flex-row gap-6">
+                    <div className="flex flex-col gap-6 lg:flex-row">
                       {/* 左侧：分子结构图 */}
-                      <div className="flex-shrink-0 w-full lg:w-auto">
+                      <div className="w-full flex-shrink-0 lg:w-auto">
                         {molecule.imageUrl ? (
-                          <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
+                          <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
                             <span className="block w-fit overflow-hidden">
                               <img
                                 src={molecule.imageUrl}
                                 alt={`Molecule ${molecule.index}`}
                                 className="size-full object-contain"
-                                style={{ 
-                                  maxWidth: '400px',
-                                  maxHeight: '400px',
+                                style={{
+                                  maxWidth: "400px",
+                                  maxHeight: "400px",
                                 }}
                                 onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = "none";
-                                  const parent = (e.target as HTMLImageElement).parentElement;
+                                  (e.target as HTMLImageElement).style.display =
+                                    "none";
+                                  const parent = (e.target as HTMLImageElement)
+                                    .parentElement;
                                   if (parent) {
-                                    parent.innerHTML = '<div class="text-center text-sm text-slate-500 dark:text-slate-400 py-8">图像加载失败</div>';
+                                    parent.innerHTML =
+                                      '<div class="text-center text-sm text-slate-500 dark:text-slate-400 py-8">图像加载失败</div>';
                                   }
                                 }}
                               />
                             </span>
                           </div>
                         ) : (
-                          <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-8 flex items-center justify-center mx-auto lg:mx-0" style={{ width: '400px', height: '400px' }}>
+                          <div
+                            className="mx-auto flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 p-8 lg:mx-0 dark:border-slate-700 dark:bg-slate-800/50"
+                            style={{ width: "400px", height: "400px" }}
+                          >
                             <div className="flex flex-col items-center gap-2">
                               <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-                              <p className="text-xs text-slate-500 dark:text-slate-400">加载图像中...</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                加载图像中...
+                              </p>
                             </div>
                           </div>
                         )}
@@ -550,20 +668,20 @@ export function Step3ReviewCandidates({
                       <div className="flex-1 space-y-4">
                         {/* 分子基本信息 */}
                         <div>
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="mb-2 flex items-center justify-between">
                             <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                               候选分子 {molecule.index}
                             </h3>
                             {molecule.score && (
                               <Badge
                                 variant="outline"
-                                className={`text-lg font-bold px-3 py-1 ${getScoreColor(molecule.score.total)}`}
+                                className={`px-3 py-1 text-lg font-bold ${getScoreColor(molecule.score.total)}`}
                               >
                                 {formatScore(molecule.score.total)} 分
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm font-mono text-slate-600 dark:text-slate-400 break-all">
+                          <p className="font-mono text-sm break-all text-slate-600 dark:text-slate-400">
                             SMILES: {molecule.smiles}
                           </p>
                         </div>
@@ -575,11 +693,16 @@ export function Step3ReviewCandidates({
                               <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                                 总评分
                               </span>
-                              <span className={`text-lg font-bold ${getScoreColor(molecule.score.total)}`}>
+                              <span
+                                className={`text-lg font-bold ${getScoreColor(molecule.score.total)}`}
+                              >
                                 {formatScore(molecule.score.total)} / 100
                               </span>
                             </div>
-                            <Progress value={molecule.score.total} className="h-2" />
+                            <Progress
+                              value={molecule.score.total}
+                              className="h-2"
+                            />
                           </div>
                         )}
 
@@ -589,15 +712,18 @@ export function Step3ReviewCandidates({
                             <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">
                               各维度评分
                             </h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                              {molecule.score.surfaceAnchoring !== undefined && (
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                              {molecule.score.surfaceAnchoring !==
+                                undefined && (
                                 <div className="space-y-1">
                                   <div className="flex items-center justify-between text-xs">
                                     <span className="text-slate-600 dark:text-slate-400">
                                       表面锚定强度
                                     </span>
                                     <span className="font-medium">
-                                      {formatScore(molecule.score.surfaceAnchoring)}
+                                      {formatScore(
+                                        molecule.score.surfaceAnchoring,
+                                      )}
                                     </span>
                                   </div>
                                   <Progress
@@ -629,7 +755,9 @@ export function Step3ReviewCandidates({
                                       膜致密度和稳定性
                                     </span>
                                     <span className="font-medium">
-                                      {formatScore(molecule.score.packingDensity)}
+                                      {formatScore(
+                                        molecule.score.packingDensity,
+                                      )}
                                     </span>
                                   </div>
                                   <Progress
@@ -661,7 +789,8 @@ export function Step3ReviewCandidates({
                               )}
                               {molecule.properties.DM !== undefined && (
                                 <Badge variant="secondary" className="text-xs">
-                                  偶极矩: {molecule.properties.DM.toFixed(3)} Debye
+                                  偶极矩: {molecule.properties.DM.toFixed(3)}{" "}
+                                  Debye
                                 </Badge>
                               )}
                             </div>
@@ -697,14 +826,16 @@ export function Step3ReviewCandidates({
                                 </span>
                                 <ChevronDown
                                   className={`h-4 w-4 transition-transform ${
-                                    expandedMolecules.has(molecule.index) ? "rotate-180" : ""
+                                    expandedMolecules.has(molecule.index)
+                                      ? "rotate-180"
+                                      : ""
                                   }`}
                                 />
                               </Button>
                             </CollapsibleTrigger>
                             <CollapsibleContent className="pt-2">
-                              <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4">
-                                <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap">
+                              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                                <p className="text-sm whitespace-pre-wrap text-slate-600 dark:text-slate-400">
                                   {molecule.analysis.explanation}
                                 </p>
                               </div>
@@ -720,14 +851,24 @@ export function Step3ReviewCandidates({
           )}
 
           {/* 操作按钮 */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-4 border-t">
+          <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={onBack} className="w-full sm:w-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onBack}
+                className="w-full sm:w-auto"
+              >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 返回上一步
               </Button>
               {onRedesign && (
-                <Button type="button" variant="outline" onClick={onRedesign} className="w-full sm:w-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onRedesign}
+                  className="w-full sm:w-auto"
+                >
                   <RotateCcw className="mr-2 h-4 w-4" />
                   重新设计
                 </Button>

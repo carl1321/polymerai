@@ -221,4 +221,3 @@ async def generate_3d_sdf(
     if not sdf:
         raise HTTPException(status_code=400, detail="3D SDF generation unavailable or invalid SMILES")
     return {"success": True, "sdf": sdf}
-

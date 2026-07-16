@@ -7,4 +7,3 @@ export interface Resource {
   /** @deprecated use title */
   name?: string;
 }
-

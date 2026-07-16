@@ -6,8 +6,8 @@
 
 export * from "./workflows";
 
-import { getBackendBaseURL } from "@/core/config";
 import { getAuthHeaders } from "@/core/auth";
+import { getBackendBaseURL } from "@/core/config";
 
 export interface ToolParameterDefinition {
   name: string;
@@ -69,8 +69,14 @@ export async function getAvailableTools(): Promise<ToolDefinition[]> {
   if (Array.isArray(data)) {
     return (data as ToolDefinition[]).map(normalizeToolDefinition);
   }
-  if (data && typeof data === "object" && Array.isArray((data as { tools?: unknown }).tools)) {
-    return ((data as { tools: ToolDefinition[] }).tools).map(normalizeToolDefinition);
+  if (
+    data &&
+    typeof data === "object" &&
+    Array.isArray((data as { tools?: unknown }).tools)
+  ) {
+    return (data as { tools: ToolDefinition[] }).tools.map(
+      normalizeToolDefinition,
+    );
   }
   return [];
 }
@@ -101,7 +107,14 @@ export interface ExecuteWorkflowRequest {
 }
 
 export interface WorkflowExecutionEvent {
-  type: "run_start" | "log" | "node_start" | "node_success" | "node_error" | "run_end" | "error";
+  type:
+    | "run_start"
+    | "log"
+    | "node_start"
+    | "node_success"
+    | "node_error"
+    | "run_end"
+    | "error";
   run_id?: string;
   node_id?: string;
   level?: string;
@@ -116,7 +129,10 @@ interface StreamEvent {
   data?: string;
 }
 
-async function* fetchStream(url: string, init: RequestInit): AsyncGenerator<StreamEvent> {
+async function* fetchStream(
+  url: string,
+  init: RequestInit,
+): AsyncGenerator<StreamEvent> {
   const res = await fetch(url, init);
   if (!res.ok || !res.body) {
     const text = await res.text().catch(() => "");
@@ -127,7 +143,9 @@ async function* fetchStream(url: string, init: RequestInit): AsyncGenerator<Stre
   const decoder = new TextDecoder();
   let buffer = "";
 
-  const drainEvents = (chunk: string): { events: StreamEvent[]; rest: string } => {
+  const drainEvents = (
+    chunk: string,
+  ): { events: StreamEvent[]; rest: string } => {
     const events: StreamEvent[] = [];
     const parts = chunk.split(/\r?\n\r?\n/);
     const rest = parts.pop() ?? "";
@@ -210,12 +228,19 @@ export async function executeWorkflow(
       draftId: data.draftId,
     }),
   });
-  const json = (await res.json().catch(() => ({}))) as { success?: boolean; result?: { run_id: string }; detail?: string };
+  const json = (await res.json().catch(() => ({}))) as {
+    success?: boolean;
+    result?: { run_id: string };
+    detail?: string;
+  };
   if (!res.ok) throw new Error(json?.detail ?? res.statusText);
   return { success: !!json.success, result: json.result ?? { run_id: "" } };
 }
 
-export async function getWorkflowRun(workflowId: string, runId: string): Promise<{
+export async function getWorkflowRun(
+  workflowId: string,
+  runId: string,
+): Promise<{
   id: string;
   workflow_id: string;
   status: string;
@@ -257,4 +282,3 @@ export async function getWorkflowRun(workflowId: string, runId: string): Promise
     created_by_name?: string;
   };
 }
-

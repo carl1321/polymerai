@@ -3,9 +3,48 @@
 
 "use client";
 
+import type { Node, Edge } from "@xyflow/react";
+import {
+  X,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Clock,
+  Circle,
+  Wrench,
+} from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { X, Plus, Trash2, CheckCircle2, XCircle, Loader2, Clock, Circle, Wrench } from "lucide-react";
+
+import { ScrollArea } from "~/components/ui/scroll-area";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "~/components/ui/accordion";
+import { SkillPicker } from "~/components/skills/SkillPicker";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "~/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Textarea } from "~/components/ui/textarea";
 import {
   buildToolParamValues,
   formatToolParamDefault,
@@ -13,24 +52,17 @@ import {
   type ToolDefinition,
   type ToolParameterDefinition,
 } from "~/core/api/workflow";
-import { ToolSelector } from "./ToolSelector";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "~/components/ui/sheet";
-import type { Node, Edge } from "@xyflow/react";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
-import { Textarea } from "~/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { Badge } from "~/components/ui/badge";
-import { ScrollArea } from "~/components/ui/scroll-area";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "~/components/ui/accordion";
-import { SkillPicker } from "~/components/skills/SkillPicker";
+
 import { KnowledgeSelector } from "./components/KnowledgeSelector";
-import { VariableInsertButton } from "./components/VariableInsertButton";
-import { ModelSelector } from "./components/ModelSelector";
 import { LoopBodyNodeSelector } from "./components/LoopBodyNodeSelector";
-import { OutputSchemaEditor, type OutputFormatType, type OutputField } from "./components/OutputSchemaEditor";
+import { ModelSelector } from "./components/ModelSelector";
+import {
+  OutputSchemaEditor,
+  type OutputFormatType,
+  type OutputField,
+} from "./components/OutputSchemaEditor";
+import { VariableInsertButton } from "./components/VariableInsertButton";
+import { ToolSelector } from "./ToolSelector";
 import {
   buildDefaultLlmPromptFromUpstream,
   resolveLlmPromptSource,
@@ -51,22 +83,22 @@ function formatJSONForDisplay(obj: any): string {
   if (obj === null || obj === undefined) {
     return "null";
   }
-  
+
   // 递归处理对象和数组，去除字符串中的换行符和转义字符
   const processValue = (value: any): any => {
     if (typeof value === "string") {
       // 去除字符串中的换行符（包括 \n 和实际的换行符），替换为空格
       return value
-        .replace(/\\n/g, " ")  // 将 \n 转义字符替换为空格
-        .replace(/\n/g, " ")    // 将实际换行符替换为空格
-        .replace(/\\t/g, " ")   // 将 \t 替换为空格
-        .replace(/\t/g, " ")     // 将实际制表符替换为空格
-        .replace(/\\r/g, " ")   // 将 \r 替换为空格
-        .replace(/\r/g, " ")     // 将实际回车符替换为空格
-        .replace(/\\"/g, '"')   // 保留转义的引号
+        .replace(/\\n/g, " ") // 将 \n 转义字符替换为空格
+        .replace(/\n/g, " ") // 将实际换行符替换为空格
+        .replace(/\\t/g, " ") // 将 \t 替换为空格
+        .replace(/\t/g, " ") // 将实际制表符替换为空格
+        .replace(/\\r/g, " ") // 将 \r 替换为空格
+        .replace(/\r/g, " ") // 将实际回车符替换为空格
+        .replace(/\\"/g, '"') // 保留转义的引号
         .replace(/\\\\/g, "\\") // 保留转义的反斜杠
-        .replace(/\s+/g, " ")    // 将多个连续空格合并为单个空格
-        .trim();                // 去除首尾空格
+        .replace(/\s+/g, " ") // 将多个连续空格合并为单个空格
+        .trim(); // 去除首尾空格
     } else if (Array.isArray(value)) {
       return value.map(processValue);
     } else if (typeof value === "object" && value !== null) {
@@ -80,7 +112,7 @@ function formatJSONForDisplay(obj: any): string {
     }
     return value;
   };
-  
+
   try {
     // 先处理字符串中的换行符，然后格式化为标准 JSON
     const processed = processValue(obj);
@@ -93,33 +125,42 @@ function formatJSONForDisplay(obj: any): string {
 
 // 渲染对象字段，直接展开显示内部字段（不显示 input/output 字段名）
 function renderObjectFields(obj: any, label: string) {
-  if (!obj || typeof obj !== 'object') {
+  if (!obj || typeof obj !== "object") {
     return null;
   }
-  
+
   // 如果是数组，直接显示
   if (Array.isArray(obj)) {
     return (
       <div className="space-y-1">
-        <Label className="text-xs text-muted-foreground">{label}</Label>
-        <div className="bg-muted rounded-md p-2 overflow-auto max-h-[200px]">
-          <pre className="text-xs font-mono whitespace-pre-wrap">{formatJSONForDisplay(obj)}</pre>
+        <Label className="text-muted-foreground text-xs">{label}</Label>
+        <div className="bg-muted max-h-[200px] overflow-auto rounded-md p-2">
+          <pre className="font-mono text-xs whitespace-pre-wrap">
+            {formatJSONForDisplay(obj)}
+          </pre>
         </div>
       </div>
     );
   }
-  
+
   // 如果是对象，展开显示每个字段
   return (
     <div className="space-y-1">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <div className="bg-muted rounded-md p-2 space-y-2">
+      <Label className="text-muted-foreground text-xs">{label}</Label>
+      <div className="bg-muted space-y-2 rounded-md p-2">
         {Object.entries(obj).map(([key, value]) => (
-          <div key={key} className="border-b border-border/50 pb-2 last:border-0 last:pb-0">
-            <div className="text-xs font-semibold text-foreground mb-1">{key}</div>
-            <div className="text-xs text-muted-foreground">
-              {typeof value === 'object' && value !== null ? (
-                <pre className="whitespace-pre-wrap">{formatJSONForDisplay(value)}</pre>
+          <div
+            key={key}
+            className="border-border/50 border-b pb-2 last:border-0 last:pb-0"
+          >
+            <div className="text-foreground mb-1 text-xs font-semibold">
+              {key}
+            </div>
+            <div className="text-muted-foreground text-xs">
+              {typeof value === "object" && value !== null ? (
+                <pre className="whitespace-pre-wrap">
+                  {formatJSONForDisplay(value)}
+                </pre>
               ) : (
                 String(value)
               )}
@@ -145,19 +186,24 @@ function RunResultTab({
   const nodeType = nodeData.type || nodeData.nodeType;
   const isLoopNode = nodeType === "loop";
   const isLoopBodyNode = nodeData.loopId || nodeData.loop_id;
-  
+
   if (!result && status === "pending") {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
+      <div className="text-muted-foreground flex h-full flex-col items-center justify-center p-8">
         <p>暂无运行结果</p>
-        <p className="text-xs mt-2">点击"执行"查看结果</p>
+        <p className="mt-2 text-xs">点击"执行"查看结果</p>
       </div>
     );
   }
 
-  const duration = result?.startTime && result?.endTime 
-    ? ((new Date(result.endTime).getTime() - new Date(result.startTime).getTime()) / 1000).toFixed(2) + "s"
-    : null;
+  const duration =
+    result?.startTime && result?.endTime
+      ? (
+          (new Date(result.endTime).getTime() -
+            new Date(result.startTime).getTime()) /
+          1000
+        ).toFixed(2) + "s"
+      : null;
 
   // 循环体节点：显示 iterations, passed_items, pending_items
   if (isLoopNode) {
@@ -165,38 +211,68 @@ function RunResultTab({
     const iterations = outputs.iterations || 0;
     const passedItems = outputs.passed_items || [];
     const pendingItems = outputs.pending_items || [];
-    
+
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-              {status === "success" && <Badge variant="default" className="bg-green-500 hover:bg-green-600"><CheckCircle2 className="w-3 h-3 mr-1"/> 成功</Badge>}
-              {status === "error" && <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1"/> 失败</Badge>}
-              {status === "running" && <Badge variant="secondary" className="bg-blue-100 text-blue-800"><Loader2 className="w-3 h-3 mr-1 animate-spin"/> 运行中</Badge>}
-              {status === "ready" && <Badge variant="secondary" className="bg-blue-100 text-blue-800 animate-pulse">就绪</Badge>}
-              {status === "skipped" && <Badge variant="outline">已跳过</Badge>}
-              {status === "cancelled" && <Badge variant="outline">已取消</Badge>}
-              {status === "pending" && <Badge variant="outline">未运行</Badge>}
+            {status === "success" && (
+              <Badge
+                variant="default"
+                className="bg-green-500 hover:bg-green-600"
+              >
+                <CheckCircle2 className="mr-1 h-3 w-3" /> 成功
+              </Badge>
+            )}
+            {status === "error" && (
+              <Badge variant="destructive">
+                <XCircle className="mr-1 h-3 w-3" /> 失败
+              </Badge>
+            )}
+            {status === "running" && (
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" /> 运行中
+              </Badge>
+            )}
+            {status === "ready" && (
+              <Badge
+                variant="secondary"
+                className="animate-pulse bg-blue-100 text-blue-800"
+              >
+                就绪
+              </Badge>
+            )}
+            {status === "skipped" && <Badge variant="outline">已跳过</Badge>}
+            {status === "cancelled" && <Badge variant="outline">已取消</Badge>}
+            {status === "pending" && <Badge variant="outline">未运行</Badge>}
           </div>
           {duration && (
-            <div className="flex items-center text-xs text-muted-foreground">
-              <Clock className="w-3 h-3 mr-1" />
+            <div className="text-muted-foreground flex items-center text-xs">
+              <Clock className="mr-1 h-3 w-3" />
               {duration}
             </div>
           )}
         </div>
 
         {result?.error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
-            <p className="text-sm font-medium text-red-800 dark:text-red-300">错误信息</p>
-            <pre className="mt-1 text-xs text-red-600 dark:text-red-400 whitespace-pre-wrap overflow-auto max-h-[100px]">{typeof result.error === 'string' ? result.error : JSON.stringify(result.error, null, 2)}</pre>
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20">
+            <p className="text-sm font-medium text-red-800 dark:text-red-300">
+              错误信息
+            </p>
+            <pre className="mt-1 max-h-[100px] overflow-auto text-xs whitespace-pre-wrap text-red-600 dark:text-red-400">
+              {typeof result.error === "string"
+                ? result.error
+                : JSON.stringify(result.error, null, 2)}
+            </pre>
           </div>
         )}
 
         {/* 显示重试信息 */}
         {result?.attempt && result.attempt > 1 && (
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
-            <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">重试信息</p>
+          <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-900/20">
+            <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+              重试信息
+            </p>
             <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
               当前重试次数: {result.attempt} / 4
             </p>
@@ -210,8 +286,10 @@ function RunResultTab({
 
         {/* 显示超时信息 */}
         {result?.timeout_seconds && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
-            <p className="text-sm font-medium text-blue-800 dark:text-blue-300">超时配置</p>
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
+            <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+              超时配置
+            </p>
             <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
               超时时间: {result.timeout_seconds}秒
             </p>
@@ -220,7 +298,7 @@ function RunResultTab({
 
         {/* 迭代次数 */}
         <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">迭代次数</Label>
+          <Label className="text-muted-foreground text-xs">迭代次数</Label>
           <div className="bg-muted rounded-md p-2">
             <p className="text-sm font-medium">{iterations}</p>
           </div>
@@ -228,17 +306,25 @@ function RunResultTab({
 
         {/* 通过筛选的数据 */}
         <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">通过筛选的数据 (passed_items)</Label>
-          <div className="bg-muted rounded-md p-2 overflow-auto max-h-[300px]">
-            <pre className="text-xs font-mono whitespace-pre-wrap">{formatJSONForDisplay(passedItems)}</pre>
+          <Label className="text-muted-foreground text-xs">
+            通过筛选的数据 (passed_items)
+          </Label>
+          <div className="bg-muted max-h-[300px] overflow-auto rounded-md p-2">
+            <pre className="font-mono text-xs whitespace-pre-wrap">
+              {formatJSONForDisplay(passedItems)}
+            </pre>
           </div>
         </div>
 
         {/* 不满足条件的条目 */}
         <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">不满足条件的条目 (pending_items)</Label>
-          <div className="bg-muted rounded-md p-2 overflow-auto max-h-[300px]">
-            <pre className="text-xs font-mono whitespace-pre-wrap">{formatJSONForDisplay(pendingItems)}</pre>
+          <Label className="text-muted-foreground text-xs">
+            不满足条件的条目 (pending_items)
+          </Label>
+          <div className="bg-muted max-h-[300px] overflow-auto rounded-md p-2">
+            <pre className="font-mono text-xs whitespace-pre-wrap">
+              {formatJSONForDisplay(pendingItems)}
+            </pre>
           </div>
         </div>
       </div>
@@ -246,9 +332,14 @@ function RunResultTab({
   }
 
   // 循环体内的节点：按迭代次数分组展示
-  if (isLoopBodyNode && result?.outputs?.iteration_outputs && Array.isArray(result.outputs.iteration_outputs) && result.outputs.iteration_outputs.length > 0) {
+  if (
+    isLoopBodyNode &&
+    result?.outputs?.iteration_outputs &&
+    Array.isArray(result.outputs.iteration_outputs) &&
+    result.outputs.iteration_outputs.length > 0
+  ) {
     const iterationOutputs = result.outputs.iteration_outputs;
-    
+
     // 按迭代次数分组
     const groupedByIteration: Record<number, typeof iterationOutputs> = {};
     iterationOutputs.forEach((item: any) => {
@@ -258,52 +349,82 @@ function RunResultTab({
       }
       groupedByIteration[iter].push(item);
     });
-    
-    const iterations = Object.keys(groupedByIteration).map(Number).sort((a, b) => a - b);
-    
+
+    const iterations = Object.keys(groupedByIteration)
+      .map(Number)
+      .sort((a, b) => a - b);
+
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-              {status === "success" && <Badge variant="default" className="bg-green-500 hover:bg-green-600"><CheckCircle2 className="w-3 h-3 mr-1"/> 成功</Badge>}
-              {status === "error" && <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1"/> 失败</Badge>}
-              {status === "running" && <Badge variant="secondary" className="bg-blue-100 text-blue-800"><Loader2 className="w-3 h-3 mr-1 animate-spin"/> 运行中</Badge>}
-              {status === "ready" && <Badge variant="secondary" className="bg-blue-100 text-blue-800 animate-pulse">就绪</Badge>}
-              {status === "skipped" && <Badge variant="outline">已跳过</Badge>}
-              {status === "cancelled" && <Badge variant="outline">已取消</Badge>}
-              {status === "pending" && <Badge variant="outline">未运行</Badge>}
+            {status === "success" && (
+              <Badge
+                variant="default"
+                className="bg-green-500 hover:bg-green-600"
+              >
+                <CheckCircle2 className="mr-1 h-3 w-3" /> 成功
+              </Badge>
+            )}
+            {status === "error" && (
+              <Badge variant="destructive">
+                <XCircle className="mr-1 h-3 w-3" /> 失败
+              </Badge>
+            )}
+            {status === "running" && (
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" /> 运行中
+              </Badge>
+            )}
+            {status === "ready" && (
+              <Badge
+                variant="secondary"
+                className="animate-pulse bg-blue-100 text-blue-800"
+              >
+                就绪
+              </Badge>
+            )}
+            {status === "skipped" && <Badge variant="outline">已跳过</Badge>}
+            {status === "cancelled" && <Badge variant="outline">已取消</Badge>}
+            {status === "pending" && <Badge variant="outline">未运行</Badge>}
           </div>
           {duration && (
-            <div className="flex items-center text-xs text-muted-foreground">
-              <Clock className="w-3 h-3 mr-1" />
+            <div className="text-muted-foreground flex items-center text-xs">
+              <Clock className="mr-1 h-3 w-3" />
               {duration}
             </div>
           )}
         </div>
 
         {result?.error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
-            <p className="text-sm font-medium text-red-800 dark:text-red-300">错误信息</p>
-            <pre className="mt-1 text-xs text-red-600 dark:text-red-400 whitespace-pre-wrap overflow-auto max-h-[100px]">{typeof result.error === 'string' ? result.error : JSON.stringify(result.error, null, 2)}</pre>
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20">
+            <p className="text-sm font-medium text-red-800 dark:text-red-300">
+              错误信息
+            </p>
+            <pre className="mt-1 max-h-[100px] overflow-auto text-xs whitespace-pre-wrap text-red-600 dark:text-red-400">
+              {typeof result.error === "string"
+                ? result.error
+                : JSON.stringify(result.error, null, 2)}
+            </pre>
           </div>
         )}
 
         <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">迭代执行结果</Label>
+          <Label className="text-muted-foreground text-xs">迭代执行结果</Label>
           <Accordion type="multiple" className="w-full">
             {iterations.map((iter) => {
               const items = groupedByIteration[iter];
               if (!items || items.length === 0) return null;
-              
+
               // 取最后一次执行的结果（同一迭代可能执行多次）
               const lastItem = items[items.length - 1];
-              
+
               return (
                 <AccordionItem key={iter} value={`iteration-${iter}`}>
                   <AccordionTrigger className="text-sm">
                     迭代 {iter}
                     {lastItem.duration && (
-                      <span className="ml-2 text-xs text-muted-foreground">
+                      <span className="text-muted-foreground ml-2 text-xs">
                         ({lastItem.duration.toFixed(2)}s)
                       </span>
                     )}
@@ -311,62 +432,81 @@ function RunResultTab({
                   <AccordionContent>
                     <div className="space-y-3 pt-2">
                       {/* 输入：优先使用 resolved_inputs，如果没有则使用 inputs */}
-                      {(lastItem.resolved_inputs || lastItem.inputs) && (
+                      {(lastItem.resolved_inputs || lastItem.inputs) &&
                         renderObjectFields(
                           lastItem.resolved_inputs || lastItem.inputs,
-                          "输入"
-                        )
-                      )}
-                      
+                          "输入",
+                        )}
+
                       {/* 输出：直接显示内部字段 */}
-                      {lastItem.output && (() => {
-                        const output = lastItem.output;
-                        
-                        // 检查是否是评估节点的数组输出
-                        // 评估节点输出通常是数组，每个元素包含 score、opt_des 等字段
-                        const isEvaluationArray = Array.isArray(output) && 
-                          output.length > 0 && 
-                          output.every(item => 
-                            typeof item === 'object' && 
-                            item !== null && 
-                            ('score' in item || 'opt_des' in item || 'name' in item || 'smiles' in item)
-                          );
-                        
-                        if (isEvaluationArray) {
-                          // 数组格式：直接显示整个数组，不展开字段
-                          return (
-                            <div className="space-y-2">
-                              <Label className="text-xs text-muted-foreground">输出</Label>
-                              <div className="bg-muted rounded-md p-2 overflow-auto max-h-[300px]">
-                                <pre className="text-xs font-mono whitespace-pre-wrap">
-                                  {formatJSONForDisplay(output)}
-                                </pre>
-                              </div>
-                            </div>
-                          );
-                        }
-                        
-                        // 其他情况：使用原有的 renderObjectFields
-                        return renderObjectFields(output, "输出");
-                      })()}
-                      
-                      {lastItem.metrics && Object.keys(lastItem.metrics).length > 0 && (
-                        <div className="grid grid-cols-2 gap-2">
-                          {Object.entries(lastItem.metrics).map(([key, value]) => {
-                            if (typeof value === 'object') return null;
+                      {lastItem.output &&
+                        (() => {
+                          const output = lastItem.output;
+
+                          // 检查是否是评估节点的数组输出
+                          // 评估节点输出通常是数组，每个元素包含 score、opt_des 等字段
+                          const isEvaluationArray =
+                            Array.isArray(output) &&
+                            output.length > 0 &&
+                            output.every(
+                              (item) =>
+                                typeof item === "object" &&
+                                item !== null &&
+                                ("score" in item ||
+                                  "opt_des" in item ||
+                                  "name" in item ||
+                                  "smiles" in item),
+                            );
+
+                          if (isEvaluationArray) {
+                            // 数组格式：直接显示整个数组，不展开字段
                             return (
-                              <div key={key} className="bg-muted rounded p-2">
-                                <p className="text-[10px] text-muted-foreground uppercase">{key}</p>
-                                <p className="text-sm font-medium">{String(value)}</p>
+                              <div className="space-y-2">
+                                <Label className="text-muted-foreground text-xs">
+                                  输出
+                                </Label>
+                                <div className="bg-muted max-h-[300px] overflow-auto rounded-md p-2">
+                                  <pre className="font-mono text-xs whitespace-pre-wrap">
+                                    {formatJSONForDisplay(output)}
+                                  </pre>
+                                </div>
                               </div>
                             );
-                          })}
-                        </div>
-                      )}
-                      
+                          }
+
+                          // 其他情况：使用原有的 renderObjectFields
+                          return renderObjectFields(output, "输出");
+                        })()}
+
+                      {lastItem.metrics &&
+                        Object.keys(lastItem.metrics).length > 0 && (
+                          <div className="grid grid-cols-2 gap-2">
+                            {Object.entries(lastItem.metrics).map(
+                              ([key, value]) => {
+                                if (typeof value === "object") return null;
+                                return (
+                                  <div
+                                    key={key}
+                                    className="bg-muted rounded p-2"
+                                  >
+                                    <p className="text-muted-foreground text-[10px] uppercase">
+                                      {key}
+                                    </p>
+                                    <p className="text-sm font-medium">
+                                      {String(value)}
+                                    </p>
+                                  </div>
+                                );
+                              },
+                            )}
+                          </div>
+                        )}
+
                       {lastItem.error && (
-                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-2">
-                          <p className="text-xs text-red-600 dark:text-red-400">{lastItem.error}</p>
+                        <div className="rounded-md border border-red-200 bg-red-50 p-2 dark:border-red-800 dark:bg-red-900/20">
+                          <p className="text-xs text-red-600 dark:text-red-400">
+                            {lastItem.error}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -395,62 +535,99 @@ function RunResultTab({
       ) : null}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-            {status === "success" && <Badge variant="default" className="bg-green-500 hover:bg-green-600"><CheckCircle2 className="w-3 h-3 mr-1"/> 成功</Badge>}
-            {status === "error" && <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1"/> 失败</Badge>}
-            {status === "running" && <Badge variant="secondary" className="bg-blue-100 text-blue-800"><Loader2 className="w-3 h-3 mr-1 animate-spin"/> 运行中</Badge>}
-            {status === "ready" && <Badge variant="secondary" className="bg-blue-100 text-blue-800 animate-pulse">就绪</Badge>}
-            {status === "skipped" && <Badge variant="outline">已跳过</Badge>}
-            {status === "cancelled" && <Badge variant="outline">已取消</Badge>}
-            {status === "pending" && <Badge variant="outline">未运行</Badge>}
+          {status === "success" && (
+            <Badge
+              variant="default"
+              className="bg-green-500 hover:bg-green-600"
+            >
+              <CheckCircle2 className="mr-1 h-3 w-3" /> 成功
+            </Badge>
+          )}
+          {status === "error" && (
+            <Badge variant="destructive">
+              <XCircle className="mr-1 h-3 w-3" /> 失败
+            </Badge>
+          )}
+          {status === "running" && (
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+              <Loader2 className="mr-1 h-3 w-3 animate-spin" /> 运行中
+            </Badge>
+          )}
+          {status === "ready" && (
+            <Badge
+              variant="secondary"
+              className="animate-pulse bg-blue-100 text-blue-800"
+            >
+              就绪
+            </Badge>
+          )}
+          {status === "skipped" && <Badge variant="outline">已跳过</Badge>}
+          {status === "cancelled" && <Badge variant="outline">已取消</Badge>}
+          {status === "pending" && <Badge variant="outline">未运行</Badge>}
         </div>
         {duration && (
-            <div className="flex items-center text-xs text-muted-foreground">
-                <Clock className="w-3 h-3 mr-1" />
-                {duration}
-            </div>
+          <div className="text-muted-foreground flex items-center text-xs">
+            <Clock className="mr-1 h-3 w-3" />
+            {duration}
+          </div>
         )}
       </div>
 
       {result?.error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
-          <p className="text-sm font-medium text-red-800 dark:text-red-300">错误信息</p>
-          <pre className="mt-1 text-xs text-red-600 dark:text-red-400 whitespace-pre-wrap overflow-auto max-h-[100px]">{typeof result.error === 'string' ? result.error : JSON.stringify(result.error, null, 2)}</pre>
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20">
+          <p className="text-sm font-medium text-red-800 dark:text-red-300">
+            错误信息
+          </p>
+          <pre className="mt-1 max-h-[100px] overflow-auto text-xs whitespace-pre-wrap text-red-600 dark:text-red-400">
+            {typeof result.error === "string"
+              ? result.error
+              : JSON.stringify(result.error, null, 2)}
+          </pre>
         </div>
       )}
 
       {result?.metrics && Object.keys(result.metrics).length > 0 && (
         <div className="grid grid-cols-2 gap-2">
-            {Object.entries(result.metrics).map(([key, value]) => {
-                if (typeof value === 'object') return null;
-                return (
-                    <div key={key} className="bg-muted rounded p-2">
-                        <p className="text-[10px] text-muted-foreground uppercase">{key}</p>
-                        <p className="text-sm font-medium">{String(value)}</p>
-                    </div>
-                );
-            })}
+          {Object.entries(result.metrics).map(([key, value]) => {
+            if (typeof value === "object") return null;
+            return (
+              <div key={key} className="bg-muted rounded p-2">
+                <p className="text-muted-foreground text-[10px] uppercase">
+                  {key}
+                </p>
+                <p className="text-sm font-medium">{String(value)}</p>
+              </div>
+            );
+          })}
         </div>
       )}
 
       {result?.inputs && (
         <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">输入参数</Label>
-          <div className="bg-muted rounded-md p-2 overflow-auto max-h-[200px]">
-            <pre className="text-xs font-mono whitespace-pre-wrap">{formatJSONForDisplay(result.inputs)}</pre>
+          <Label className="text-muted-foreground text-xs">输入参数</Label>
+          <div className="bg-muted max-h-[200px] overflow-auto rounded-md p-2">
+            <pre className="font-mono text-xs whitespace-pre-wrap">
+              {formatJSONForDisplay(result.inputs)}
+            </pre>
           </div>
         </div>
       )}
 
       {result?.outputs != null && result?.outputs !== "" ? (
         <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">输出结果</Label>
-          <div className="bg-muted rounded-md p-2 overflow-auto max-h-[300px]">
-             <pre className="text-xs font-mono whitespace-pre-wrap">{formatJSONForDisplay(result.outputs)}</pre>
+          <Label className="text-muted-foreground text-xs">输出结果</Label>
+          <div className="bg-muted max-h-[300px] overflow-auto rounded-md p-2">
+            <pre className="font-mono text-xs whitespace-pre-wrap">
+              {formatJSONForDisplay(result.outputs)}
+            </pre>
           </div>
         </div>
       ) : status !== "pending" && !result?.error ? (
-        <p className="text-xs text-muted-foreground">
-          暂无输出数据。{runHistoryHref ? "请打开运行历史查看各节点详情。" : "请重新执行工作流。"}
+        <p className="text-muted-foreground text-xs">
+          暂无输出数据。
+          {runHistoryHref
+            ? "请打开运行历史查看各节点详情。"
+            : "请重新执行工作流。"}
         </p>
       ) : null}
     </div>
@@ -474,13 +651,18 @@ export function NodeConfigPanel({
         ? (nodeData as any).label
         : "";
   const [displayName, setDisplayName] = useState<string>(_initialDisplayName);
-  
+
   // 节点名称（不可编辑）
   // 确保 taskName 始终是字符串
-  const taskName = typeof nodeData.taskName === 'string' 
-    ? nodeData.taskName 
-    : (typeof nodeData.nodeName === 'string' ? nodeData.nodeName : (typeof nodeData.label === 'string' ? nodeData.label : String(node.type || 'node')));
-  
+  const taskName =
+    typeof nodeData.taskName === "string"
+      ? nodeData.taskName
+      : typeof nodeData.nodeName === "string"
+        ? nodeData.nodeName
+        : typeof nodeData.label === "string"
+          ? nodeData.label
+          : String(node.type || "node");
+
   // 开始和结束节点固定名称
   const isFixedName = node.type === "start" || node.type === "end";
 
@@ -504,121 +686,136 @@ export function NodeConfigPanel({
     switch (node.type) {
       case "start":
         return (
-          <StartNodeConfig 
-            node={node} 
-            nodeData={nodeData} 
-            onUpdate={onUpdate} 
+          <StartNodeConfig
+            node={node}
+            nodeData={nodeData}
+            onUpdate={onUpdate}
           />
         );
       case "llm":
         return (
-          <LLMNodeConfig 
-            node={node} 
-            nodeData={nodeData} 
+          <LLMNodeConfig
+            node={node}
+            nodeData={nodeData}
             nodes={nodes}
             edges={edges}
-            onUpdate={onUpdate} 
+            onUpdate={onUpdate}
           />
         );
       case "tool":
         return (
-          <ToolNodeConfig 
-            node={node} 
-            nodeData={nodeData} 
+          <ToolNodeConfig
+            node={node}
+            nodeData={nodeData}
             nodes={nodes}
             edges={edges}
-            onUpdate={onUpdate} 
+            onUpdate={onUpdate}
           />
         );
       case "condition":
         return (
-          <ConditionNodeConfig 
-            node={node} 
-            nodeData={nodeData} 
+          <ConditionNodeConfig
+            node={node}
+            nodeData={nodeData}
             nodes={nodes}
             edges={edges}
-            onUpdate={onUpdate} 
+            onUpdate={onUpdate}
           />
         );
       case "loop":
         return (
-          <LoopNodeConfig 
-            node={node} 
-            nodeData={nodeData} 
+          <LoopNodeConfig
+            node={node}
+            nodeData={nodeData}
             nodes={nodes}
             edges={edges}
-            onUpdate={onUpdate} 
+            onUpdate={onUpdate}
           />
         );
       default:
-        return <div className="text-sm text-muted-foreground">此节点类型暂无额外配置</div>;
+        return (
+          <div className="text-muted-foreground text-sm">
+            此节点类型暂无额外配置
+          </div>
+        );
     }
   };
 
   return (
-    <div className="h-full min-h-0 min-w-0 w-full flex flex-col border-l border-border bg-card shadow-lg overflow-hidden">
-      <div className="flex h-16 shrink-0 items-center justify-between border-b border-border px-4">
-        <h2 className="text-lg font-semibold text-foreground truncate">节点配置</h2>
+    <div className="border-border bg-card flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden border-l shadow-lg">
+      <div className="border-border flex h-16 shrink-0 items-center justify-between border-b px-4">
+        <h2 className="text-foreground truncate text-lg font-semibold">
+          节点配置
+        </h2>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
       </div>
-      
-        <Tabs defaultValue="config" className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="shrink-0 px-4 pt-2">
-            <TabsList className="w-full grid grid-cols-2">
-              <TabsTrigger value="config">配置</TabsTrigger>
-              <TabsTrigger value="result">运行结果</TabsTrigger>
-            </TabsList>
-          </div>
-          
-          <TabsContent value="config" className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden p-4 data-[state=inactive]:hidden mt-0">
-            <div className="space-y-4 break-words">
-              <div>
-                <Label htmlFor="taskName">节点名称</Label>
-                <Input
-                  id="taskName"
-                  value={taskName}
-                  disabled
-                  className="bg-muted"
-                />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  节点名称用于程序运行和记录，不可更改
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="displayName">显示名称</Label>
-                <Input
-                  id="displayName"
-                  value={displayName}
-                  onChange={(e) => handleDisplayNameChange(e.target.value)}
-                  placeholder="输入显示名称"
-                  disabled={isFixedName}
-                  className={isFixedName ? "bg-muted" : ""}
-                />
-                {isFixedName && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    开始和结束节点的显示名称不可更改
-                  </p>
-                )}
-                {!isFixedName && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    显示名称用于界面展示，可以自定义
-                  </p>
-                )}
-              </div>
-              {renderNodeSpecificConfig()}
+
+      <Tabs
+        defaultValue="config"
+        className="flex min-h-0 flex-1 flex-col overflow-hidden"
+      >
+        <div className="shrink-0 px-4 pt-2">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="config">配置</TabsTrigger>
+            <TabsTrigger value="result">运行结果</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent
+          value="config"
+          className="mt-0 min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 data-[state=inactive]:hidden"
+        >
+          <div className="space-y-4 break-words">
+            <div>
+              <Label htmlFor="taskName">节点名称</Label>
+              <Input
+                id="taskName"
+                value={taskName}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-muted-foreground mt-1 text-xs">
+                节点名称用于程序运行和记录，不可更改
+              </p>
             </div>
-          </TabsContent>
-          
-          <TabsContent value="result" className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden p-4 data-[state=inactive]:hidden mt-0">
-            <RunResultTab
-              nodeData={{ ...nodeData, type: node.type }}
-              workflowId={workflowId}
-              currentRunId={currentRunId}
-            />
-          </TabsContent>
-        </Tabs>
+            <div>
+              <Label htmlFor="displayName">显示名称</Label>
+              <Input
+                id="displayName"
+                value={displayName}
+                onChange={(e) => handleDisplayNameChange(e.target.value)}
+                placeholder="输入显示名称"
+                disabled={isFixedName}
+                className={isFixedName ? "bg-muted" : ""}
+              />
+              {isFixedName && (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  开始和结束节点的显示名称不可更改
+                </p>
+              )}
+              {!isFixedName && (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  显示名称用于界面展示，可以自定义
+                </p>
+              )}
+            </div>
+            {renderNodeSpecificConfig()}
+          </div>
+        </TabsContent>
+
+        <TabsContent
+          value="result"
+          className="mt-0 min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 data-[state=inactive]:hidden"
+        >
+          <RunResultTab
+            nodeData={{ ...nodeData, type: node.type }}
+            workflowId={workflowId}
+            currentRunId={currentRunId}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -649,7 +846,8 @@ function StartNodeConfig({ node, nodeData, onUpdate }: NodeConfigProps) {
   const [startInputs, setStartInputs] = useState<StartInputFieldRow[]>(
     Array.isArray(nodeData.startInputs) ? nodeData.startInputs : [],
   );
-  const filesEnabled = nodeData.startFiles !== null && nodeData.startFiles !== false;
+  const filesEnabled =
+    nodeData.startFiles !== null && nodeData.startFiles !== false;
   const [filesAccept, setFilesAccept] = useState(
     nodeData.startFiles?.accept ?? DEFAULT_START_FILES.accept,
   );
@@ -659,10 +857,14 @@ function StartNodeConfig({ node, nodeData, onUpdate }: NodeConfigProps) {
 
   useEffect(() => {
     setInputInfo(nodeData.startInputInfo || "");
-    setStartInputs(Array.isArray(nodeData.startInputs) ? nodeData.startInputs : []);
+    setStartInputs(
+      Array.isArray(nodeData.startInputs) ? nodeData.startInputs : [],
+    );
     if (nodeData.startFiles && typeof nodeData.startFiles === "object") {
       setFilesAccept(nodeData.startFiles.accept ?? DEFAULT_START_FILES.accept);
-      setFilesMaxCount(String(nodeData.startFiles.maxCount ?? DEFAULT_START_FILES.maxCount));
+      setFilesMaxCount(
+        String(nodeData.startFiles.maxCount ?? DEFAULT_START_FILES.maxCount),
+      );
     }
   }, [nodeData.startInputInfo, nodeData.startInputs, nodeData.startFiles]);
 
@@ -711,7 +913,7 @@ function StartNodeConfig({ node, nodeData, onUpdate }: NodeConfigProps) {
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground rounded-md bg-muted/40 p-2">
+      <p className="text-muted-foreground bg-muted/40 rounded-md p-2 text-xs">
         附件在点击工作流「执行」时的弹窗中上传，不在此面板直接上传。请在此配置运行时要填写的字段与附件规则。
       </p>
       <div>
@@ -721,16 +923,24 @@ function StartNodeConfig({ node, nodeData, onUpdate }: NodeConfigProps) {
           value={inputInfo}
           onChange={(e) => {
             setInputInfo(e.target.value);
-            onUpdate(node.id, { ...nodeData, startInputInfo: e.target.value || undefined });
+            onUpdate(node.id, {
+              ...nodeData,
+              startInputInfo: e.target.value || undefined,
+            });
           }}
           placeholder="运行前对话框中的提示文案"
         />
       </div>
       <div>
-        <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <Label>输入字段</Label>
           <div className="flex gap-1">
-            <Button type="button" variant="outline" size="sm" onClick={addPoscarPreset}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addPoscarPreset}
+            >
               POSCAR 模板
             </Button>
             <Button
@@ -744,14 +954,17 @@ function StartNodeConfig({ node, nodeData, onUpdate }: NodeConfigProps) {
                 ])
               }
             >
-              <Plus className="h-3 w-3 mr-1" />
+              <Plus className="mr-1 h-3 w-3" />
               添加
             </Button>
           </div>
         </div>
         <div className="space-y-2">
           {startInputs.map((row, idx) => (
-            <div key={idx} className="grid grid-cols-2 gap-2 border rounded p-2">
+            <div
+              key={idx}
+              className="grid grid-cols-2 gap-2 rounded border p-2"
+            >
               <Input
                 placeholder="key"
                 value={row.key}
@@ -799,7 +1012,7 @@ function StartNodeConfig({ node, nodeData, onUpdate }: NodeConfigProps) {
                   <SelectItem value="path">文件（运行上传）</SelectItem>
                 </SelectContent>
               </Select>
-              <label className="flex items-center gap-1 text-xs cursor-pointer col-span-2">
+              <label className="col-span-2 flex cursor-pointer items-center gap-1 text-xs">
                 <input
                   type="checkbox"
                   checked={!!row.required}
@@ -815,7 +1028,9 @@ function StartNodeConfig({ node, nodeData, onUpdate }: NodeConfigProps) {
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={() => persistInputs(startInputs.filter((_, i) => i !== idx))}
+                onClick={() =>
+                  persistInputs(startInputs.filter((_, i) => i !== idx))
+                }
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -824,7 +1039,7 @@ function StartNodeConfig({ node, nodeData, onUpdate }: NodeConfigProps) {
         </div>
       </div>
       <div>
-        <label className="flex items-center gap-2 text-sm font-medium mb-2">
+        <label className="mb-2 flex items-center gap-2 text-sm font-medium">
           <input
             type="checkbox"
             checked={filesEnabled}
@@ -876,25 +1091,45 @@ function StartNodeConfig({ node, nodeData, onUpdate }: NodeConfigProps) {
   );
 }
 
-function resolveLlmSkillFromNodeData(nodeData: Record<string, unknown>): string | null {
-  if (nodeData.llmSkill && typeof nodeData.llmSkill === "string") return nodeData.llmSkill;
-  if (nodeData.llm_skill && typeof nodeData.llm_skill === "string") return nodeData.llm_skill;
-  const legacy = (nodeData.llmSkills ?? nodeData.llm_skills) as string[] | undefined;
+function resolveLlmSkillFromNodeData(
+  nodeData: Record<string, unknown>,
+): string | null {
+  if (nodeData.llmSkill && typeof nodeData.llmSkill === "string")
+    return nodeData.llmSkill;
+  if (nodeData.llm_skill && typeof nodeData.llm_skill === "string")
+    return nodeData.llm_skill;
+  const legacy = (nodeData.llmSkills ?? nodeData.llm_skills) as
+    | string[]
+    | undefined;
   if (Array.isArray(legacy) && legacy.length > 0) return legacy[0] ?? null;
   return null;
 }
 
-function LLMNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: NodeConfigProps) {
+function LLMNodeConfig({
+  node,
+  nodeData,
+  nodes = [],
+  edges = [],
+  onUpdate,
+}: NodeConfigProps) {
   const [model, setModel] = useState(nodeData.llmModel || "");
-  const [llmSkill, setLlmSkill] = useState<string | null>(() => resolveLlmSkillFromNodeData(nodeData));
-  const [temperature, setTemperature] = useState(nodeData.llmTemperature?.toString() || "0.7");
+  const [llmSkill, setLlmSkill] = useState<string | null>(() =>
+    resolveLlmSkillFromNodeData(nodeData),
+  );
+  const [temperature, setTemperature] = useState(
+    nodeData.llmTemperature?.toString() || "0.7",
+  );
   const [prompt, setPrompt] = useState(nodeData.llmPrompt || "");
-  const [systemPrompt, setSystemPrompt] = useState(nodeData.llmSystemPrompt || "");
+  const [systemPrompt, setSystemPrompt] = useState(
+    nodeData.llmSystemPrompt || "",
+  );
   const [outputFormat, setOutputFormat] = useState<OutputFormatType>(
-    (nodeData.outputFormat || nodeData.output_format || "array") as OutputFormatType
+    (nodeData.outputFormat ||
+      nodeData.output_format ||
+      "array") as OutputFormatType,
   );
   const [outputFields, setOutputFields] = useState<OutputField[]>(
-    nodeData.outputFields || nodeData.output_fields || []
+    nodeData.outputFields || nodeData.output_fields || [],
   );
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const systemPromptRef = useRef<HTMLTextAreaElement>(null);
@@ -905,7 +1140,13 @@ function LLMNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: Nod
   );
 
   const promptSource = useMemo(
-    () => resolveLlmPromptSource(nodeData as Record<string, unknown>, node.id, nodes, edges),
+    () =>
+      resolveLlmPromptSource(
+        nodeData as Record<string, unknown>,
+        node.id,
+        nodes,
+        edges,
+      ),
     [nodeData, node.id, nodes, edges],
   );
 
@@ -915,14 +1156,20 @@ function LLMNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: Nod
 
   useEffect(() => {
     setLlmSkill(resolveLlmSkillFromNodeData(nodeData));
-  }, [nodeData.llmSkill, nodeData.llm_skill, nodeData.llmSkills, nodeData.llm_skills]);
+  }, [
+    nodeData.llmSkill,
+    nodeData.llm_skill,
+    nodeData.llmSkills,
+    nodeData.llm_skills,
+  ]);
 
   useEffect(() => {
     setTemperature(nodeData.llmTemperature?.toString() || "0.7");
   }, [nodeData.llmTemperature]);
 
   useEffect(() => {
-    const saved = typeof nodeData.llmPrompt === "string" ? nodeData.llmPrompt : "";
+    const saved =
+      typeof nodeData.llmPrompt === "string" ? nodeData.llmPrompt : "";
     if (promptSource === "manual") {
       setPrompt(saved);
       return;
@@ -930,7 +1177,11 @@ function LLMNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: Nod
     const next = defaultPromptFromUpstream || "";
     setPrompt(next);
     if (next !== saved) {
-      onUpdate(node.id, { ...nodeData, llmPrompt: next, llmPromptSource: "auto" });
+      onUpdate(node.id, {
+        ...nodeData,
+        llmPrompt: next,
+        llmPromptSource: "auto",
+      });
     }
   }, [
     node.id,
@@ -946,9 +1197,18 @@ function LLMNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: Nod
   }, [nodeData.llmSystemPrompt]);
 
   useEffect(() => {
-    setOutputFormat((nodeData.outputFormat || nodeData.output_format || "array") as OutputFormatType);
+    setOutputFormat(
+      (nodeData.outputFormat ||
+        nodeData.output_format ||
+        "array") as OutputFormatType,
+    );
     setOutputFields(nodeData.outputFields || nodeData.output_fields || []);
-  }, [nodeData.outputFormat, nodeData.output_format, nodeData.outputFields, nodeData.output_fields]);
+  }, [
+    nodeData.outputFormat,
+    nodeData.output_format,
+    nodeData.outputFields,
+    nodeData.output_fields,
+  ]);
 
   return (
     <div className="space-y-4">
@@ -961,7 +1221,7 @@ function LLMNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: Nod
             onUpdate(node.id, { ...nodeData, llmModel: modelName });
           }}
         />
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-xs">
           选择要使用的大语言模型
         </p>
       </div>
@@ -978,7 +1238,7 @@ function LLMNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: Nod
           });
         }}
       />
-      
+
       <div>
         <Label htmlFor="temperature">温度</Label>
         <Input
@@ -997,7 +1257,7 @@ function LLMNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: Nod
           }}
         />
       </div>
-      
+
       <div>
         <Label htmlFor="timeoutSeconds">超时时间（秒）</Label>
         <Input
@@ -1014,14 +1274,14 @@ function LLMNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: Nod
           }}
           placeholder="默认：300（5分钟）"
         />
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1 text-xs">
           节点执行超时时间。对于循环体内的节点，每次迭代都会独立检测超时。
           循环体节点本身不参与超时检测，其他节点最多重试4次。
         </p>
       </div>
-      
+
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="mb-2 flex items-center justify-between">
           <Label htmlFor="prompt">提示词</Label>
           <VariableInsertButton
             currentNodeId={node.id}
@@ -1031,7 +1291,11 @@ function LLMNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: Nod
             value={prompt}
             onChange={(value) => {
               setPrompt(value);
-              onUpdate(node.id, { ...nodeData, llmPrompt: value, llmPromptSource: "manual" });
+              onUpdate(node.id, {
+                ...nodeData,
+                llmPrompt: value,
+                llmPromptSource: "manual",
+              });
             }}
           />
         </div>
@@ -1050,13 +1314,13 @@ function LLMNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: Nod
           placeholder="输入提示词，可使用 {'{'}{'{'}节点名.字段名{'}'}{'}'} 引用上游节点输出"
           rows={4}
         />
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-xs">
           未填写或由系统自动生成时，会随直连上游连线更新并插入对应变量；更早上游字段请用「插入变量」手动选择。手动修改后不再自动覆盖。
         </p>
       </div>
-      
+
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="mb-2 flex items-center justify-between">
           <Label htmlFor="systemPrompt">系统提示词</Label>
           <VariableInsertButton
             currentNodeId={node.id}
@@ -1066,7 +1330,10 @@ function LLMNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: Nod
             value={systemPrompt}
             onChange={(value) => {
               setSystemPrompt(value);
-              onUpdate(node.id, { ...nodeData, llmSystemPrompt: value || undefined });
+              onUpdate(node.id, {
+                ...nodeData,
+                llmSystemPrompt: value || undefined,
+              });
             }}
           />
         </div>
@@ -1076,13 +1343,16 @@ function LLMNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: Nod
           value={systemPrompt}
           onChange={(e) => {
             setSystemPrompt(e.target.value);
-            onUpdate(node.id, { ...nodeData, llmSystemPrompt: e.target.value || undefined });
+            onUpdate(node.id, {
+              ...nodeData,
+              llmSystemPrompt: e.target.value || undefined,
+            });
           }}
           placeholder="输入系统提示词（可选），可使用 {'{'}{'{'}节点名.字段名{'}'}{'}'} 引用上游节点输出"
           rows={3}
         />
       </div>
-      
+
       <div>
         <Label>知识库</Label>
         <KnowledgeSelector
@@ -1099,11 +1369,19 @@ function LLMNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: Nod
           fields={outputFields}
           onFormatChange={(format) => {
             setOutputFormat(format);
-            onUpdate(node.id, { ...nodeData, outputFormat: format, output_format: format });
+            onUpdate(node.id, {
+              ...nodeData,
+              outputFormat: format,
+              output_format: format,
+            });
           }}
           onFieldsChange={(fields) => {
             setOutputFields(fields);
-            onUpdate(node.id, { ...nodeData, outputFields: fields, output_fields: fields });
+            onUpdate(node.id, {
+              ...nodeData,
+              outputFields: fields,
+              output_fields: fields,
+            });
           }}
         />
       </div>
@@ -1130,7 +1408,7 @@ function ToolParamField({
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-2 mb-1">
+      <div className="mb-1 flex items-center justify-between gap-2">
         <Label className="text-xs">
           {param.name}
           {param.required ? " *" : ""}
@@ -1142,11 +1420,13 @@ function ToolParamField({
           inputRef={inputRef}
           value={value}
           onChange={onValueChange}
-          className="h-7 px-2 text-xs shrink-0"
+          className="h-7 shrink-0 px-2 text-xs"
         />
       </div>
       {param.description && (
-        <p className="text-[10px] text-muted-foreground mb-1">{param.description}</p>
+        <p className="text-muted-foreground mb-1 text-[10px]">
+          {param.description}
+        </p>
       )}
       <Input
         ref={inputRef}
@@ -1163,8 +1443,16 @@ function ToolParamField({
   );
 }
 
-function ToolNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: NodeConfigProps) {
-  const [toolName, setToolName] = useState(nodeData.toolName || nodeData.tool_name || "");
+function ToolNodeConfig({
+  node,
+  nodeData,
+  nodes = [],
+  edges = [],
+  onUpdate,
+}: NodeConfigProps) {
+  const [toolName, setToolName] = useState(
+    nodeData.toolName || nodeData.tool_name || "",
+  );
   const [toolCatalog, setToolCatalog] = useState<ToolDefinition[]>([]);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [paramValues, setParamValues] = useState<Record<string, string>>(() => {
@@ -1176,10 +1464,12 @@ function ToolNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
     return out;
   });
   const [outputFormat, setOutputFormat] = useState<OutputFormatType>(
-    (nodeData.outputFormat || nodeData.output_format || "array") as OutputFormatType
+    (nodeData.outputFormat ||
+      nodeData.output_format ||
+      "array") as OutputFormatType,
   );
   const [outputFields, setOutputFields] = useState<OutputField[]>(
-    nodeData.outputFields || nodeData.output_fields || []
+    nodeData.outputFields || nodeData.output_fields || [],
   );
 
   const selectedTool = useMemo(
@@ -1194,7 +1484,11 @@ function ToolNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
   }, []);
 
   useEffect(() => {
-    setOutputFormat((nodeData.outputFormat || nodeData.output_format || "array") as OutputFormatType);
+    setOutputFormat(
+      (nodeData.outputFormat ||
+        nodeData.output_format ||
+        "array") as OutputFormatType,
+    );
     setOutputFields(nodeData.outputFields || nodeData.output_fields || []);
     const name = nodeData.toolName || nodeData.tool_name || "";
     setToolName(name);
@@ -1257,26 +1551,41 @@ function ToolNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
       <div>
         <Label>工具</Label>
         <div className="mt-1 flex gap-2">
-          <Input readOnly value={toolName || "未选择"} placeholder="从工具库选择" className="flex-1" />
-          <Button type="button" variant="outline" size="sm" onClick={() => setSelectorOpen(true)}>
-            <Wrench className="h-4 w-4 mr-1" />
+          <Input
+            readOnly
+            value={toolName || "未选择"}
+            placeholder="从工具库选择"
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectorOpen(true)}
+          >
+            <Wrench className="mr-1 h-4 w-4" />
             选择
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1 text-xs">
           请先在
-          <Link href="/workspace/workflow-tools" className="text-primary underline mx-1">
+          <Link
+            href="/workspace/workflow-tools"
+            className="text-primary mx-1 underline"
+          >
             工作流工具库
           </Link>
           配置、试跑并发布工具。
         </p>
         {selectedTool?.description && (
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{selectedTool.description}</p>
+          <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
+            {selectedTool.description}
+          </p>
         )}
       </div>
 
       <Sheet open={selectorOpen} onOpenChange={setSelectorOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0">
+        <SheetContent side="right" className="w-full p-0 sm:max-w-md">
           <SheetHeader className="sr-only">
             <SheetTitle>选择工具</SheetTitle>
           </SheetHeader>
@@ -1304,7 +1613,7 @@ function ToolNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
           }}
           placeholder="默认：120（2分钟）"
         />
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1 text-xs">
           节点执行超时时间。对于循环体内的节点，每次迭代都会独立检测超时。
           循环体节点本身不参与超时检测，其他节点最多重试4次。
         </p>
@@ -1326,7 +1635,7 @@ function ToolNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
               }}
             />
           ))}
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             点击「插入变量」可从上游节点选择输出字段，与大模型节点用法相同。
           </p>
         </div>
@@ -1338,11 +1647,19 @@ function ToolNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
           fields={outputFields}
           onFormatChange={(format) => {
             setOutputFormat(format);
-            onUpdate(node.id, { ...nodeData, outputFormat: format, output_format: format });
+            onUpdate(node.id, {
+              ...nodeData,
+              outputFormat: format,
+              output_format: format,
+            });
           }}
           onFieldsChange={(fields) => {
             setOutputFields(fields);
-            onUpdate(node.id, { ...nodeData, outputFields: fields, output_fields: fields });
+            onUpdate(node.id, {
+              ...nodeData,
+              outputFields: fields,
+              output_fields: fields,
+            });
           }}
         />
       </div>
@@ -1350,25 +1667,44 @@ function ToolNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
   );
 }
 
-function ConditionNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: NodeConfigProps) {
-  const [expression, setExpression] = useState(nodeData.conditionExpression || "");
+function ConditionNodeConfig({
+  node,
+  nodeData,
+  nodes = [],
+  edges = [],
+  onUpdate,
+}: NodeConfigProps) {
+  const [expression, setExpression] = useState(
+    nodeData.conditionExpression || "",
+  );
   const [outputFormat, setOutputFormat] = useState<OutputFormatType>(
-    (nodeData.outputFormat || nodeData.output_format || "array") as OutputFormatType
+    (nodeData.outputFormat ||
+      nodeData.output_format ||
+      "array") as OutputFormatType,
   );
   const [outputFields, setOutputFields] = useState<OutputField[]>(
-    nodeData.outputFields || nodeData.output_fields || []
+    nodeData.outputFields || nodeData.output_fields || [],
   );
   const expressionRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    setOutputFormat((nodeData.outputFormat || nodeData.output_format || "array") as OutputFormatType);
+    setOutputFormat(
+      (nodeData.outputFormat ||
+        nodeData.output_format ||
+        "array") as OutputFormatType,
+    );
     setOutputFields(nodeData.outputFields || nodeData.output_fields || []);
-  }, [nodeData.outputFormat, nodeData.output_format, nodeData.outputFields, nodeData.output_fields]);
+  }, [
+    nodeData.outputFormat,
+    nodeData.output_format,
+    nodeData.outputFields,
+    nodeData.output_fields,
+  ]);
 
   return (
     <div className="space-y-4">
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="mb-2 flex items-center justify-between">
           <Label htmlFor="expression">条件表达式</Label>
           <VariableInsertButton
             currentNodeId={node.id}
@@ -1388,16 +1724,21 @@ function ConditionNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate 
           value={expression}
           onChange={(e) => {
             setExpression(e.target.value);
-            onUpdate(node.id, { ...nodeData, conditionExpression: e.target.value });
+            onUpdate(node.id, {
+              ...nodeData,
+              conditionExpression: e.target.value,
+            });
           }}
           placeholder="输入条件表达式，例如: {'{'}{'{'}节点名.字段名{'}'}{'}'} > 80"
           rows={3}
         />
-        <p className="mt-1 text-xs text-muted-foreground">
-          提示：使用 {'{'}{'{'}节点名.字段名{'}'}{'}'} 引用上游节点的输出字段
+        <p className="text-muted-foreground mt-1 text-xs">
+          提示：使用 {"{"}
+          {"{"}节点名.字段名{"}"}
+          {"}"} 引用上游节点的输出字段
         </p>
       </div>
-      
+
       <div>
         <Label htmlFor="timeoutSeconds">超时时间（秒）</Label>
         <Input
@@ -1414,23 +1755,31 @@ function ConditionNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate 
           }}
           placeholder="默认：30秒"
         />
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1 text-xs">
           节点执行超时时间。对于循环体内的节点，每次迭代都会独立检测超时。
           循环体节点本身不参与超时检测，其他节点最多重试4次。
         </p>
       </div>
-      
+
       <div>
         <OutputSchemaEditor
           format={outputFormat}
           fields={outputFields}
           onFormatChange={(format) => {
             setOutputFormat(format);
-            onUpdate(node.id, { ...nodeData, outputFormat: format, output_format: format });
+            onUpdate(node.id, {
+              ...nodeData,
+              outputFormat: format,
+              output_format: format,
+            });
           }}
           onFieldsChange={(fields) => {
             setOutputFields(fields);
-            onUpdate(node.id, { ...nodeData, outputFields: fields, output_fields: fields });
+            onUpdate(node.id, {
+              ...nodeData,
+              outputFields: fields,
+              output_fields: fields,
+            });
           }}
         />
       </div>
@@ -1438,31 +1787,52 @@ function ConditionNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate 
   );
 }
 
-function LoopNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: NodeConfigProps) {
+function LoopNodeConfig({
+  node,
+  nodeData,
+  nodes = [],
+  edges = [],
+  onUpdate,
+}: NodeConfigProps) {
   const [loopCount, setLoopCount] = useState(
-    nodeData.loopCount?.toString() || nodeData.loop_count?.toString() || "3"
+    nodeData.loopCount?.toString() || nodeData.loop_count?.toString() || "3",
   );
   const [breakConditions, setBreakConditions] = useState(
-    nodeData.breakConditions || nodeData.break_conditions || []
+    nodeData.breakConditions || nodeData.break_conditions || [],
   );
   const [logicalOperator, setLogicalOperator] = useState(
-    nodeData.logicalOperator || nodeData.logical_operator || "and"
+    nodeData.logicalOperator || nodeData.logical_operator || "and",
   );
   const [outputFormat, setOutputFormat] = useState<OutputFormatType>(
-    (nodeData.outputFormat || nodeData.output_format || "array") as OutputFormatType
+    (nodeData.outputFormat ||
+      nodeData.output_format ||
+      "array") as OutputFormatType,
   );
   const [outputFields, setOutputFields] = useState<OutputField[]>(
-    nodeData.outputFields || nodeData.output_fields || []
+    nodeData.outputFields || nodeData.output_fields || [],
   );
   const [pendingItemsVariableName, setPendingItemsVariableName] = useState(
-    nodeData.pendingItemsVariableName || nodeData.pending_items_variable_name || "pending_items"
+    nodeData.pendingItemsVariableName ||
+      nodeData.pending_items_variable_name ||
+      "pending_items",
   );
-  const [showLoopBodySelector, setShowLoopBodySelector] = useState<number | null>(null); // 显示选择器的条件索引
+  const [showLoopBodySelector, setShowLoopBodySelector] = useState<
+    number | null
+  >(null); // 显示选择器的条件索引
 
   useEffect(() => {
-    setOutputFormat((nodeData.outputFormat || nodeData.output_format || "array") as OutputFormatType);
+    setOutputFormat(
+      (nodeData.outputFormat ||
+        nodeData.output_format ||
+        "array") as OutputFormatType,
+    );
     setOutputFields(nodeData.outputFields || nodeData.output_fields || []);
-  }, [nodeData.outputFormat, nodeData.output_format, nodeData.outputFields, nodeData.output_fields]);
+  }, [
+    nodeData.outputFormat,
+    nodeData.output_format,
+    nodeData.outputFields,
+    nodeData.output_fields,
+  ]);
 
   const addBreakCondition = () => {
     const newCondition = {
@@ -1503,14 +1873,22 @@ function LoopNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
             setLoopCount(e.target.value);
             const count = parseInt(e.target.value);
             if (!isNaN(count) && count >= 1) {
-              onUpdate(node.id, { ...nodeData, loopCount: count, loop_count: count });
+              onUpdate(node.id, {
+                ...nodeData,
+                loopCount: count,
+                loop_count: count,
+              });
             } else if (e.target.value === "") {
-              onUpdate(node.id, { ...nodeData, loopCount: undefined, loop_count: undefined });
+              onUpdate(node.id, {
+                ...nodeData,
+                loopCount: undefined,
+                loop_count: undefined,
+              });
             }
           }}
           placeholder="留空表示无限制"
         />
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-xs">
           设置循环的最大执行次数，留空表示无限制（需配置退出条件）
         </p>
       </div>
@@ -1530,13 +1908,16 @@ function LoopNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
           }}
           placeholder="pending_items"
         />
-        <p className="mt-1 text-xs text-muted-foreground">
-          用于在循环体内访问待优化数据的变量名，可在LLM节点的Prompt中使用 {'{'}{'{'}loop.variables.{pendingItemsVariableName}{'}'}{'}'} 引用
+        <p className="text-muted-foreground mt-1 text-xs">
+          用于在循环体内访问待优化数据的变量名，可在LLM节点的Prompt中使用 {"{"}
+          {"{"}loop.variables.{pendingItemsVariableName}
+          {"}"}
+          {"}"} 引用
         </p>
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="mb-2 flex items-center justify-between">
           <Label>退出条件</Label>
           <Button
             type="button"
@@ -1544,18 +1925,18 @@ function LoopNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
             size="sm"
             onClick={addBreakCondition}
           >
-            <Plus className="h-4 w-4 mr-1" />
+            <Plus className="mr-1 h-4 w-4" />
             添加条件
           </Button>
         </div>
         {breakConditions.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-2">
+          <p className="text-muted-foreground py-2 text-sm">
             暂无退出条件，将根据最大循环次数退出
           </p>
         ) : (
           <div className="space-y-2">
             {breakConditions.map((condition: any, index: number) => (
-              <div key={index} className="border rounded-md p-3 space-y-2">
+              <div key={index} className="space-y-2 rounded-md border p-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">条件 {index + 1}</span>
                   <Button
@@ -1567,14 +1948,18 @@ function LoopNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="grid grid-cols-12 gap-2 items-end">
+                <div className="grid grid-cols-12 items-end gap-2">
                   <div className="col-span-6">
                     <Label className="text-xs">输出变量</Label>
-                    <div className="flex gap-1 items-center">
+                    <div className="flex items-center gap-1">
                       <Input
                         value={condition.outputVariable || ""}
                         onChange={(e) =>
-                          updateBreakCondition(index, "outputVariable", e.target.value)
+                          updateBreakCondition(
+                            index,
+                            "outputVariable",
+                            e.target.value,
+                          )
                         }
                         placeholder="如：LLM6.output.score"
                         className="h-8 flex-1"
@@ -1587,7 +1972,7 @@ function LoopNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
                         onClick={() => setShowLoopBodySelector(index)}
                         title="选择循环体内节点变量"
                       >
-                        <Circle className="h-3 w-3 text-muted-foreground" />
+                        <Circle className="text-muted-foreground h-3 w-3" />
                       </Button>
                     </div>
                   </div>
@@ -1633,7 +2018,11 @@ function LoopNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
                   value={logicalOperator}
                   onValueChange={(value) => {
                     setLogicalOperator(value);
-                    onUpdate(node.id, { ...nodeData, logicalOperator: value, logical_operator: value });
+                    onUpdate(node.id, {
+                      ...nodeData,
+                      logicalOperator: value,
+                      logical_operator: value,
+                    });
                   }}
                 >
                   <SelectTrigger>
@@ -1649,33 +2038,45 @@ function LoopNodeConfig({ node, nodeData, nodes = [], edges = [], onUpdate }: No
           </div>
         )}
       </div>
-      
+
       <div>
         <OutputSchemaEditor
           format={outputFormat}
           fields={outputFields}
           onFormatChange={(format) => {
             setOutputFormat(format);
-            onUpdate(node.id, { ...nodeData, outputFormat: format, output_format: format });
+            onUpdate(node.id, {
+              ...nodeData,
+              outputFormat: format,
+              output_format: format,
+            });
           }}
           onFieldsChange={(fields) => {
             setOutputFields(fields);
-            onUpdate(node.id, { ...nodeData, outputFields: fields, output_fields: fields });
+            onUpdate(node.id, {
+              ...nodeData,
+              outputFields: fields,
+              output_fields: fields,
+            });
           }}
         />
       </div>
-      
+
       {/* 循环体内节点选择器对话框 */}
       {showLoopBodySelector !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-card border border-border rounded-lg shadow-lg">
+          <div className="bg-card border-border rounded-lg border shadow-lg">
             <LoopBodyNodeSelector
               loopNodeId={node.id}
               nodes={nodes}
               onSelect={(variablePath) => {
                 // 移除 {{ 和 }}，只保留变量路径
                 const cleanPath = variablePath.replace(/^\{\{|\}\}$/g, "");
-                updateBreakCondition(showLoopBodySelector, "outputVariable", cleanPath);
+                updateBreakCondition(
+                  showLoopBodySelector,
+                  "outputVariable",
+                  cleanPath,
+                );
                 setShowLoopBodySelector(null);
               }}
               onClose={() => setShowLoopBodySelector(null)}

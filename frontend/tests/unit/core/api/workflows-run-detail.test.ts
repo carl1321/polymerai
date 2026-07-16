@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { mapRunTasksToNodeExecutions } from "@/core/api/workflows";
 import { shouldPollRunProgress } from "@/components/workflow/runs/run-display-utils";
+import { mapRunTasksToNodeExecutions } from "@/core/api/workflows";
 import type { WorkflowRunDetail } from "@/core/api/workflows";
 
 describe("mapRunTasksToNodeExecutions", () => {
@@ -45,8 +45,12 @@ describe("shouldPollRunProgress", () => {
   };
 
   it("polls when run is active", () => {
-    expect(shouldPollRunProgress({ ...base, run: { status: "awaiting_external" } })).toBe(true);
-    expect(shouldPollRunProgress({ ...base, run: { status: "running" } })).toBe(true);
+    expect(
+      shouldPollRunProgress({ ...base, run: { status: "awaiting_external" } }),
+    ).toBe(true);
+    expect(shouldPollRunProgress({ ...base, run: { status: "running" } })).toBe(
+      true,
+    );
   });
 
   it("polls when async tasks still active", () => {

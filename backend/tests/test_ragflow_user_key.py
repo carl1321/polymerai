@@ -2,7 +2,6 @@
 
 from unittest.mock import MagicMock
 
-
 from extensions._core.ragflow_user_key import parse_api_key_from_fetch_response
 
 

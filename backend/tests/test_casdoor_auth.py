@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -72,8 +72,8 @@ def _self_signed_key_and_cert_pem() -> tuple[object, str]:
         .issuer_name(issuer)
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.now(timezone.utc) - timedelta(minutes=1))
-        .not_valid_after(datetime.now(timezone.utc) + timedelta(hours=1))
+        .not_valid_before(datetime.now(UTC) - timedelta(minutes=1))
+        .not_valid_after(datetime.now(UTC) + timedelta(hours=1))
         .sign(key, hashes.SHA256())
     )
     cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode()
@@ -175,7 +175,7 @@ class TestVerifyCasdoorJwt:
             client_secret="x",
             certificate=cert_pem,
         )
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         tok = pyjwt.encode(
             {
                 "sub": "user-1",
@@ -199,7 +199,7 @@ class TestVerifyCasdoorJwt:
             client_secret="x",
             certificate=cert_pem,
         )
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         tok = pyjwt.encode(
             {
                 "sub": "user-1",

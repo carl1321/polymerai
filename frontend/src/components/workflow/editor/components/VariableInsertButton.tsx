@@ -3,15 +3,17 @@
 
 "use client";
 
-import { useRef, useState, useCallback } from "react";
 import type { Node, Edge } from "@xyflow/react";
-import { Button } from "~/components/ui/button";
 import { Variable } from "lucide-react";
+import { useRef, useState, useCallback } from "react";
+
+import { Button } from "~/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
+
 import { UpstreamNodeSelector } from "./UpstreamNodeSelector";
 
 interface VariableInsertButtonProps {
@@ -47,9 +49,7 @@ export function VariableInsertButton({
       const currentValue = value;
 
       const newValue =
-        currentValue.substring(0, start) +
-        text +
-        currentValue.substring(end);
+        currentValue.substring(0, start) + text + currentValue.substring(end);
 
       onChange(newValue);
 
@@ -67,18 +67,13 @@ export function VariableInsertButton({
       insertAtCursor(template);
       setOpen(false);
     },
-    [insertAtCursor]
+    [insertAtCursor],
   );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={className}
-        >
+        <Button type="button" variant="outline" size="sm" className={className}>
           <Variable className="mr-2 h-4 w-4" />
           插入变量
         </Button>
@@ -100,4 +95,3 @@ export function VariableInsertButton({
     </Popover>
   );
 }
-

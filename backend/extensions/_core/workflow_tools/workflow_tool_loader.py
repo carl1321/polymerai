@@ -45,7 +45,7 @@ def _tool_subprocess_error(data: dict[str, Any]) -> RuntimeError:
 
 
 _BOOTSTRAP = textwrap.dedent(
-    '''
+    """
     import importlib.util
     import inspect
     import json
@@ -134,7 +134,7 @@ _BOOTSTRAP = textwrap.dedent(
             import traceback
             print(json.dumps({"ok": False, "error": str(e), "traceback": traceback.format_exc()}))
             sys.exit(1)
-    '''
+    """
 )
 
 
@@ -274,7 +274,6 @@ class ScriptWorkflowTool(BaseTool):
     def _run(self, *args: Any, **kwargs: Any) -> Any:
         from extensions._core.workflow_tools.schema_utils import (
             prepare_tool_invoke_params,
-            tool_args_schema_to_parameters,
         )
 
         params = prepare_tool_invoke_params(

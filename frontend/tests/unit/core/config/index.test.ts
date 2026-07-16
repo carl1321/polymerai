@@ -7,8 +7,8 @@ vi.mock("@/env", () => ({
   },
 }));
 
-import { env } from "@/env";
 import { getBackendBaseURL } from "@/core/config";
+import { env } from "@/env";
 
 beforeEach(() => {
   env.NEXT_PUBLIC_BACKEND_BASE_URL = undefined;

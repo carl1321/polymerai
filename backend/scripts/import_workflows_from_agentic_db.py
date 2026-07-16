@@ -32,6 +32,7 @@ def get_target_connection_url() -> str:
         return url
     try:
         from deerflow.config.app_config import get_app_config
+
         cfg = get_app_config()
         if cfg.app_database and cfg.app_database.url:
             return cfg.app_database.url
@@ -73,12 +74,15 @@ def load_workflows_from_source(source_conn) -> list[dict]:
             else:
                 row = None
             if not row:
-                cur.execute("""
+                cur.execute(
+                    """
                     SELECT id, graph FROM workflow_drafts
                     WHERE workflow_id = %s
                     ORDER BY version DESC
                     LIMIT 1
-                """, (wf_id,))
+                """,
+                    (wf_id,),
+                )
                 row = cur.fetchone()
             if not row:
                 logger.warning("Workflow %s (%s) has no draft, skip.", w.get("name"), wf_id)
@@ -94,12 +98,14 @@ def load_workflows_from_source(source_conn) -> list[dict]:
                 graph = dict(graph)
             nodes = graph.get("nodes") or []
             edges = graph.get("edges") or []
-            out.append({
-                "name": w.get("name") or "未命名工作流",
-                "description": w.get("description"),
-                "status": w.get("status") or "draft",
-                "graph": {"nodes": nodes, "edges": edges},
-            })
+            out.append(
+                {
+                    "name": w.get("name") or "未命名工作流",
+                    "description": w.get("description"),
+                    "status": w.get("status") or "draft",
+                    "graph": {"nodes": nodes, "edges": edges},
+                }
+            )
     return out
 
 
@@ -111,9 +117,7 @@ def get_first_user_id(conn) -> UUID | None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Import workflows from agentic_workflow database into deer-flow database"
-    )
+    parser = argparse.ArgumentParser(description="Import workflows from agentic_workflow database into deer-flow database")
     parser.add_argument(
         "--source-db-url",
         required=True,
@@ -151,7 +155,10 @@ def main() -> None:
         for w in workflows:
             logger.info(
                 "  - %s (status=%s, nodes=%d, edges=%d)",
-                w["name"], w.get("status"), len(w["graph"]["nodes"]), len(w["graph"]["edges"]),
+                w["name"],
+                w.get("status"),
+                len(w["graph"]["nodes"]),
+                len(w["graph"]["edges"]),
             )
         return
 
@@ -171,9 +178,7 @@ def main() -> None:
         else:
             user_id = get_first_user_id(conn)
         if not user_id:
-            logger.error(
-                "No user in deer-flow database. Run init_app_database.py or pass --user-id."
-            )
+            logger.error("No user in deer-flow database. Run init_app_database.py or pass --user-id.")
             sys.exit(1)
 
         for w in workflows:

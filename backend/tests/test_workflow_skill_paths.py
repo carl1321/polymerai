@@ -1,7 +1,6 @@
 # Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
 # SPDX-License-Identifier: MIT
 
-from pathlib import Path
 
 from extensions._core.workflow.runtime.template_parser import render_template
 from extensions._core.workflow.workflow_skill_paths import (
@@ -136,3 +135,27 @@ def test_default_skill_argv_vasp_potcar(tmp_path):
     assert argv[0] == "workflow"
     assert argv[1] == str(poscar)
     assert argv[-1] == str(wd / "POTCAR")
+
+
+def test_find_structure_path_rejects_potcar_content(tmp_path):
+    work_root = tmp_path / "run"
+    work_root.mkdir()
+    inputs = work_root / "inputs"
+    inputs.mkdir()
+    real = inputs / "POSCAR.POSCAR"
+    real.write_text("Si2\n1.0\n", encoding="utf-8")
+    pot_node = work_root / "nodes" / "pot"
+    pot_node.mkdir(parents=True)
+    fake = pot_node / "POSCAR"
+    fake.write_text("  PAW_PBE Si 05Jan2001\n   VRHFIN =Si: s2p2\n", encoding="utf-8")
+    (pot_node / "POTCAR").write_text(fake.read_text(encoding="utf-8"), encoding="utf-8")
+    node_outputs = {
+        "start": {"output": {"poscar_path": {"file": "inputs/POSCAR.POSCAR"}}},
+        "pot": {"output": {"POTCAR": {"file": "nodes/pot/POTCAR"}, "POSCAR": {"file": "nodes/pot/POSCAR"}}},
+    }
+    found = find_structure_path(
+        node_outputs=node_outputs,
+        work_root=str(work_root),
+        prompt="use upstream POSCAR",
+    )
+    assert found == str(real.resolve())

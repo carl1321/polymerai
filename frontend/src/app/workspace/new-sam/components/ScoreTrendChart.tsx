@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: MIT
 
 import { useEffect, useRef } from "react";
+
 import type { CandidateTrendPoint } from "@/app/workspace/new-sam/utils/molecule";
 
 interface ScoreTrendChartProps {
@@ -37,14 +38,16 @@ export function ScoreTrendChart({
         echarts = echartsModule.default || echartsModule;
 
         if (!chartInstanceRef.current) {
-          const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches || 
-                         document.documentElement.classList.contains("dark");
+          const isDark =
+            window.matchMedia("(prefers-color-scheme: dark)").matches ||
+            document.documentElement.classList.contains("dark");
           chartInstanceRef.current = echarts.init(chartRef.current);
-          
+
           // 监听主题变化
           const observer = new MutationObserver(() => {
             if (chartInstanceRef.current) {
-              const isDarkNow = document.documentElement.classList.contains("dark");
+              const isDarkNow =
+                document.documentElement.classList.contains("dark");
               chartInstanceRef.current.dispose();
               chartInstanceRef.current = echarts.init(chartRef.current);
               updateChart(isDarkNow);
@@ -56,8 +59,9 @@ export function ScoreTrendChart({
           });
         }
 
-        const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches || 
-                      document.documentElement.classList.contains("dark");
+        const isDark =
+          window.matchMedia("(prefers-color-scheme: dark)").matches ||
+          document.documentElement.classList.contains("dark");
         updateChart(isDark);
       } catch (error) {
         console.error("Failed to load echarts:", error);
@@ -65,13 +69,19 @@ export function ScoreTrendChart({
     };
 
     const updateChart = (isDark: boolean) => {
-      if (!chartInstanceRef.current || !hasData || !candidateTrends || candidateTrends.length === 0) {
+      if (
+        !chartInstanceRef.current ||
+        !hasData ||
+        !candidateTrends ||
+        candidateTrends.length === 0
+      ) {
         if (chartInstanceRef.current) {
           chartInstanceRef.current.setOption({
             title: {
-              text: executionState === "running" 
-                ? "等待迭代数据..." 
-                : "暂无迭代数据",
+              text:
+                executionState === "running"
+                  ? "等待迭代数据..."
+                  : "暂无迭代数据",
               left: "center",
               top: "middle",
               textStyle: {
@@ -95,16 +105,24 @@ export function ScoreTrendChart({
 
       // 为每个候选分子创建一条趋势线
       const colors = [
-        "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444",
-        "#06b6d4", "#84cc16", "#f97316", "#a855f7", "#ec4899",
+        "#3b82f6",
+        "#10b981",
+        "#f59e0b",
+        "#8b5cf6",
+        "#ef4444",
+        "#06b6d4",
+        "#84cc16",
+        "#f97316",
+        "#a855f7",
+        "#ec4899",
       ];
-      
+
       const series = candidateTrends.slice(0, 20).map((ct, idx) => {
         const data = iters.map((iter) => ct.scoresByIter.get(iter) || null);
-        const label = ct.smiles 
+        const label = ct.smiles
           ? `分子 ${ct.moleculeId} (${ct.smiles.substring(0, 20)}...)`
           : `分子 ${ct.moleculeId}`;
-        
+
         return {
           name: label,
           type: "line",
@@ -127,8 +145,12 @@ export function ScoreTrendChart({
       const option = {
         tooltip: {
           trigger: "axis",
-          backgroundColor: isDark ? "rgba(30, 41, 59, 0.95)" : "rgba(255, 255, 255, 0.95)",
-          borderColor: isDark ? "rgba(100, 116, 139, 0.3)" : "rgba(0, 0, 0, 0.1)",
+          backgroundColor: isDark
+            ? "rgba(30, 41, 59, 0.95)"
+            : "rgba(255, 255, 255, 0.95)",
+          borderColor: isDark
+            ? "rgba(100, 116, 139, 0.3)"
+            : "rgba(0, 0, 0, 0.1)",
           textStyle: {
             color: isDark ? "#e2e8f0" : "#1e293b",
             fontSize: 12,

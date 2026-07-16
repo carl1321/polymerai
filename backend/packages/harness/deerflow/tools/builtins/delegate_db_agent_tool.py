@@ -6,7 +6,8 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.typing import ContextT
 
 from deerflow.agents.thread_state import ThreadState
-from extensions._core.agents_db import get_agent as db_get_agent, list_swarm_member_ids
+from extensions._core.agents_db import get_agent as db_get_agent
+from extensions._core.agents_db import list_swarm_member_ids
 from extensions._core.app_db import get_app_db_connection
 
 logger = logging.getLogger(__name__)
@@ -86,13 +87,7 @@ def build_delegate_db_agent_tool(*, swarm_agent_id: str):
         if isinstance(metadata, dict):
             cfg["metadata"] = dict(metadata)
 
-        parent_thread = (
-            context.get("thread_id")
-            or configurable.get("thread_id")
-            or runtime.context.get("thread_id")
-            if runtime.context
-            else None
-        )
+        parent_thread = context.get("thread_id") or configurable.get("thread_id") or runtime.context.get("thread_id") if runtime.context else None
         child_id_str = str(child_uid)
         child_thread = f"{parent_thread}/delegate/{child_id_str}" if parent_thread else f"delegate/{child_id_str}"
         configurable["thread_id"] = child_thread

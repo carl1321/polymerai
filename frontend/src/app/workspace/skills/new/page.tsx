@@ -64,8 +64,8 @@ export default function NewSkillPage() {
 
   return (
     <div className="flex h-full flex-col bg-[#F5F5F5] dark:bg-slate-900">
-      <div className="px-6 py-4 shrink-0">
-        <div className="rounded-xl overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#1e3a5f] to-[#0f172a] dark:from-slate-900 dark:via-blue-950/50 dark:to-slate-900 p-8 text-white shadow-lg">
+      <div className="shrink-0 px-6 py-4">
+        <div className="overflow-hidden rounded-xl bg-gradient-to-br from-[#0f172a] via-[#1e3a5f] to-[#0f172a] p-8 text-white shadow-lg dark:from-slate-900 dark:via-blue-950/50 dark:to-slate-900">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-xl font-bold">页面创建技能</h2>
             <Button
@@ -78,7 +78,7 @@ export default function NewSkillPage() {
               返回技能库
             </Button>
           </div>
-          <p className="text-sm text-white/90 max-w-2xl">
+          <p className="max-w-2xl text-sm text-white/90">
             上传一个技能文件夹（目录名即 skill 名），目录根部必须包含 SKILL.md。
           </p>
         </div>
@@ -98,7 +98,9 @@ export default function NewSkillPage() {
             handleChooseFiles(files);
           }}
           className={`rounded-xl border border-dashed bg-white p-8 dark:bg-slate-800 ${
-            dragOver ? "border-[#1890FF] bg-[#E6F7FF]/50 dark:bg-blue-950/20" : "border-slate-300 dark:border-slate-600"
+            dragOver
+              ? "border-[#1890FF] bg-[#E6F7FF]/50 dark:bg-blue-950/20"
+              : "border-slate-300 dark:border-slate-600"
           }`}
         >
           <div className="mx-auto flex max-w-xl flex-col items-center gap-4 text-center">
@@ -134,13 +136,17 @@ export default function NewSkillPage() {
             >
               选择技能文件夹
             </Button>
-            <div className="w-full rounded-lg border border-slate-200 dark:border-slate-700 p-3 text-left">
-              <div className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">可见性与分类</div>
+            <div className="w-full rounded-lg border border-slate-200 p-3 text-left dark:border-slate-700">
+              <div className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                可见性与分类
+              </div>
               <div className="grid grid-cols-1 gap-2">
                 <select
                   value={visibility}
-                  onChange={(e) => setVisibility(e.target.value as "user" | "org")}
-                  className="h-9 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-sm"
+                  onChange={(e) =>
+                    setVisibility(e.target.value as "user" | "org")
+                  }
+                  className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800"
                 >
                   <option value="user">私有（仅自己）</option>
                   <option value="org">公有（组织内）</option>
@@ -149,14 +155,18 @@ export default function NewSkillPage() {
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
                   placeholder="一级分类（可选，如 VASP计算）"
-                  className="h-9 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-sm"
+                  className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800"
                 />
               </div>
             </div>
-            <div className="w-full rounded-lg border border-slate-200 dark:border-slate-700 p-3 text-left">
-              <div className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">已选文件夹</div>
+            <div className="w-full rounded-lg border border-slate-200 p-3 text-left dark:border-slate-700">
+              <div className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+                已选文件夹
+              </div>
               <div className="text-sm text-slate-500 dark:text-slate-400">
-                {pendingFolderName ? `${pendingFolderName}（${pendingFiles.length} 个文件）` : "尚未选择"}
+                {pendingFolderName
+                  ? `${pendingFolderName}（${pendingFiles.length} 个文件）`
+                  : "尚未选择"}
               </div>
             </div>
             <Button
@@ -177,4 +187,3 @@ export default function NewSkillPage() {
     </div>
   );
 }
-

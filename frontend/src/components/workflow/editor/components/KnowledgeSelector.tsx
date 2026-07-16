@@ -3,10 +3,10 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { BookOpen, X, Search, Loader2 } from "lucide-react";
-import { queryRAGResources } from "~/core/api/rag";
-import type { Resource } from "~/core/messages";
+import { useState, useEffect, useCallback } from "react";
+
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
@@ -14,7 +14,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
-import { Badge } from "~/components/ui/badge";
+import { queryRAGResources } from "~/core/api/rag";
+import type { Resource } from "~/core/messages";
 import { cn } from "~/lib/utils";
 
 interface KnowledgeSelectorItem {
@@ -34,13 +35,13 @@ export function KnowledgeSelector({
 }: KnowledgeSelectorProps) {
   // 确保 value 始终是一个数组，防止 null 或 undefined
   const safeValue: KnowledgeSelectorItem[] = Array.isArray(value) ? value : [];
-  
+
   const [open, setOpen] = useState(false);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const loadResources = useCallback(async (query: string = "") => {
+  const loadResources = useCallback(async (query = "") => {
     try {
       setLoading(true);
       const results = await queryRAGResources(query);
@@ -104,9 +105,9 @@ export function KnowledgeSelector({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-96 p-0" align="start">
-          <div className="p-3 border-b border-border">
+          <div className="border-border border-b p-3">
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
               <Input
                 type="text"
                 placeholder="搜索知识库..."
@@ -119,10 +120,10 @@ export function KnowledgeSelector({
           <div className="max-h-80 overflow-y-auto p-2">
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
               </div>
             ) : resources.length === 0 ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
+              <div className="text-muted-foreground py-8 text-center text-sm">
                 {searchQuery ? "未找到匹配的资源" : "暂无知识库资源"}
               </div>
             ) : (
@@ -137,31 +138,31 @@ export function KnowledgeSelector({
                         "w-full rounded-lg border p-3 text-left transition-colors",
                         selected
                           ? "border-primary bg-primary/5"
-                          : "border-border hover:bg-accent"
+                          : "border-border hover:bg-accent",
                       )}
                     >
                       <div className="flex items-start gap-2">
                         <BookOpen
                           className={cn(
                             "mt-0.5 h-4 w-4 flex-shrink-0",
-                            selected ? "text-primary" : "text-muted-foreground"
+                            selected ? "text-primary" : "text-muted-foreground",
                           )}
                         />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm text-foreground">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-foreground text-sm font-medium">
                             {resource.title}
                           </div>
                           {resource.description && (
-                            <div className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                            <div className="text-muted-foreground mt-1 line-clamp-2 text-xs">
                               {resource.description}
                             </div>
                           )}
-                          <div className="mt-1 text-xs font-mono text-muted-foreground truncate">
+                          <div className="text-muted-foreground mt-1 truncate font-mono text-xs">
                             {resource.uri.replace("rag://dataset/", "")}
                           </div>
                         </div>
                         {selected && (
-                          <div className="flex-shrink-0 text-primary">✓</div>
+                          <div className="text-primary flex-shrink-0">✓</div>
                         )}
                       </div>
                     </button>
@@ -179,11 +180,11 @@ export function KnowledgeSelector({
           {safeValue.map((resource) => (
             <div
               key={resource.uri}
-              className="flex items-center justify-between rounded-lg border border-border bg-muted/50 p-2"
+              className="border-border bg-muted/50 flex items-center justify-between rounded-lg border p-2"
             >
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <BookOpen className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                <span className="text-sm text-foreground truncate">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <BookOpen className="text-muted-foreground h-3 w-3 flex-shrink-0" />
+                <span className="text-foreground truncate text-sm">
                   {resource.title}
                 </span>
               </div>
@@ -202,4 +203,3 @@ export function KnowledgeSelector({
     </div>
   );
 }
-

@@ -249,4 +249,3 @@ export interface DesignHistory {
   /** 完整的分子数据（包含评估结果） */
   molecules: Molecule[];
 }
-

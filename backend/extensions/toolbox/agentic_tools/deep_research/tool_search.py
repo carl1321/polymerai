@@ -1,15 +1,8 @@
-import json
-from concurrent.futures import ThreadPoolExecutor
-from typing import List, Union
-import requests
-from .base_tool import BaseTool
-import asyncio
-from typing import Dict, List, Optional, Union
-import uuid
 import http.client
 import json
-
 import os
+
+from .base_tool import BaseTool
 
 
 class Search(BaseTool):
@@ -18,55 +11,39 @@ class Search(BaseTool):
     parameters = {
         "type": "object",
         "properties": {
-            "query": {
-                "type": "array",
-                "items": {
-                    "type": "string"
-                },
-                "description": "Array of query strings. Include multiple complementary search queries in a single call."
-            },
+            "query": {"type": "array", "items": {"type": "string"}, "description": "Array of query strings. Include multiple complementary search queries in a single call."},
         },
         "required": ["query"],
     }
 
-    def __init__(self, cfg: Optional[dict] = None):
+    def __init__(self, cfg: dict | None = None):
         super().__init__(cfg)
+
     def google_search_with_serp(self, query: str):
         # 动态获取API密钥
-        serper_key = os.environ.get('SERPER_KEY_ID')
+        serper_key = os.environ.get("SERPER_KEY_ID")
         if not serper_key:
             return "Error: SERPER_KEY_ID environment variable not set"
-        
+
         def contains_chinese_basic(text: str) -> bool:
-            return any('\u4E00' <= char <= '\u9FFF' for char in text)
-        
+            return any("\u4e00" <= char <= "\u9fff" for char in text)
+
         if contains_chinese_basic(query):
-            payload = json.dumps({
-                "q": query,
-                "location": "China",
-                "gl": "cn",
-                "hl": "zh-cn"
-            })
-            
+            payload = json.dumps({"q": query, "location": "China", "gl": "cn", "hl": "zh-cn"})
+
         else:
-            payload = json.dumps({
-                "q": query,
-                "location": "United States",
-                "gl": "us",
-                "hl": "en"
-            })
+            payload = json.dumps({"q": query, "location": "United States", "gl": "us", "hl": "en"})
         headers = {
-                'X-API-KEY': serper_key,  # 使用动态获取的密钥
-                'Content-Type': 'application/json'
-            }
-        
-        
+            "X-API-KEY": serper_key,  # 使用动态获取的密钥
+            "Content-Type": "application/json",
+        }
+
         for i in range(3):  # 减少重试次数
             try:
                 conn = http.client.HTTPSConnection("google.serper.dev", timeout=30)  # 添加超时
                 conn.request("POST", "/search", payload, headers)
                 res = conn.getresponse()
-                
+
                 if res.status == 200:
                     data = res.read()
                     conn.close()
@@ -76,11 +53,11 @@ class Search(BaseTool):
                     if i == 2:  # 最后一次重试
                         return f"Google search API error: HTTP {res.status}"
                     continue
-                    
+
             except Exception as e:
-                print(f"Google search request error (attempt {i+1}): {e}")
+                print(f"Google search request error (attempt {i + 1}): {e}")
                 if i == 2:  # 最后一次重试
-                    return f"Google search Timeout, return None, Please try again later."
+                    return "Google search Timeout, return None, Please try again later."
                 continue
         results = json.loads(data.decode("utf-8"))
 
@@ -114,27 +91,25 @@ class Search(BaseTool):
         except:
             return f"No results found for '{query}'. Try with a more general query."
 
-
-    
     def search_with_serp(self, query: str):
         result = self.google_search_with_serp(query)
         return result
 
-    def call(self, params: Union[str, dict], **kwargs) -> str:
+    def call(self, params: str | dict, **kwargs) -> str:
         try:
             query = params["query"]
         except:
             return "[Search] Invalid request format: Input must be a JSON object containing 'query' field"
-        
+
         if isinstance(query, str):
             # 单个查询
             response = self.search_with_serp(query)
         else:
             # 多个查询
-            assert isinstance(query, List)
+            assert isinstance(query, list)
             responses = []
             for q in query:
                 responses.append(self.search_with_serp(q))
             response = "\n=======\n".join(responses)
-            
+
         return response

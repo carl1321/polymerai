@@ -10,7 +10,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -28,6 +27,7 @@ except Exception:  # pragma: no cover
 
     async def get_current_user_optional():  # type: ignore[no-redef]
         return None
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/runs", tags=["runs"])

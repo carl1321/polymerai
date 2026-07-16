@@ -14,17 +14,18 @@ import hashlib
 import logging
 import os
 import time
-import typing as t
 
 import requests
 from langchain_core.tools import tool
 
 logger = logging.getLogger(__name__)
 
+
 # 优先从 conf.yaml 的 ENV 读取，其次环境变量（与 src.config.tools 一致）
 def _get_semantic_scholar_key() -> str:
     try:
         from extensions._core.config.loader import load_yaml_config
+
         config = load_yaml_config("conf.yaml")
         env_config = config.get("ENV") or {}
         key = (env_config.get("SEMANTIC_SCHOLAR_KEY") or os.getenv("SEMANTIC_SCHOLAR_KEY") or "").strip()
@@ -36,6 +37,7 @@ def _get_semantic_scholar_key() -> str:
 def _get_semantic_scholar_api() -> str:
     try:
         from extensions._core.config.loader import load_yaml_config
+
         config = load_yaml_config("conf.yaml")
         env_config = config.get("ENV") or {}
         api = env_config.get("SEMANTIC_SCHOLAR_API") or os.getenv("SEMANTIC_SCHOLAR_API") or "https://api.semanticscholar.org/graph/v1"
@@ -48,6 +50,7 @@ def _get_timeout() -> float:
     try:
         t_str = os.getenv("SEMANTIC_SCHOLAR_TIMEOUT", "20")
         from extensions._core.config.loader import load_yaml_config
+
         config = load_yaml_config("conf.yaml")
         env_config = config.get("ENV") or {}
         t_str = env_config.get("SEMANTIC_SCHOLAR_TIMEOUT") or t_str
@@ -56,11 +59,11 @@ def _get_timeout() -> float:
         return float(os.getenv("SEMANTIC_SCHOLAR_TIMEOUT", "20"))
 
 
-def _fingerprint(title: str, authors: t.List[str] | None, year: int | None) -> str:
+def _fingerprint(title: str, authors: list[str] | None, year: int | None) -> str:
     base = (title or "").strip().lower()
     first_author = (authors[0] if authors else "").strip().lower()
     year_str = str(year) if year else ""
-    return hashlib.sha1(f"{base}|{first_author}|{year_str}".encode("utf-8")).hexdigest()
+    return hashlib.sha1(f"{base}|{first_author}|{year_str}".encode()).hexdigest()
 
 
 def _request(path: str, params: dict) -> dict:
@@ -115,7 +118,7 @@ def _normalize_paper(p: dict) -> dict:
     }
 
 
-def _dedupe(papers: t.List[dict]) -> t.List[dict]:
+def _dedupe(papers: list[dict]) -> list[dict]:
     seen: set[str] = set()
     results: list[dict] = []
     for p in papers:
@@ -162,11 +165,7 @@ def search_literature(query: str, top_k: int = 20) -> str:
                 authors = [authors]
 
             year = None
-            published = (
-                meta.get("Published")
-                or meta.get("published")
-                or meta.get("published_date")
-            )
+            published = meta.get("Published") or meta.get("published") or meta.get("published_date")
             if isinstance(published, str):
                 # 简单从日期字符串中提取年份
                 for part in published.split("-"):
@@ -175,12 +174,7 @@ def search_literature(query: str, top_k: int = 20) -> str:
                         year = int(part)
                         break
 
-            url = (
-                meta.get("entry_id")
-                or meta.get("Entry ID")
-                or meta.get("url")
-                or (meta.get("links") or [{}])[0].get("href", "")
-            )
+            url = meta.get("entry_id") or meta.get("Entry ID") or meta.get("url") or (meta.get("links") or [{}])[0].get("href", "")
             pdf_url = meta.get("pdf_url")
             url_str = str(url or "")
             if not pdf_url and "arxiv.org" in url_str:
@@ -212,5 +206,3 @@ def search_literature(query: str, top_k: int = 20) -> str:
     except Exception as e:
         logger.exception("arXiv literature search failed: %s", e)
         return f"[ERROR] arxiv_search failed: {e}"
-
-

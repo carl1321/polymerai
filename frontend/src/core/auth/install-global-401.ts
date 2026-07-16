@@ -39,4 +39,3 @@ export function installGlobal401Redirect(): void {
     return response;
   }) as typeof window.fetch;
 }
-

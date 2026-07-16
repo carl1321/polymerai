@@ -3,9 +3,11 @@
 
 "use client";
 
-import { useState } from "react";
 import { Copy, Check } from "lucide-react";
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
+
 import { formatJson, isEmptyValue } from "./run-display-utils";
 
 type JsonBlockProps = {
@@ -38,16 +40,30 @@ export function JsonBlock({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <span className="text-muted-foreground text-xs font-medium">
+          {label}
+        </span>
         {text ? (
-          <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => void handleCopy()}>
-            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            onClick={() => void handleCopy()}
+          >
+            {copied ? (
+              <Check className="h-3 w-3" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
             <span className="ml-1 text-xs">{copied ? "已复制" : "复制"}</span>
           </Button>
         ) : null}
       </div>
-      <div className={`rounded-md border bg-muted/40 p-2 overflow-auto ${maxHeightClass}`}>
-        <pre className="text-xs font-mono whitespace-pre-wrap break-all">
+      <div
+        className={`bg-muted/40 overflow-auto rounded-md border p-2 ${maxHeightClass}`}
+      >
+        <pre className="font-mono text-xs break-all whitespace-pre-wrap">
           {text || emptyHint}
         </pre>
       </div>

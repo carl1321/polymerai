@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from extensions.auth.admin.models import (
     UserCreateRequest,
-    UserListResponse,
     UserListItem,
+    UserListResponse,
     UserUpdateRequest,
 )
 from extensions.auth.db import UserDB

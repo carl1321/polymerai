@@ -36,6 +36,7 @@ def get_connection_url() -> str:
         return url
     try:
         from deerflow.config.app_config import get_app_config
+
         cfg = get_app_config()
         if cfg.app_database and cfg.app_database.url:
             return cfg.app_database.url
@@ -63,7 +64,7 @@ def collect_workflows_from_path(source: Path) -> list[dict]:
     """从文件或目录收集工作流列表。每项为 { "name", "description?", "graph" }。"""
     out = []
     if source.is_file():
-        with open(source, "r", encoding="utf-8") as f:
+        with open(source, encoding="utf-8") as f:
             raw = json.load(f)
         if isinstance(raw, list):
             for i, item in enumerate(raw):
@@ -76,11 +77,13 @@ def collect_workflows_from_path(source: Path) -> list[dict]:
                     name = name.strip() or source.stem
                 else:
                     name = source.stem
-                out.append({
-                    "name": name,
-                    "description": item.get("description") or item.get("workflow_description"),
-                    "graph": graph,
-                })
+                out.append(
+                    {
+                        "name": name,
+                        "description": item.get("description") or item.get("workflow_description"),
+                        "graph": graph,
+                    }
+                )
         else:
             graph = normalize_graph(raw)
             name = raw.get("name") or raw.get("workflow_name") or source.stem
@@ -88,11 +91,13 @@ def collect_workflows_from_path(source: Path) -> list[dict]:
                 name = name.strip() or source.stem
             else:
                 name = source.stem
-            out.append({
-                "name": name,
-                "description": raw.get("description") or raw.get("workflow_description"),
-                "graph": graph,
-            })
+            out.append(
+                {
+                    "name": name,
+                    "description": raw.get("description") or raw.get("workflow_description"),
+                    "graph": graph,
+                }
+            )
         return out
 
     if source.is_dir():
@@ -114,7 +119,7 @@ def collect_workflows_from_path(source: Path) -> list[dict]:
                 continue
             seen.add(p)
             try:
-                with open(p, "r", encoding="utf-8") as f:
+                with open(p, encoding="utf-8") as f:
                     raw = json.load(f)
             except Exception as e:
                 logger.warning("Skip %s: %s", p, e)
@@ -131,11 +136,13 @@ def collect_workflows_from_path(source: Path) -> list[dict]:
                 name = name.strip() or p.stem
             else:
                 name = p.stem
-            out.append({
-                "name": name,
-                "description": raw.get("description") or raw.get("workflow_description"),
-                "graph": graph,
-            })
+            out.append(
+                {
+                    "name": name,
+                    "description": raw.get("description") or raw.get("workflow_description"),
+                    "graph": graph,
+                }
+            )
         return out
 
     logger.error("Source is not a file or directory: %s", source)
@@ -201,9 +208,7 @@ def main() -> None:
             description = (w.get("description") or "").strip() or None
             graph = w["graph"]
             try:
-                workflow_id = wf_db.create_workflow(
-                    conn, name=name, description=description, created_by=user_id
-                )
+                workflow_id = wf_db.create_workflow(conn, name=name, description=description, created_by=user_id)
                 wf_db.save_draft(conn, workflow_id=workflow_id, graph=graph, created_by=user_id)
                 conn.commit()
                 logger.info("Imported workflow: %s (id=%s)", name, workflow_id)

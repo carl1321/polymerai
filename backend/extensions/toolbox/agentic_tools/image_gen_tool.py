@@ -8,7 +8,6 @@ import logging
 import os
 import uuid
 from pathlib import Path
-from typing import Optional
 
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
@@ -41,7 +40,7 @@ def _get_image_gen_config() -> dict:
     return image_gen
 
 
-def _generate_image_openai(prompt: str, api_key: str, base_url: Optional[str], model: str, size: str) -> bytes:
+def _generate_image_openai(prompt: str, api_key: str, base_url: str | None, model: str, size: str) -> bytes:
     """调用 OpenAI 兼容的 images API，返回图片二进制内容。"""
     try:
         from openai import OpenAI
@@ -68,10 +67,12 @@ def _generate_image_openai(prompt: str, api_key: str, base_url: Optional[str], m
     b64 = getattr(resp.data[0], "b64_json", None)
     if b64:
         import base64
+
         return base64.b64decode(b64)
     url = getattr(resp.data[0], "url", None)
     if url:
         import httpx
+
         r = httpx.get(url, timeout=60)
         r.raise_for_status()
         return r.content

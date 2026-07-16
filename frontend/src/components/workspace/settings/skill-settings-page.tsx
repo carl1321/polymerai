@@ -23,7 +23,11 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useI18n } from "@/core/i18n/hooks";
-import { useEnableSkill, useSkills, useUploadSkillFolder } from "@/core/skills/hooks";
+import {
+  useEnableSkill,
+  useSkills,
+  useUploadSkillFolder,
+} from "@/core/skills/hooks";
 import type { Skill } from "@/core/skills/type";
 import { env } from "@/env";
 
@@ -158,9 +162,7 @@ function SkillSettingsList({
           <div className="text-muted-foreground">
             拖拽技能文件夹到此处，或点击“上传技能”。目录根部必须包含 SKILL.md。
           </div>
-          {uploadMessage && (
-            <div className="mt-2 text-sm">{uploadMessage}</div>
-          )}
+          {uploadMessage && <div className="mt-2 text-sm">{uploadMessage}</div>}
         </div>
       )}
       {filteredSkills.length === 0 && (

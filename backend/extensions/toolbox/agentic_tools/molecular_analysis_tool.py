@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 def molecular_analysis_tool(
     smiles: Annotated[str, "The SMILES string of the molecule to analyze."],
 ) -> str:
-    """Analyze molecular structure using InternLM API. 
-    This tool takes a SMILES string and returns detailed molecular structure analysis 
+    """Analyze molecular structure using InternLM API.
+    This tool takes a SMILES string and returns detailed molecular structure analysis
     including chemical properties, structural features, and potential applications."""
     try:
         # Get API configuration from environment variables
@@ -39,14 +39,14 @@ def molecular_analysis_tool(
 
         # Normalize base_url and construct API endpoint
         base_url = api_base_url.rstrip("/")
-        
+
         # Remove /v1/chat/completions if present
         if base_url.endswith("/v1/chat/completions"):
             base_url = base_url[: -len("/v1/chat/completions")].rstrip("/")
         # Remove /v1 if present (to avoid duplicate /v1)
         elif base_url.endswith("/v1"):
             base_url = base_url[: -len("/v1")].rstrip("/")
-        
+
         # Construct API endpoint
         api_url = f"{base_url}/v1/chat/completions"
 
@@ -116,4 +116,3 @@ def molecular_analysis_tool(
         error_msg = f"Unexpected error: {repr(e)}"
         logger.error(error_msg, exc_info=True)
         return f"错误：分析分子结构时发生异常\n{error_msg}"
-

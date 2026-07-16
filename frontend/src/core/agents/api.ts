@@ -42,7 +42,6 @@ function isAgentsApiDisabledDetail(detail: string | undefined): boolean {
   return typeof detail === "string" && detail.includes("agents_api.enabled");
 }
 
-
 export interface GenerateAgentPromptResponse {
   supplement_prompt: string;
   skill_names: string[];

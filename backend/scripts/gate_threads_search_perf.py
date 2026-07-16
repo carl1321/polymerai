@@ -40,11 +40,7 @@ async def _check_indexes(repo: ThreadMetaRepository) -> list[str]:
             rows = await session.execute(text("PRAGMA index_list('threads_meta')"))
             names = {row[1] for row in rows.fetchall()}
         else:
-            rows = await session.execute(
-                text(
-                    "SELECT indexname FROM pg_indexes WHERE tablename='threads_meta'"
-                )
-            )
+            rows = await session.execute(text("SELECT indexname FROM pg_indexes WHERE tablename='threads_meta'"))
             names = {row[0] for row in rows.fetchall()}
 
     required = {

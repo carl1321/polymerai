@@ -637,11 +637,7 @@ async def get_thread(
             "status": "idle",
             "created_at": coerce_iso(ckpt_meta.get("created_at", "")),
             "updated_at": coerce_iso(ckpt_meta.get("updated_at", ckpt_meta.get("created_at", ""))),
-            "metadata": {
-                k: v
-                for k, v in ckpt_meta.items()
-                if k not in ("created_at", "updated_at", "step", "source", "writes", "parents")
-            },
+            "metadata": {k: v for k, v in ckpt_meta.items() if k not in ("created_at", "updated_at", "step", "source", "writes", "parents")},
         }
 
     status = _derive_thread_status(checkpoint_tuple) if checkpoint_tuple is not None else record.get("status", "idle")
@@ -875,9 +871,7 @@ async def get_thread_history(
         async for checkpoint_tuple in checkpointer.alist(config, limit=body.limit):
             if not owner_verified:
                 ck_owner = _owner_from_checkpoint_tuple(checkpoint_tuple)
-                if not _requestor_owns_thread(
-                    user, checkpoint_owner=ck_owner, store_owner=store_owner
-                ):
+                if not _requestor_owns_thread(user, checkpoint_owner=ck_owner, store_owner=store_owner):
                     raise HTTPException(status_code=404, detail="Thread not found")
                 owner_verified = True
             ckpt_config = getattr(checkpoint_tuple, "config", {})

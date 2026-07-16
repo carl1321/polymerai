@@ -1,15 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AsyncTaskTable } from "@/components/workflow/runs/AsyncTaskTable";
+import { JsonBlock } from "@/components/workflow/runs/JsonBlock";
+import { NodeExecutionTable } from "@/components/workflow/runs/NodeExecutionTable";
+import {
+  formatDateTime,
+  runStatusBadgeVariant,
+  runStatusLabel,
+  shouldPollRunProgress,
+} from "@/components/workflow/runs/run-display-utils";
+import { RunExecutionGraph } from "@/components/workflow/runs/RunExecutionGraph";
 import {
   getRun,
   getRunAsyncTasks,
@@ -19,16 +29,6 @@ import {
   mapRunTasksToNodeExecutions,
   type WorkflowRunDetail,
 } from "@/core/api/workflows";
-import { NodeExecutionTable } from "@/components/workflow/runs/NodeExecutionTable";
-import { RunExecutionGraph } from "@/components/workflow/runs/RunExecutionGraph";
-import { AsyncTaskTable } from "@/components/workflow/runs/AsyncTaskTable";
-import { JsonBlock } from "@/components/workflow/runs/JsonBlock";
-import {
-  formatDateTime,
-  runStatusBadgeVariant,
-  runStatusLabel,
-  shouldPollRunProgress,
-} from "@/components/workflow/runs/run-display-utils";
 
 const RUN_PROGRESS_POLL_MS = 15_000;
 
@@ -41,7 +41,9 @@ export default function WorkflowRunDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("nodes");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [openNodeAccordionIds, setOpenNodeAccordionIds] = useState<string[]>([]);
+  const [openNodeAccordionIds, setOpenNodeAccordionIds] = useState<string[]>(
+    [],
+  );
 
   const load = useCallback(
     async (silent = false) => {
@@ -118,18 +120,23 @@ export default function WorkflowRunDetailPage() {
 
   useEffect(() => {
     if (!pollRunProgress) return;
-    const id = window.setInterval(() => void refreshRunProgress(), RUN_PROGRESS_POLL_MS);
+    const id = window.setInterval(
+      () => void refreshRunProgress(),
+      RUN_PROGRESS_POLL_MS,
+    );
     return () => window.clearInterval(id);
   }, [pollRunProgress, refreshRunProgress]);
 
   const runInput = run?.input;
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
+    <div className="container mx-auto max-w-6xl p-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">运行详情</h1>
-          <p className="text-muted-foreground text-sm font-mono mt-1">{runId}</p>
+          <p className="text-muted-foreground mt-1 font-mono text-sm">
+            {runId}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline">
@@ -138,24 +145,32 @@ export default function WorkflowRunDetailPage() {
               返回运行历史
             </Link>
           </Button>
-          <Button variant="outline" onClick={() => void load()} disabled={loading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          <Button
+            variant="outline"
+            onClick={() => void load()}
+            disabled={loading}
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+            />
             刷新
           </Button>
         </div>
       </div>
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">加载中...</div>
+        <div className="text-muted-foreground text-sm">加载中...</div>
       ) : !detail ? (
-        <div className="text-sm text-muted-foreground">无法加载运行详情</div>
+        <div className="text-muted-foreground text-sm">无法加载运行详情</div>
       ) : (
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">运行概览</CardTitle>
-                <Badge variant={runStatusBadgeVariant(status)}>{runStatusLabel(status)}</Badge>
+                <Badge variant={runStatusBadgeVariant(status)}>
+                  {runStatusLabel(status)}
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -164,26 +179,44 @@ export default function WorkflowRunDetailPage() {
                 selectedNodeId={selectedNodeId}
                 onSelectNode={handleSelectNodeFromGraph}
               />
-              <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="text-muted-foreground space-y-2 text-sm">
                 <div>创建：{formatDateTime(run?.created_at as string)}</div>
-                {run?.started_at ? <div>开始：{formatDateTime(run.started_at as string)}</div> : null}
-                {run?.finished_at ? <div>结束：{formatDateTime(run.finished_at as string)}</div> : null}
+                {run?.started_at ? (
+                  <div>开始：{formatDateTime(run.started_at as string)}</div>
+                ) : null}
+                {run?.finished_at ? (
+                  <div>结束：{formatDateTime(run.finished_at as string)}</div>
+                ) : null}
                 {run?.work_root ? (
-                  <div className="font-mono text-xs break-all">工作目录：{String(run.work_root)}</div>
+                  <div className="font-mono text-xs break-all">
+                    工作目录：{String(run.work_root)}
+                  </div>
                 ) : null}
                 {runInput != null ? (
                   <div className="pt-2">
-                    <JsonBlock label="运行级输入" value={runInput} maxHeightClass="max-h-[160px]" />
+                    <JsonBlock
+                      label="运行级输入"
+                      value={runInput}
+                      maxHeightClass="max-h-[160px]"
+                    />
                   </div>
                 ) : null}
               </div>
             </CardContent>
           </Card>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
             <TabsList>
-              <TabsTrigger value="nodes">节点执行（{detail.nodes.length}）</TabsTrigger>
-              <TabsTrigger value="async">异步任务（{asyncTasks.length}）</TabsTrigger>
+              <TabsTrigger value="nodes">
+                节点执行（{detail.nodes.length}）
+              </TabsTrigger>
+              <TabsTrigger value="async">
+                异步任务（{asyncTasks.length}）
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="nodes" className="mt-4">
               <NodeExecutionTable

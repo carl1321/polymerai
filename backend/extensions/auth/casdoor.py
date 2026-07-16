@@ -59,6 +59,7 @@ def build_authorize_url(
     }
     return f"{url}?{urllib.parse.urlencode(params)}"
 
+
 def _ssl_context_from_certificate(certificate_pem: str | None) -> ssl.SSLContext | None:
     """Build SSL context with the provided CA certificate.
 
@@ -111,6 +112,7 @@ async def exchange_code_for_tokens(
         raw=payload,
     )
 
+
 async def get_account(
     *,
     endpoint: str,
@@ -133,7 +135,7 @@ def _public_key_from_certificate_pem(pem: str) -> Any:
     return cert.public_key()
 
 
-def verify_casdoor_jwt(token: str, cfg: "CasdoorConfig") -> dict[str, Any] | None:
+def verify_casdoor_jwt(token: str, cfg: CasdoorConfig) -> dict[str, Any] | None:
     """Decode Casdoor JWT without signature verification.
 
     This is intended for scenarios where only user identity extraction is needed.
@@ -169,4 +171,3 @@ def pick_identity(claims: Mapping[str, Any]) -> tuple[str, str | None, str | Non
     username = username.replace("@", "_")
     real_name = display_name or name or None
     return username, email, real_name
-

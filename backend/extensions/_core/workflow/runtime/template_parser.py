@@ -7,40 +7,40 @@
 解析 prompt 中的 {{节点名.字段名}} 模板语法，替换为实际值
 """
 
-import re
 import logging
+import re
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 def render_template(
     template: str,
-    node_outputs: Dict[str, Dict[str, Any]],
-    node_labels: Optional[Dict[str, str]] = None,
-    loop_context: Optional[Dict[str, Any]] = None,
-    node_output_formats: Optional[Dict[str, str]] = None,
-    work_root: Optional[str] = None,
-    node_aliases: Optional[Dict[str, str]] = None,
+    node_outputs: dict[str, dict[str, Any]],
+    node_labels: dict[str, str] | None = None,
+    loop_context: dict[str, Any] | None = None,
+    node_output_formats: dict[str, str] | None = None,
+    work_root: str | None = None,
+    node_aliases: dict[str, str] | None = None,
     file_path_style: str = "absolute",
-    workflow_inputs: Optional[Dict[str, Any]] = None,
+    workflow_inputs: dict[str, Any] | None = None,
 ) -> str:
     """
     解析模板中的 {{节点名.字段名}} 语法并替换为实际值
     支持循环上下文变量：{{loop.iteration}}, {{loop.variables.变量名}}, {{loop.previous_output}}
     支持输出格式字段：{{节点名.array}}, {{节点名.object}}, {{节点名.string}}, {{节点名.number}}
-    
+
     Args:
         template: 包含模板语法的字符串，如 "请分析：{{start.inputs}}"
         node_outputs: 节点输出映射，格式为 {节点ID: {字段名: 值}}
         node_labels: 节点标签映射，格式为 {节点ID: 标签}，用于通过标签查找节点
         loop_context: 循环上下文，格式为 {循环节点ID: {iteration: int, variables: dict, previous_output: dict}}
         node_output_formats: 节点输出格式映射，格式为 {节点ID: 格式}，格式可以是 "output", "array", "object", "string", "number"
-    
+
     Returns:
         解析后的字符串
-    
+
     Example:
         >>> node_outputs = {
         ...     "node_123": {"response": "Hello"},
@@ -58,32 +58,32 @@ def render_template(
     """
     if not template:
         return template
-    
+
     # 先处理循环语句 {% for ... %} ... {% endfor %}
     template = _process_loops(template, loop_context)
-    
+
     # 再处理条件语句 {% if ... %} ... {% endif %}
     template = _process_conditionals(template, loop_context)
-    
-    pattern = r'\{\{([^}]+)\}\}'
-    
+
+    pattern = r"\{\{([^}]+)\}\}"
+
     def replace_match(match):
         var_path = match.group(1).strip()
-        
+
         # 检查是否是循环上下文变量
         if var_path.startswith("loop."):
             if not loop_context:
                 logger.warning(f"Loop context not available for: {var_path}")
                 return match.group(0)
-            
+
             # 解析循环变量路径：loop.iteration, loop.variables.变量名, loop.previous_output
-            loop_parts = var_path.split('.', 1)
+            loop_parts = var_path.split(".", 1)
             if len(loop_parts) < 2:
                 logger.warning(f"Invalid loop variable syntax: {var_path}")
                 return match.group(0)
-            
+
             loop_field = loop_parts[1].strip()
-            
+
             # 获取当前循环上下文（如果有多个循环，使用第一个）
             # 实际使用中，应该根据当前执行的循环节点ID来确定
             current_loop_context = None
@@ -92,11 +92,11 @@ def render_template(
                 for loop_id, ctx in loop_context.items():
                     current_loop_context = ctx
                     break  # 使用第一个找到的循环上下文
-            
+
             if not current_loop_context:
                 logger.warning(f"Loop context not found for: {var_path}")
                 return match.group(0)
-            
+
             # 处理不同的循环变量
             if loop_field == "iteration":
                 value = current_loop_context.get("iteration", 0)
@@ -111,10 +111,10 @@ def render_template(
                 var_path_parts = loop_field.split(".", 2)  # 最多分割为3部分
                 var_name = var_path_parts[1] if len(var_path_parts) > 1 else None
                 field_name = var_path_parts[2] if len(var_path_parts) > 2 else None
-                
+
                 variables = current_loop_context.get("variables", {})
                 value = variables.get(var_name) if var_name else None
-                
+
                 if value is None:
                     logger.debug(f"Loop variable '{var_name}' not found in variables: {list(variables.keys())}")
                 elif field_name:
@@ -140,6 +140,7 @@ def render_template(
                     elif isinstance(value, str):
                         try:
                             import json
+
                             parsed = json.loads(value)
                             # 如果解析后是数组，从第一个元素提取字段
                             if isinstance(parsed, list) and len(parsed) > 0:
@@ -156,44 +157,45 @@ def render_template(
                         except (json.JSONDecodeError, ValueError):
                             logger.debug(f"Loop variable '{var_name}' is a string but not valid JSON, cannot extract field '{field_name}'")
                             value = None
-                    
+
                     if value is None:
                         logger.debug(f"Field '{field_name}' not found in loop variable '{var_name}'")
                 # 如果没有指定字段名，返回整个变量值（保持原有行为）
             else:
                 # 直接访问循环上下文字段
                 value = current_loop_context.get(loop_field)
-            
+
             if value is None:
                 # 对于循环变量，如果值为 None，尝试返回空字符串而不是原始模板
                 # 这样可以避免在模板中显示未定义的变量
                 logger.debug(f"Loop variable '{loop_field}' is None, returning empty string")
                 return ""
-            
+
             # 转换为字符串
             if isinstance(value, (dict, list)):
                 import json
+
                 try:
                     return json.dumps(value, ensure_ascii=False)
                 except:
                     return str(value)
             return str(value)
-        
+
         # 解析 节点名.字段名
-        parts = var_path.split('.', 1)
+        parts = var_path.split(".", 1)
         if len(parts) != 2:
             logger.warning(f"Invalid template syntax: {var_path}, expected format: nodeName.fieldName")
             return match.group(0)  # 返回原始模板，不替换
-        
+
         node_name, field_name = parts[0].strip(), parts[1].strip()
-        
+
         # 查找对应的节点
         target_node_id = None
-        
+
         # 方案1: 优先尝试直接使用 node_name 作为节点 ID（节点 ID 是唯一标识符，应该优先使用）
         if node_name in node_outputs:
             target_node_id = node_name
-        
+
         # 方案2: 如果直接查找失败，通过节点标签（nodeName）查找
         if not target_node_id and node_labels:
             for node_id, label in node_labels.items():
@@ -209,17 +211,17 @@ def render_template(
             alias_id = node_aliases.get(node_name)
             if alias_id:
                 target_node_id = alias_id
-        
+
         if not target_node_id:
             logger.warning(f"Node not found: {node_name}")
             return match.group(0)  # 返回原始模板
-        
+
         # 获取节点输出
         node_output = node_outputs.get(target_node_id)
         if not node_output:
             logger.warning(f"No output found for node: {target_node_id}")
             return match.group(0)
-        
+
         # 获取字段值
         value = None
         if isinstance(node_output, dict):
@@ -241,19 +243,20 @@ def render_template(
                 # 检查是否是嵌套路径（如 output.content）
                 if field_name.startswith("output."):
                     # 提取嵌套字段名（如 content）
-                    nested_field = field_name[len("output."):]
+                    nested_field = field_name[len("output.") :]
                     raw_output = node_output.get("output")
                     if raw_output is not None:
                         # 如果 output 是字符串，尝试解析为 JSON
                         if isinstance(raw_output, str):
                             try:
                                 import json
+
                                 parsed = json.loads(raw_output)
                                 raw_output = parsed
                                 logger.debug(f"Parsed JSON string from output for node '{target_node_id}'")
                             except (json.JSONDecodeError, ValueError):
                                 logger.debug(f"Output is a string but not valid JSON for node '{target_node_id}', treating as plain string")
-                        
+
                         # 如果 output 是数组，尝试从第一个元素中获取字段
                         if isinstance(raw_output, list):
                             if len(raw_output) > 0:
@@ -285,12 +288,13 @@ def render_template(
                         if isinstance(raw_output, str):
                             try:
                                 import json
+
                                 parsed = json.loads(raw_output)
                                 raw_output = parsed
                                 logger.debug(f"Parsed JSON string from output for node '{target_node_id}'")
                             except (json.JSONDecodeError, ValueError):
                                 logger.debug(f"Output is a string but not valid JSON for node '{target_node_id}', treating as plain string")
-                        
+
                         # 如果 output 是数组，尝试从第一个元素中获取字段
                         if isinstance(raw_output, list):
                             if len(raw_output) > 0:
@@ -317,7 +321,7 @@ def render_template(
         else:
             # 如果输出不是字典，尝试直接访问属性
             value = getattr(node_output, field_name, None)
-        
+
         if field_name == "output":
             if isinstance(node_output, dict):
                 from extensions._core.workflow.workflow_output_paths import (
@@ -337,6 +341,7 @@ def render_template(
                         if isinstance(raw_output, str):
                             try:
                                 import json
+
                                 parsed = json.loads(raw_output)
                                 value = parsed
                             except (json.JSONDecodeError, ValueError):
@@ -347,11 +352,9 @@ def render_template(
                         logger.warning(f"Field 'output' is None for node '{target_node_id}'")
                         value = None
             else:
-                logger.warning(
-                    f"Node output is not a dict for node '{target_node_id}', cannot get 'output' field"
-                )
+                logger.warning(f"Node output is not a dict for node '{target_node_id}', cannot get 'output' field")
                 value = None
-        
+
         # 如果字段是格式字段（array、object、string、number），需要根据节点的输出格式进行转换
         elif field_name in ["array", "object", "string", "number"]:
             # 获取节点的原始输出（output 字段）
@@ -359,7 +362,7 @@ def render_template(
             if raw_output is None:
                 logger.warning(f"Field 'output' not found in node '{target_node_id}' output for format conversion")
                 return match.group(0)
-            
+
             # 根据格式字段进行转换
             if field_name == "array":
                 # 转换为数组格式
@@ -369,6 +372,7 @@ def render_template(
                     # 尝试解析 JSON 字符串
                     try:
                         import json
+
                         parsed = json.loads(raw_output)
                         value = parsed if isinstance(parsed, list) else [parsed]
                     except:
@@ -383,6 +387,7 @@ def render_template(
                     # 尝试解析 JSON 字符串
                     try:
                         import json
+
                         value = json.loads(raw_output)
                         if not isinstance(value, dict):
                             value = {"value": value}
@@ -394,6 +399,7 @@ def render_template(
                 # 转换为字符串格式
                 if isinstance(raw_output, (dict, list)):
                     import json
+
                     try:
                         value = json.dumps(raw_output, ensure_ascii=False)
                     except:
@@ -408,7 +414,7 @@ def render_template(
                     # 尝试转换为数值
                     try:
                         # 尝试转换为整数
-                        if '.' not in raw_output:
+                        if "." not in raw_output:
                             value = int(raw_output)
                         else:
                             value = float(raw_output)
@@ -416,6 +422,7 @@ def render_template(
                         # 如果转换失败，尝试从 JSON 中提取数值
                         try:
                             import json
+
                             parsed = json.loads(raw_output)
                             if isinstance(parsed, (int, float)):
                                 value = parsed
@@ -433,16 +440,14 @@ def render_template(
             if value is None:
                 logger.warning(f"Field '{field_name}' not found in node '{target_node_id}' output")
                 return match.group(0)
-        
+
         from extensions._core.workflow.workflow_output_paths import (
             format_file_ref_for_template,
             is_file_ref,
         )
 
         if work_root and is_file_ref(value):
-            formatted = format_file_ref_for_template(
-                value, work_root, file_path_style=file_path_style
-            )
+            formatted = format_file_ref_for_template(value, work_root, file_path_style=file_path_style)
             if formatted:
                 return formatted
 
@@ -473,54 +478,55 @@ def render_template(
         # 转换为字符串
         if isinstance(value, (dict, list)):
             import json
+
             try:
                 return json.dumps(value, ensure_ascii=False)
             except:
                 return str(value)
         return str(value)
-    
+
     return re.sub(pattern, replace_match, template)
 
 
-def _process_loops(template: str, loop_context: Optional[Dict[str, Any]] = None) -> str:
+def _process_loops(template: str, loop_context: dict[str, Any] | None = None) -> str:
     """
     处理模板中的循环语句 {% for item in loop.variables.var_name %} ... {% endfor %}
-    
+
     Args:
         template: 包含循环语句的模板字符串
         loop_context: 循环上下文，用于获取循环变量
-        
+
     Returns:
         处理后的模板字符串
     """
     if not template:
         return template
-    
+
     # 获取循环上下文
     current_loop_context = None
     if loop_context:
         for loop_id, ctx in loop_context.items():
             current_loop_context = ctx
             break
-    
+
     if not current_loop_context:
         # 如果没有循环上下文，直接返回原模板（循环语句不会被处理）
         return template
-    
+
     # 匹配 {% for item in loop.variables.var_name %} ... {% endfor %}
-    pattern = r'\{%\s*for\s+(\w+)\s+in\s+([^%]+)\s*%\}(.*?)\{%\s*endfor\s*%\}'
-    
+    pattern = r"\{%\s*for\s+(\w+)\s+in\s+([^%]+)\s*%\}(.*?)\{%\s*endfor\s*%\}"
+
     def replace_loop(match):
         item_var = match.group(1).strip()  # 循环变量名，如 "item"
         collection_path = match.group(2).strip()  # 集合路径，如 "loop.variables.pending_items"
         loop_body = match.group(3) if match.group(3) else ""  # 循环体内容
-        
+
         # 解析集合路径，支持：
         # - loop.variables.var_name
         # - loop.filtered_data.pending
         # - loop.filtered_data.passed
         collection = None
-        
+
         if collection_path.startswith("loop.variables."):
             var_name = collection_path.replace("loop.variables.", "").strip()
             variables = current_loop_context.get("variables", {})
@@ -533,11 +539,11 @@ def _process_loops(template: str, loop_context: Optional[Dict[str, Any]] = None)
             # 直接访问循环上下文字段
             field_path = collection_path.replace("loop.", "").strip()
             collection = current_loop_context.get(field_path)
-        
+
         if collection is None:
             logger.warning(f"Loop collection not found: {collection_path}, returning empty string")
             return ""
-        
+
         # 确保 collection 是列表
         if not isinstance(collection, list):
             if isinstance(collection, dict):
@@ -546,30 +552,32 @@ def _process_loops(template: str, loop_context: Optional[Dict[str, Any]] = None)
             else:
                 logger.warning(f"Loop collection is not a list or dict: {type(collection)}, returning empty string")
                 return ""
-        
+
         # 对每个元素进行循环处理
         results = []
         for item in collection:
             # 在循环体中替换 {{item.field}} 或 {{item}} 变量
             item_template = loop_body
-            
+
             # 替换 {{item}} 为整个 item 的 JSON 表示
             if isinstance(item, (dict, list)):
                 import json
+
                 try:
                     item_json = json.dumps(item, ensure_ascii=False)
                 except:
                     item_json = str(item)
             else:
                 item_json = str(item)
-            
+
             # 替换 {{item}} 或 {{item_var}}（如 {{item}}）
-            item_pattern = r'\{\{' + re.escape(item_var) + r'\}\}'
+            item_pattern = r"\{\{" + re.escape(item_var) + r"\}\}"
             item_template = re.sub(item_pattern, item_json, item_template)
-            
+
             # 替换 {{item.field}} 或 {{item_var.field}}（如 {{item.generation_id}}）
             if isinstance(item, dict):
-                item_field_pattern = r'\{\{' + re.escape(item_var) + r'\.([^}]+)\}\}'
+                item_field_pattern = r"\{\{" + re.escape(item_var) + r"\.([^}]+)\}\}"
+
                 def replace_item_field(m):
                     field_name = m.group(1).strip()
                     field_value = item.get(field_name)
@@ -579,170 +587,172 @@ def _process_loops(template: str, loop_context: Optional[Dict[str, Any]] = None)
                     # 转换为字符串
                     if isinstance(field_value, (dict, list)):
                         import json
+
                         try:
                             return json.dumps(field_value, ensure_ascii=False)
                         except:
                             return str(field_value)
                     return str(field_value)
+
                 item_template = re.sub(item_field_pattern, replace_item_field, item_template)
-            
+
             results.append(item_template)
-        
+
         # 将所有结果连接起来
         return "".join(results)
-    
+
     # 使用 DOTALL 标志以支持多行内容
     result = re.sub(pattern, replace_loop, template, flags=re.DOTALL)
     return result
 
 
-def _process_conditionals(template: str, loop_context: Optional[Dict[str, Any]] = None) -> str:
+def _process_conditionals(template: str, loop_context: dict[str, Any] | None = None) -> str:
     """
     处理模板中的条件语句 {% if condition %} ... {% endif %}
-    
+
     Args:
         template: 包含条件语句的模板字符串
         loop_context: 循环上下文，用于评估条件
-        
+
     Returns:
         处理后的模板字符串
     """
     if not template:
         return template
-    
+
     # 获取循环上下文中的 iteration 值
     iteration = 0
     if loop_context:
         for loop_id, ctx in loop_context.items():
             iteration = ctx.get("iteration", 0)
             break
-    
+
     # 匹配 {% if condition %} ... {% else %} ... {% endif %}
     # 支持两种格式：
     # 1. {% if condition %} ... {% endif %}
     # 2. {% if condition %} ... {% else %} ... {% endif %}
-    pattern = r'\{%\s*if\s+([^%]+)\s*%\}(.*?)(?:\{%\s*else\s*%\}(.*?))?\{%\s*endif\s*%\}'
-    
+    pattern = r"\{%\s*if\s+([^%]+)\s*%\}(.*?)(?:\{%\s*else\s*%\}(.*?))?\{%\s*endif\s*%\}"
+
     def replace_conditional(match):
         condition = match.group(1).strip()
         if_content = match.group(2) if match.group(2) else ""
         else_content = match.group(3) if match.group(3) else ""
-        
+
         # 评估条件
         condition_met = False
-        
+
         # 支持 loop.iteration == 1 这样的条件
-        if 'loop.iteration' in condition:
+        if "loop.iteration" in condition:
             # 提取比较操作符和值
-            if '==' in condition:
-                parts = condition.split('==')
+            if "==" in condition:
+                parts = condition.split("==")
                 if len(parts) == 2:
                     left = parts[0].strip()
                     right = parts[1].strip()
-                    if 'loop.iteration' in left:
+                    if "loop.iteration" in left:
                         try:
                             compare_value = int(right)
-                            condition_met = (iteration == compare_value)
+                            condition_met = iteration == compare_value
                         except ValueError:
                             condition_met = False
-                    elif 'loop.iteration' in right:
+                    elif "loop.iteration" in right:
                         try:
                             compare_value = int(left)
-                            condition_met = (iteration == compare_value)
+                            condition_met = iteration == compare_value
                         except ValueError:
                             condition_met = False
-            elif '!=' in condition:
-                parts = condition.split('!=')
+            elif "!=" in condition:
+                parts = condition.split("!=")
                 if len(parts) == 2:
                     left = parts[0].strip()
                     right = parts[1].strip()
-                    if 'loop.iteration' in left:
+                    if "loop.iteration" in left:
                         try:
                             compare_value = int(right)
-                            condition_met = (iteration != compare_value)
+                            condition_met = iteration != compare_value
                         except ValueError:
                             condition_met = False
-                    elif 'loop.iteration' in right:
+                    elif "loop.iteration" in right:
                         try:
                             compare_value = int(left)
-                            condition_met = (iteration != compare_value)
+                            condition_met = iteration != compare_value
                         except ValueError:
                             condition_met = False
-            elif '>' in condition and '>=' not in condition and '=>' not in condition:
-                parts = condition.split('>')
+            elif ">" in condition and ">=" not in condition and "=>" not in condition:
+                parts = condition.split(">")
                 if len(parts) == 2:
                     left = parts[0].strip()
                     right = parts[1].strip()
-                    if 'loop.iteration' in left:
+                    if "loop.iteration" in left:
                         try:
                             compare_value = int(right)
-                            condition_met = (iteration > compare_value)
+                            condition_met = iteration > compare_value
                         except ValueError:
                             condition_met = False
-                    elif 'loop.iteration' in right:
+                    elif "loop.iteration" in right:
                         try:
                             compare_value = int(left)
-                            condition_met = (compare_value > iteration)
+                            condition_met = compare_value > iteration
                         except ValueError:
                             condition_met = False
-            elif '<' in condition and '<=' not in condition and '=<' not in condition:
-                parts = condition.split('<')
+            elif "<" in condition and "<=" not in condition and "=<" not in condition:
+                parts = condition.split("<")
                 if len(parts) == 2:
                     left = parts[0].strip()
                     right = parts[1].strip()
-                    if 'loop.iteration' in left:
+                    if "loop.iteration" in left:
                         try:
                             compare_value = int(right)
-                            condition_met = (iteration < compare_value)
+                            condition_met = iteration < compare_value
                         except ValueError:
                             condition_met = False
-                    elif 'loop.iteration' in right:
+                    elif "loop.iteration" in right:
                         try:
                             compare_value = int(left)
-                            condition_met = (compare_value < iteration)
+                            condition_met = compare_value < iteration
                         except ValueError:
                             condition_met = False
-            elif '>=' in condition:
-                parts = condition.split('>=')
+            elif ">=" in condition:
+                parts = condition.split(">=")
                 if len(parts) == 2:
                     left = parts[0].strip()
                     right = parts[1].strip()
-                    if 'loop.iteration' in left:
+                    if "loop.iteration" in left:
                         try:
                             compare_value = int(right)
-                            condition_met = (iteration >= compare_value)
+                            condition_met = iteration >= compare_value
                         except ValueError:
                             condition_met = False
-                    elif 'loop.iteration' in right:
+                    elif "loop.iteration" in right:
                         try:
                             compare_value = int(left)
-                            condition_met = (compare_value >= iteration)
+                            condition_met = compare_value >= iteration
                         except ValueError:
                             condition_met = False
-            elif '<=' in condition:
-                parts = condition.split('<=')
+            elif "<=" in condition:
+                parts = condition.split("<=")
                 if len(parts) == 2:
                     left = parts[0].strip()
                     right = parts[1].strip()
-                    if 'loop.iteration' in left:
+                    if "loop.iteration" in left:
                         try:
                             compare_value = int(right)
-                            condition_met = (iteration <= compare_value)
+                            condition_met = iteration <= compare_value
                         except ValueError:
                             condition_met = False
-                    elif 'loop.iteration' in right:
+                    elif "loop.iteration" in right:
                         try:
                             compare_value = int(left)
-                            condition_met = (compare_value <= iteration)
+                            condition_met = compare_value <= iteration
                         except ValueError:
                             condition_met = False
-        
+
         # 如果条件满足，返回 if 分支内容；否则返回 else 分支内容（如果有）
         if condition_met:
             return if_content
         else:
             return else_content
-    
+
     # 使用 DOTALL 标志以支持多行内容
     result = re.sub(pattern, replace_conditional, template, flags=re.DOTALL)
     return result
@@ -751,22 +761,21 @@ def _process_conditionals(template: str, loop_context: Optional[Dict[str, Any]] 
 def extract_template_variables(template: str) -> list[tuple[str, str]]:
     """
     提取模板中的所有变量引用
-    
+
     Returns:
         [(节点名, 字段名), ...] 列表
     """
     if not template:
         return []
-    
-    pattern = r'\{\{([^}]+)\}\}'
+
+    pattern = r"\{\{([^}]+)\}\}"
     variables = []
-    
+
     for match in re.finditer(pattern, template):
         var_path = match.group(1).strip()
-        parts = var_path.split('.', 1)
+        parts = var_path.split(".", 1)
         if len(parts) == 2:
             node_name, field_name = parts[0].strip(), parts[1].strip()
             variables.append((node_name, field_name))
-    
-    return variables
 
+    return variables

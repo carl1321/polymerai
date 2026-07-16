@@ -115,8 +115,8 @@ def sync_toolbox_skills_from_disk(conn) -> int:
 def bootstrap_app_extension_schema() -> None:
     """Idempotent schema + skills seed for agents/workflows/skills APIs."""
     from extensions._core.app_db import get_app_db_connection
-    from scripts.init_app_database import create_workflow_tables
     from extensions._core.workflow_tools.db import init_workflow_tools_table
+    from scripts.init_app_database import create_workflow_tables
 
     conn = get_app_db_connection()
     try:

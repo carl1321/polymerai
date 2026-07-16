@@ -16,7 +16,6 @@ from langchain_core.tools import tool
 from extensions._core.crawler.crawler import Crawler
 from extensions._core.crawler.readability_extractor import ReadabilityExtractor
 
-
 PDF_TIMEOUT = float(os.getenv("PDF_FETCH_TIMEOUT", "25"))
 
 
@@ -96,5 +95,3 @@ def fetch_pdf_text(url: str, max_pages: int | None = None) -> dict:
     except Exception as e:
         meta["error"] = str(e)
         return {"text": "", "meta": meta}
-
-

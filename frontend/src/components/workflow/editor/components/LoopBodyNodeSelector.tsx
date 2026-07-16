@@ -3,11 +3,20 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
 import type { Node } from "@xyflow/react";
+import {
+  ChevronRight,
+  ChevronDown,
+  Play,
+  Brain,
+  Wrench,
+  GitBranch,
+  RotateCcw,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+
 import { Button } from "~/components/ui/button";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import { ChevronRight, ChevronDown, Play, Brain, Wrench, GitBranch, RotateCcw } from "lucide-react";
 import { cn } from "~/lib/utils";
 
 interface LoopBodyNodeSelectorProps {
@@ -43,14 +52,17 @@ const getNodeOutputFields = (node: Node): string[] => {
 };
 
 // 获取节点定义的输出字段列表（用于显示嵌套字段）
-const getNodeDefinedFields = (node: Node): Array<{ name: string; type: string }> => {
-  const outputFields = node.data?.outputFields || node.data?.output_fields || [];
+const getNodeDefinedFields = (
+  node: Node,
+): Array<{ name: string; type: string }> => {
+  const outputFields =
+    node.data?.outputFields || node.data?.output_fields || [];
   if (Array.isArray(outputFields) && outputFields.length > 0) {
     return outputFields
-      .filter((field: any) => field && field.name && typeof field.name === 'string')
+      .filter((field: any) => field?.name && typeof field.name === "string")
       .map((field: any) => ({
         name: field.name,
-        type: field.type || "String"
+        type: field.type || "String",
       }));
   }
   return [];
@@ -75,25 +87,32 @@ const getNodeIcon = (nodeType: string) => {
 };
 
 // 递归获取嵌套字段
-const getNestedFields = (obj: any, prefix: string = "", maxDepth: number = 3, currentDepth: number = 0): Array<{ path: string; value: any }> => {
+const getNestedFields = (
+  obj: any,
+  prefix = "",
+  maxDepth = 3,
+  currentDepth = 0,
+): Array<{ path: string; value: any }> => {
   if (currentDepth >= maxDepth || !obj || typeof obj !== "object") {
     return [];
   }
-  
+
   const fields: Array<{ path: string; value: any }> = [];
-  
+
   for (const [key, value] of Object.entries(obj)) {
     const fullPath = prefix ? `${prefix}.${key}` : key;
-    
+
     if (value && typeof value === "object" && !Array.isArray(value)) {
       // 递归获取嵌套字段
-      fields.push(...getNestedFields(value, fullPath, maxDepth, currentDepth + 1));
+      fields.push(
+        ...getNestedFields(value, fullPath, maxDepth, currentDepth + 1),
+      );
     } else {
       // 叶子节点
       fields.push({ path: fullPath, value });
     }
   }
-  
+
   return fields;
 };
 
@@ -109,18 +128,20 @@ export function LoopBodyNodeSelector({
   // 筛选循环体内的节点
   const bodyNodes = useMemo(() => {
     return nodes.filter(
-      (node) => 
-        (node.data?.loopId === loopNodeId || node.data?.loop_id === loopNodeId) && 
+      (node) =>
+        (node.data?.loopId === loopNodeId ||
+          node.data?.loop_id === loopNodeId) &&
         node.id !== loopNodeId &&
-        node.type !== "start" && 
-        node.type !== "end"
+        node.type !== "start" &&
+        node.type !== "end",
     );
   }, [nodes, loopNodeId]);
 
   // 生成节点唯一标识（使用节点名称 taskName）
   const getNodeIdentifier = (node: Node): string => {
-    const identifier = node.data?.taskName || node.data?.nodeName || node.data?.label || node.id;
-    return typeof identifier === 'string' ? identifier : String(identifier);
+    const identifier =
+      node.data?.taskName || node.data?.nodeName || node.data?.label || node.id;
+    return typeof identifier === "string" ? identifier : String(identifier);
   };
 
   const toggleNode = (nodeId: string) => {
@@ -157,7 +178,7 @@ export function LoopBodyNodeSelector({
   if (bodyNodes.length === 0) {
     return (
       <div className="w-80 p-4">
-        <div className="text-sm text-muted-foreground text-center py-8">
+        <div className="text-muted-foreground py-8 text-center text-sm">
           循环体内暂无节点
         </div>
       </div>
@@ -165,53 +186,59 @@ export function LoopBodyNodeSelector({
   }
 
   return (
-    <div className="w-80 flex flex-col">
-      <div className="p-3 border-b border-border">
+    <div className="flex w-80 flex-col">
+      <div className="border-border border-b p-3">
         <h3 className="text-sm font-semibold">选择循环体内节点</h3>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1 text-xs">
           选择节点和字段，将在光标位置插入变量引用
         </p>
       </div>
       <ScrollArea className="flex-1">
-        <div className="p-2 space-y-1">
+        <div className="space-y-1 p-2">
           {bodyNodes.map((node) => {
             const Icon = getNodeIcon(node.type || "start");
             const isExpanded = expandedNodes.has(node.id);
             const outputFields = getNodeOutputFields(node);
-            const nodeLabel = typeof node.data?.displayName === 'string' 
-              ? node.data.displayName 
-              : (typeof node.data?.label === 'string' ? node.data.label : String(node.id));
+            const nodeLabel =
+              typeof node.data?.displayName === "string"
+                ? node.data.displayName
+                : typeof node.data?.label === "string"
+                  ? node.data.label
+                  : String(node.id);
             const nodeIdentifier = getNodeIdentifier(node);
 
             return (
-              <div key={node.id} className="border border-border rounded-md">
+              <div key={node.id} className="border-border rounded-md border">
                 <button
                   onClick={() => toggleNode(node.id)}
-                  className="w-full flex items-center gap-2 p-2 hover:bg-accent transition-colors"
+                  className="hover:bg-accent flex w-full items-center gap-2 p-2 transition-colors"
                 >
                   {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    <ChevronDown className="text-muted-foreground h-4 w-4" />
                   ) : (
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <ChevronRight className="text-muted-foreground h-4 w-4" />
                   )}
-                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  <Icon className="text-muted-foreground h-4 w-4" />
                   <span className="flex-1 text-left text-sm font-medium">
                     {nodeLabel}
                   </span>
                 </button>
                 {isExpanded && (
-                  <div className="border-t border-border bg-muted/30">
+                  <div className="border-border bg-muted/30 border-t">
                     {outputFields.map((field) => {
                       const fieldPath = field;
-                      const isFieldExpanded = expandedFields.has(`${node.id}.${fieldPath}`);
-                      
+                      const isFieldExpanded = expandedFields.has(
+                        `${node.id}.${fieldPath}`,
+                      );
+
                       // 获取节点定义的字段列表
                       const definedFields = getNodeDefinedFields(node);
-                      
+
                       // 如果字段是 output 且有定义的字段，可以展开显示嵌套字段
                       // 对于自定义字段，直接选择，不需要展开
-                      const hasNestedFields = field === "output" && definedFields.length > 0;
-                      
+                      const hasNestedFields =
+                        field === "output" && definedFields.length > 0;
+
                       return (
                         <div key={field}>
                           <div className="flex items-center">
@@ -223,21 +250,21 @@ export function LoopBodyNodeSelector({
                                   handleFieldSelect(node, fieldPath);
                                 }
                               }}
-                              className="flex-1 flex items-center gap-2 px-6 py-2 text-sm hover:bg-accent transition-colors text-left"
+                              className="hover:bg-accent flex flex-1 items-center gap-2 px-6 py-2 text-left text-sm transition-colors"
                             >
                               <span className="text-muted-foreground">└─</span>
                               <span className="font-mono text-xs">{field}</span>
                               {hasNestedFields && (
                                 <span className="ml-auto">
                                   {isFieldExpanded ? (
-                                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                    <ChevronDown className="text-muted-foreground h-3 w-3" />
                                   ) : (
-                                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                                    <ChevronRight className="text-muted-foreground h-3 w-3" />
                                   )}
                                 </span>
                               )}
                               {!hasNestedFields && (
-                                <span className="text-xs text-muted-foreground ml-auto">
+                                <span className="text-muted-foreground ml-auto text-xs">
                                   {`{{${nodeIdentifier}.${field}}}`}
                                 </span>
                               )}
@@ -249,15 +276,24 @@ export function LoopBodyNodeSelector({
                               {definedFields.map((definedField) => (
                                 <button
                                   key={definedField.name}
-                                  onClick={() => handleFieldSelect(node, `${fieldPath}.${definedField.name}`)}
-                                  className="w-full flex items-center gap-2 px-4 py-1.5 text-xs hover:bg-accent transition-colors text-left"
+                                  onClick={() =>
+                                    handleFieldSelect(
+                                      node,
+                                      `${fieldPath}.${definedField.name}`,
+                                    )
+                                  }
+                                  className="hover:bg-accent flex w-full items-center gap-2 px-4 py-1.5 text-left text-xs transition-colors"
                                 >
-                                  <span className="text-muted-foreground">└─</span>
-                                  <span className="font-mono">{definedField.name}</span>
-                                  <span className="text-xs text-muted-foreground ml-auto">
+                                  <span className="text-muted-foreground">
+                                    └─
+                                  </span>
+                                  <span className="font-mono">
+                                    {definedField.name}
+                                  </span>
+                                  <span className="text-muted-foreground ml-auto text-xs">
                                     ({definedField.type})
                                   </span>
-                                  <span className="text-xs text-muted-foreground ml-auto">
+                                  <span className="text-muted-foreground ml-auto text-xs">
                                     {`{{${nodeIdentifier}.${fieldPath}.${definedField.name}}}`}
                                   </span>
                                 </button>
@@ -274,12 +310,16 @@ export function LoopBodyNodeSelector({
           })}
         </div>
       </ScrollArea>
-      <div className="p-3 border-t border-border">
-        <Button variant="outline" size="sm" onClick={onClose} className="w-full">
+      <div className="border-border border-t p-3">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onClose}
+          className="w-full"
+        >
           取消
         </Button>
       </div>
     </div>
   );
 }
-

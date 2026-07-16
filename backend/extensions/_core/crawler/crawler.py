@@ -24,4 +24,3 @@ class Crawler:
         article = extractor.extract_article(html)
         article.url = url
         return article
-

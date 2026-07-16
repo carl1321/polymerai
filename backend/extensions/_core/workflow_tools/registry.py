@@ -104,9 +104,7 @@ def _fallback_tool_definitions(include_mcp: bool) -> list[dict[str, Any]]:
 
 def _is_missing_workflow_tools_table(exc: BaseException) -> bool:
     text = str(exc).lower()
-    return "workflow_tools" in text and (
-        "does not exist" in text or "undefinedtable" in text or "relation" in text
-    )
+    return "workflow_tools" in text and ("does not exist" in text or "undefinedtable" in text or "relation" in text)
 
 
 def list_workflow_tool_definitions(include_mcp: bool = True) -> list[dict[str, Any]]:

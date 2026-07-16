@@ -171,10 +171,7 @@ def _upsert_threads_meta_owner(
         assignments = ["user_id=excluded.user_id"]
         if "updated_at" in cols:
             assignments.append("updated_at=excluded.updated_at")
-        sql = (
-            f"INSERT INTO threads_meta ({', '.join(insert_cols)}) VALUES ({placeholders}) "
-            f"ON CONFLICT(thread_id) DO UPDATE SET {', '.join(assignments)}"
-        )
+        sql = f"INSERT INTO threads_meta ({', '.join(insert_cols)}) VALUES ({placeholders}) ON CONFLICT(thread_id) DO UPDATE SET {', '.join(assignments)}"
 
         upserted = 0
         for thread_id, user_id in owner_map.items():

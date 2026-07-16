@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: MIT
 
 import { useEffect, useRef, useMemo } from "react";
+
 import type { CandidateTrendPoint } from "@/app/workspace/new-sam/utils/molecule";
 
 interface DimensionTrendChartProps {
@@ -52,8 +53,16 @@ export function DimensionTrendChart({
 
   // 颜色调色板
   const colors = [
-    "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444",
-    "#06b6d4", "#84cc16", "#f97316", "#a855f7", "#ec4899",
+    "#3b82f6",
+    "#10b981",
+    "#f59e0b",
+    "#8b5cf6",
+    "#ef4444",
+    "#06b6d4",
+    "#84cc16",
+    "#f97316",
+    "#a855f7",
+    "#ec4899",
   ];
 
   useEffect(() => {
@@ -68,14 +77,16 @@ export function DimensionTrendChart({
         echarts = echartsModule.default || echartsModule;
 
         if (!chartInstanceRef.current) {
-          const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches || 
-                         document.documentElement.classList.contains("dark");
+          const isDark =
+            window.matchMedia("(prefers-color-scheme: dark)").matches ||
+            document.documentElement.classList.contains("dark");
           chartInstanceRef.current = echarts.init(chartRef.current);
-          
+
           // 监听主题变化
           const observer = new MutationObserver(() => {
             if (chartInstanceRef.current) {
-              const isDarkNow = document.documentElement.classList.contains("dark");
+              const isDarkNow =
+                document.documentElement.classList.contains("dark");
               chartInstanceRef.current.dispose();
               chartInstanceRef.current = echarts.init(chartRef.current);
               updateChart(isDarkNow);
@@ -87,8 +98,9 @@ export function DimensionTrendChart({
           });
         }
 
-        const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches || 
-                      document.documentElement.classList.contains("dark");
+        const isDark =
+          window.matchMedia("(prefers-color-scheme: dark)").matches ||
+          document.documentElement.classList.contains("dark");
         updateChart(isDark);
       } catch (error) {
         console.error("Failed to load echarts:", error);
@@ -96,13 +108,19 @@ export function DimensionTrendChart({
     };
 
     const updateChart = (isDark: boolean) => {
-      if (!chartInstanceRef.current || !hasData || !candidateTrends || candidateTrends.length === 0) {
+      if (
+        !chartInstanceRef.current ||
+        !hasData ||
+        !candidateTrends ||
+        candidateTrends.length === 0
+      ) {
         if (chartInstanceRef.current) {
           chartInstanceRef.current.setOption({
             title: {
-              text: executionState === "running" 
-                ? "等待迭代数据..." 
-                : "暂无迭代数据",
+              text:
+                executionState === "running"
+                  ? "等待迭代数据..."
+                  : "暂无迭代数据",
               left: "center",
               top: "middle",
               textStyle: {
@@ -136,10 +154,10 @@ export function DimensionTrendChart({
             return dimScores?.[dim.key] ?? null;
           });
 
-          const label = ct.smiles 
+          const label = ct.smiles
             ? `分子 ${ct.moleculeId} (${ct.smiles.substring(0, 15)}...)`
             : `分子 ${ct.moleculeId}`;
-          
+
           // 关键：同一个候选分子在三个维度子图里共享同一个 series name
           // 这样 legend 点击一次即可联动隐藏/显示该候选分子的三条线，同时 legend 不会重复显示。
           const seriesName = label;
@@ -175,8 +193,12 @@ export function DimensionTrendChart({
       const option = {
         tooltip: {
           trigger: "axis",
-          backgroundColor: isDark ? "rgba(30, 41, 59, 0.95)" : "rgba(255, 255, 255, 0.95)",
-          borderColor: isDark ? "rgba(100, 116, 139, 0.3)" : "rgba(0, 0, 0, 0.1)",
+          backgroundColor: isDark
+            ? "rgba(30, 41, 59, 0.95)"
+            : "rgba(255, 255, 255, 0.95)",
+          borderColor: isDark
+            ? "rgba(100, 116, 139, 0.3)"
+            : "rgba(0, 0, 0, 0.1)",
           textStyle: {
             color: isDark ? "#e2e8f0" : "#1e293b",
             fontSize: 12,
@@ -185,12 +207,14 @@ export function DimensionTrendChart({
             if (!Array.isArray(params)) return "";
             const iter = allIters[params[0].dataIndex];
             let html = `<div style="margin-bottom: 4px;"><strong>迭代 ${iter}</strong></div>`;
-            
+
             // 按维度分组显示
             dimensions.forEach((dim) => {
-              const dimParams = params.filter((p: any) => seriesDimByIndex[p.seriesIndex] === dim.name);
+              const dimParams = params.filter(
+                (p: any) => seriesDimByIndex[p.seriesIndex] === dim.name,
+              );
               if (dimParams.length > 0) {
-                html += `<div style="margin-top: 8px; font-weight: 600; color: ${isDark ? '#cbd5e1' : '#475569'};">
+                html += `<div style="margin-top: 8px; font-weight: 600; color: ${isDark ? "#cbd5e1" : "#475569"};">
                   ${dim.name}:
                 </div>`;
                 dimParams.forEach((p: any) => {
@@ -204,7 +228,7 @@ export function DimensionTrendChart({
                 });
               }
             });
-            
+
             return html;
           },
         },
@@ -219,7 +243,10 @@ export function DimensionTrendChart({
         },
         grid: dimensions.map((_, idx) => ({
           left: idx === 0 ? "3%" : `${3 + idx * 33}%`,
-          right: idx === dimensions.length - 1 ? "4%" : `${4 + (dimensions.length - 1 - idx) * 33}%`,
+          right:
+            idx === dimensions.length - 1
+              ? "4%"
+              : `${4 + (dimensions.length - 1 - idx) * 33}%`,
           top: "10%",
           bottom: candidateTrends.length > 5 ? "25%" : "20%",
           width: "30%",
@@ -261,7 +288,9 @@ export function DimensionTrendChart({
           },
           splitLine: {
             lineStyle: {
-              color: isDark ? "rgba(71, 85, 105, 0.2)" : "rgba(203, 213, 225, 0.5)",
+              color: isDark
+                ? "rgba(71, 85, 105, 0.2)"
+                : "rgba(203, 213, 225, 0.5)",
             },
           },
         })),

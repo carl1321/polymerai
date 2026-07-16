@@ -70,9 +70,7 @@ def test_replace_swarm_members_success(monkeypatch):
     monkeypatch.setattr(
         agents_router_module,
         "db_replace_swarm_members",
-        lambda conn, _swarm_id, member_ids: stored_members.__setitem__(
-            slice(None), [str(x) for x in member_ids]
-        ),
+        lambda conn, _swarm_id, member_ids: stored_members.__setitem__(slice(None), [str(x) for x in member_ids]),
     )
     monkeypatch.setattr(agents_router_module, "db_list_swarm_member_ids", lambda conn, _swarm_id: stored_members)
 

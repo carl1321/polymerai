@@ -8,15 +8,16 @@ export interface ModelInfo {
   [key: string]: unknown;
 }
 
-export interface ToolboxConfigModels {
-  [key: string]: ModelInfo[] | undefined;
-}
+export type ToolboxConfigModels = Record<string, ModelInfo[] | undefined>;
 
 export interface ToolboxConfig {
   models?: ToolboxConfigModels;
   [key: string]: unknown;
 }
 
-export function useToolboxConfig(): { config: ToolboxConfig | null; loading: boolean } {
+export function useToolboxConfig(): {
+  config: ToolboxConfig | null;
+  loading: boolean;
+} {
   return { config: null, loading: false };
 }

@@ -1,5 +1,5 @@
-import { getBackendBaseURL } from "@/core/config";
 import { getAuthHeaders } from "@/core/auth";
+import { getBackendBaseURL } from "@/core/config";
 
 export interface PublicMetaResponse {
   valid: boolean;

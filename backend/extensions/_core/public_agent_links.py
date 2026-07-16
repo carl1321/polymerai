@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import secrets
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -112,10 +112,10 @@ def is_link_active(link_row: dict[str, Any] | None) -> bool:
     exp = link_row.get("expires_at")
     if exp is None:
         return True
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if isinstance(exp, datetime):
         if exp.tzinfo is None:
-            exp = exp.replace(tzinfo=timezone.utc)
+            exp = exp.replace(tzinfo=UTC)
         return now < exp
     return True
 

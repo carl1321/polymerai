@@ -31,4 +31,3 @@ def property_predictor_tool(smiles_text: str, properties: str = "HOMO,LUMO,DM") 
     except Exception as e:
         logger.exception("property_predictor_tool failed: %s", e)
         return f"Error: property_predictor_tool failed: {e}"
-

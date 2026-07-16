@@ -65,7 +65,13 @@ export function useUpdateSkillMetadata() {
       group_name?: string | null;
       enabled?: boolean;
       agent_ids?: string[];
-    }) => updateSkillMetadata(skillId, { visibility, group_name, enabled, agent_ids }),
+    }) =>
+      updateSkillMetadata(skillId, {
+        visibility,
+        group_name,
+        enabled,
+        agent_ids,
+      }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["skills"] });
     },

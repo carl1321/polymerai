@@ -3,14 +3,15 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { Wrench, Search, Loader2 } from "lucide-react";
-import { getAvailableTools, type ToolDefinition } from "~/core/api/workflow";
+import { useState, useEffect, useCallback } from "react";
+
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { Checkbox } from "~/components/ui/checkbox";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { getAvailableTools, type ToolDefinition } from "~/core/api/workflow";
 import { cn } from "~/lib/utils";
 
 interface ToolSelectorProps {
@@ -18,13 +19,10 @@ interface ToolSelectorProps {
   onChange: (tools: string[]) => void;
 }
 
-export function ToolSelector({
-  value = [],
-  onChange,
-}: ToolSelectorProps) {
+export function ToolSelector({ value = [], onChange }: ToolSelectorProps) {
   // 确保 value 始终是数组，防止 null 或 undefined
   const safeValue = Array.isArray(value) ? value : [];
-  
+
   const [tools, setTools] = useState<ToolDefinition[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,9 +44,12 @@ export function ToolSelector({
     }
   }, []);
 
-  const filteredTools = tools.filter((tool) =>
-    tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (tool.description ?? "").toLowerCase().includes(searchQuery.toLowerCase()),
+  const filteredTools = tools.filter(
+    (tool) =>
+      tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (tool.description ?? "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()),
   );
 
   const handleToolToggle = (toolName: string, checked: boolean) => {
@@ -65,7 +66,7 @@ export function ToolSelector({
       <div className="space-y-2">
         {/* 搜索框 */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder="搜索工具..."
             value={searchQuery}
@@ -77,14 +78,14 @@ export function ToolSelector({
         {/* 工具列表 */}
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
           </div>
         ) : filteredTools.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground py-8 text-center text-sm">
             {searchQuery ? "没有找到匹配的工具" : "没有可用工具"}
           </div>
         ) : (
-          <ScrollArea className="h-[200px] rounded-md border border-border p-2">
+          <ScrollArea className="border-border h-[200px] rounded-md border p-2">
             <div className="space-y-2">
               {filteredTools.map((tool) => {
                 const isSelected = safeValue.includes(tool.name);
@@ -92,8 +93,8 @@ export function ToolSelector({
                   <label
                     key={tool.name}
                     className={cn(
-                      "flex items-start gap-3 p-2 rounded-md cursor-pointer hover:bg-accent transition-colors",
-                      isSelected && "bg-accent"
+                      "hover:bg-accent flex cursor-pointer items-start gap-3 rounded-md p-2 transition-colors",
+                      isSelected && "bg-accent",
                     )}
                   >
                     <Checkbox
@@ -103,15 +104,15 @@ export function ToolSelector({
                       }
                       className="mt-0.5"
                     />
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <Wrench className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <span className="font-medium text-sm text-foreground">
+                        <Wrench className="text-muted-foreground h-4 w-4 shrink-0" />
+                        <span className="text-foreground text-sm font-medium">
                           {tool.name}
                         </span>
                       </div>
                       {tool.description && (
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
                           {tool.description}
                         </p>
                       )}
@@ -125,8 +126,8 @@ export function ToolSelector({
 
         {/* 已选工具显示 */}
         {safeValue.length > 0 && (
-          <div className="pt-2 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-2">
+          <div className="border-border border-t pt-2">
+            <p className="text-muted-foreground mb-2 text-xs">
               已选择 {safeValue.length} 个工具
             </p>
             <div className="flex flex-wrap gap-1">
@@ -135,7 +136,7 @@ export function ToolSelector({
                 return (
                   <span
                     key={toolName}
-                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-primary/10 text-primary rounded-md"
+                    className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs"
                   >
                     {tool?.name || toolName}
                     <button
@@ -155,4 +156,3 @@ export function ToolSelector({
     </div>
   );
 }
-

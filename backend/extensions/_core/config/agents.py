@@ -5,4 +5,3 @@ from typing import Literal
 
 # Compatibility shim for agentic_workflow tools
 LLMType = Literal["basic", "reasoning", "vision", "code"]
-

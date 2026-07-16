@@ -4,19 +4,24 @@
 // Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
 // SPDX-License-Identifier: MIT
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+
 import { SamDesignUnifiedPage } from "@/app/workspace/new-sam/components/SamDesignUnifiedPage";
 import { Step1DefineObjective } from "@/app/workspace/new-sam/components/Step1DefineObjective";
+import type {
+  DesignState,
+  DesignObjective,
+  Constraint,
+} from "@/app/workspace/new-sam/types";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { DesignState, DesignObjective, Constraint } from "@/app/workspace/new-sam/types";
 
 /**
  * 从 localStorage 加载设计状态
@@ -62,7 +67,7 @@ export default function NewSAMDesignPage() {
   useEffect(() => {
     setIsClient(true);
     const savedState = loadDesignState();
-    
+
     if (savedState.objective) {
       setObjective(savedState.objective);
     }
@@ -106,7 +111,7 @@ export default function NewSAMDesignPage() {
   // 保存状态到 localStorage
   useEffect(() => {
     if (!isClient) return; // 只在客户端保存
-    
+
     const state: Partial<DesignState> = {
       objective,
       constraints,
@@ -125,11 +130,18 @@ export default function NewSAMDesignPage() {
   return (
     <>
       <div className="flex h-screen flex-col bg-slate-50 dark:bg-slate-950">
-        <div className="flex flex-shrink-0 items-center gap-3 px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-          <Button variant="ghost" size="icon" onClick={handleBackToToolbox} className="h-8 w-8">
+        <div className="flex flex-shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-700 dark:bg-slate-900">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBackToToolbox}
+            className="h-8 w-8"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">SAM 分子设计</span>
+          <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            SAM 分子设计
+          </span>
         </div>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <SamDesignUnifiedPage
@@ -143,8 +155,11 @@ export default function NewSAMDesignPage() {
       </div>
 
       {/* 编辑研究目标对话框 */}
-      <Dialog open={editObjectiveDialogOpen} onOpenChange={setEditObjectiveDialogOpen}>
-        <DialogContent className="!max-w-[85vw] w-[85vw] max-h-[90vh] overflow-y-auto p-6">
+      <Dialog
+        open={editObjectiveDialogOpen}
+        onOpenChange={setEditObjectiveDialogOpen}
+      >
+        <DialogContent className="max-h-[90vh] w-[85vw] !max-w-[85vw] overflow-y-auto p-6">
           <DialogHeader className="pb-4">
             <DialogTitle>编辑研究目标</DialogTitle>
           </DialogHeader>

@@ -11,7 +11,8 @@ export function ToolMarkdown({
   children: React.ReactNode;
   className?: string;
 }) {
-  const content = typeof children === "string" ? children : String(children ?? "");
+  const content =
+    typeof children === "string" ? children : String(children ?? "");
   if (!content) return null;
   return (
     <div className={className}>

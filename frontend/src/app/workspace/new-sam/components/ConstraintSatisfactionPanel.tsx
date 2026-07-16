@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CheckCircle2, XCircle, HelpCircle } from "lucide-react";
+
 import type { Molecule, Constraint } from "../types";
 
 interface ConstraintSatisfactionPanelProps {
@@ -20,7 +21,9 @@ export function ConstraintSatisfactionPanel({
   constraints,
 }: ConstraintSatisfactionPanelProps) {
   // 评估单个约束是否满足
-  const evaluateConstraint = (constraint: Constraint): {
+  const evaluateConstraint = (
+    constraint: Constraint,
+  ): {
     status: "pass" | "fail" | "unknown";
     reason: string;
   } => {
@@ -34,14 +37,20 @@ export function ConstraintSatisfactionPanel({
     switch (constraint.type) {
       case "surface_anchoring": {
         // 严格判断：只有 undefined/null/NaN 才算缺失，0 是合法值
-        const isMissing = score?.surfaceAnchoring === undefined || 
-                          score?.surfaceAnchoring === null || 
-                          Number.isNaN(score?.surfaceAnchoring);
+        const isMissing =
+          score?.surfaceAnchoring === undefined ||
+          score?.surfaceAnchoring === null ||
+          Number.isNaN(score?.surfaceAnchoring);
         if (isMissing) {
           return { status: "unknown", reason: "缺少表面锚定强度评分数据" };
         }
         // 默认阈值：>=60 视为满足
-        const threshold = constraint.value === "High" ? 80 : constraint.value === "Medium" ? 60 : 40;
+        const threshold =
+          constraint.value === "High"
+            ? 80
+            : constraint.value === "Medium"
+              ? 60
+              : 40;
         const passed = score.surfaceAnchoring >= threshold;
         return {
           status: passed ? "pass" : "fail",
@@ -53,19 +62,26 @@ export function ConstraintSatisfactionPanel({
 
       case "energy_level": {
         // 严格判断：只有 undefined/null/NaN 才算缺失，0 是合法值
-        const homoMissing = properties?.HOMO === undefined || 
-                            properties?.HOMO === null || 
-                            Number.isNaN(properties?.HOMO);
-        const lumoMissing = properties?.LUMO === undefined || 
-                            properties?.LUMO === null || 
-                            Number.isNaN(properties?.LUMO);
+        const homoMissing =
+          properties?.HOMO === undefined ||
+          properties?.HOMO === null ||
+          Number.isNaN(properties?.HOMO);
+        const lumoMissing =
+          properties?.LUMO === undefined ||
+          properties?.LUMO === null ||
+          Number.isNaN(properties?.LUMO);
         if (homoMissing || lumoMissing) {
           return { status: "unknown", reason: "缺少能级数据（HOMO/LUMO）" };
         }
         // 能级匹配：计算 HOMO-LUMO gap 或与目标能级的差值
         const gap = properties.LUMO - properties.HOMO;
-        if (typeof constraint.value === "object" && constraint.value.min !== undefined && constraint.value.max !== undefined) {
-          const passed = gap >= constraint.value.min && gap <= constraint.value.max;
+        if (
+          typeof constraint.value === "object" &&
+          constraint.value.min !== undefined &&
+          constraint.value.max !== undefined
+        ) {
+          const passed =
+            gap >= constraint.value.min && gap <= constraint.value.max;
           return {
             status: passed ? "pass" : "fail",
             reason: passed
@@ -78,14 +94,20 @@ export function ConstraintSatisfactionPanel({
 
       case "packing_density": {
         // 严格判断：只有 undefined/null/NaN 才算缺失，0 是合法值
-        const isMissing = score?.packingDensity === undefined || 
-                          score?.packingDensity === null || 
-                          Number.isNaN(score?.packingDensity);
+        const isMissing =
+          score?.packingDensity === undefined ||
+          score?.packingDensity === null ||
+          Number.isNaN(score?.packingDensity);
         if (isMissing) {
           return { status: "unknown", reason: "缺少膜致密度评分数据" };
         }
         // 默认阈值：>=60 视为满足
-        const threshold = constraint.value === "High" ? 80 : constraint.value === "Medium" ? 60 : 40;
+        const threshold =
+          constraint.value === "High"
+            ? 80
+            : constraint.value === "Medium"
+              ? 60
+              : 40;
         const passed = score.packingDensity >= threshold;
         return {
           status: passed ? "pass" : "fail",
@@ -123,14 +145,14 @@ export function ConstraintSatisfactionPanel({
           evaluation.status === "pass"
             ? CheckCircle2
             : evaluation.status === "fail"
-            ? XCircle
-            : HelpCircle;
+              ? XCircle
+              : HelpCircle;
         const iconColor =
           evaluation.status === "pass"
             ? "text-green-600 dark:text-green-400"
             : evaluation.status === "fail"
-            ? "text-red-600 dark:text-red-400"
-            : "text-slate-400 dark:text-slate-500";
+              ? "text-red-600 dark:text-red-400"
+              : "text-slate-400 dark:text-slate-500";
 
         return (
           <div

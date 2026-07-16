@@ -147,8 +147,8 @@ def get_workflow_async_task_repo() -> Any | None:
     except Exception:
         pass
     try:
-        from deerflow.persistence.engine import get_session_factory
         from deerflow.persistence.async_task import AsyncTaskRepository
+        from deerflow.persistence.engine import get_session_factory
 
         sf = get_session_factory()
         if sf is not None:

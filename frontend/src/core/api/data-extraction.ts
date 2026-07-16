@@ -40,8 +40,16 @@ export interface DataExtractionRecordRequest {
   file_base64?: string;
   pdf_url?: string;
   model_name?: string;
-  categories?: { materials: string[]; processes: string[]; properties: string[] };
-  selected_categories?: { materials: string[]; processes: string[]; properties: string[] };
+  categories?: {
+    materials: string[];
+    processes: string[];
+    properties: string[];
+  };
+  selected_categories?: {
+    materials: string[];
+    processes: string[];
+    properties: string[];
+  };
   table_data?: Array<{ material: string; process: string; property: string }>;
   result_json?: string;
   metadata?: Record<string, unknown>;
@@ -70,14 +78,16 @@ export async function saveExtractionRecord(
 }
 
 export async function getExtractionRecords(
-  limit: number = 50,
-  offset: number = 0,
+  limit = 50,
+  offset = 0,
   _extraction_type?: string,
 ): Promise<DataExtractionRecordListResponse> {
   return { records: [], total: 0, limit, offset };
 }
 
-export async function getExtractionRecord(_recordId: string): Promise<DataExtractionRecord> {
+export async function getExtractionRecord(
+  _recordId: string,
+): Promise<DataExtractionRecord> {
   throw new Error("数据抽取服务未配置");
 }
 

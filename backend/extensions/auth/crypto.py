@@ -4,14 +4,13 @@ import base64
 import logging
 import os
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
 try:
     from Crypto.Cipher import PKCS1_OAEP
-    from Crypto.PublicKey import RSA
     from Crypto.Hash import SHA256
+    from Crypto.PublicKey import RSA
 
     CRYPTO_AVAILABLE = True
 except ImportError:

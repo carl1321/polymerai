@@ -10,10 +10,8 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import tempfile
-import uuid
 from pathlib import Path
 
 _BACKEND = Path(__file__).resolve().parents[1]
@@ -48,9 +46,9 @@ def main() -> int:
         print(f"FAIL: missing VASP config: {VASP_CONFIG}")
         return 1
 
+    from deerflow.runtime.async_tasks.envelope import resolve_submit_envelope
     from extensions._core.workflow.format_skill_output import format_skill_output
     from extensions._core.workflow.skill_runner import run_skill, skill_result_to_tool_json
-    from deerflow.runtime.async_tasks.envelope import resolve_submit_envelope
 
     work_dir = Path(tempfile.mkdtemp(prefix="wf-skill-test-"))
     print(f"work_dir={work_dir}")

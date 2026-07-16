@@ -16,21 +16,18 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from extensions.auth.dependencies import CurrentUser, get_current_user, require_admin
 from extensions._core.app_db import get_app_db_connection
 from extensions._core.db_errors import is_undefined_table
 from extensions._core.workflow_tools import db as wf_db
-from extensions._core.workflow_tools.registry import invalidate_script_tool, list_workflow_tool_definitions
-from extensions._core.workflow_tools.schema_utils import tool_args_schema_to_parameters
+from extensions._core.workflow_tools.registry import invalidate_script_tool
 from extensions._core.workflow_tools.workflow_tool_deps import (
     DepsInstallResult,
     ensure_script_imports,
     ensure_single_package,
-    ensure_tool_requirements,
 )
 from extensions._core.workflow_tools.workflow_tool_loader import (
-    load_tool_metadata,
     invoke_tool_script,
+    load_tool_metadata,
     metadata_to_cached_schema,
     parse_missing_module,
     parse_script_error_line,
@@ -44,6 +41,7 @@ from extensions._core.workflow_tools.workflow_tool_test_io import (
     tool_test_inputs_dir,
     tool_test_outputs_dir,
 )
+from extensions.auth.dependencies import CurrentUser, get_current_user, require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -102,10 +100,7 @@ def _output_files_payload(tool_id: str, files: list[dict[str, str]]) -> list[dic
             {
                 "filename": f.get("filename") or Path(rel).name,
                 "relativePath": rel,
-                "downloadUrl": (
-                    f"/api/workflows/tool-catalog/{tool_id}/test/download"
-                    f"?relativePath={quote(rel, safe='')}"
-                ),
+                "downloadUrl": (f"/api/workflows/tool-catalog/{tool_id}/test/download?relativePath={quote(rel, safe='')}"),
             }
         )
     return out

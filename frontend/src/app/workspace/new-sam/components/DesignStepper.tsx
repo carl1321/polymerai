@@ -5,7 +5,9 @@
 // SPDX-License-Identifier: MIT
 
 import { Check } from "lucide-react";
+
 import { cn } from "@/lib/utils";
+
 import type { DesignStep } from "../types";
 
 interface DesignStepperProps {
@@ -54,7 +56,7 @@ export function DesignStepper({
               key={step.id}
               className={cn(
                 "flex flex-1 items-center",
-                index < STEPS.length - 1 && "flex-1"
+                index < STEPS.length - 1 && "flex-1",
               )}
             >
               {/* 步骤按钮 */}
@@ -69,7 +71,7 @@ export function DesignStepper({
                 className={cn(
                   "flex flex-col items-center gap-2 transition-all",
                   isClickable && "cursor-pointer hover:opacity-80",
-                  !isClickable && "cursor-default"
+                  !isClickable && "cursor-default",
                 )}
               >
                 {/* 步骤编号/图标 */}
@@ -82,13 +84,15 @@ export function DesignStepper({
                       "border-blue-500 bg-blue-500 text-white dark:border-blue-600 dark:bg-blue-600",
                     !isActive &&
                       !isCompleted &&
-                      "border-slate-300 bg-white text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                      "border-slate-300 bg-white text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400",
                   )}
                 >
                   {isCompleted ? (
                     <Check className="h-4 w-4 sm:h-5 sm:w-5" />
                   ) : (
-                    <span className="text-xs font-semibold sm:text-sm">{stepIndex + 1}</span>
+                    <span className="text-xs font-semibold sm:text-sm">
+                      {stepIndex + 1}
+                    </span>
                   )}
                 </div>
 
@@ -97,13 +101,11 @@ export function DesignStepper({
                   <span
                     className={cn(
                       "text-xs font-medium transition-colors sm:text-sm",
-                      isActive &&
-                        "text-blue-600 dark:text-blue-400",
-                      isCompleted &&
-                        "text-blue-600 dark:text-blue-400",
+                      isActive && "text-blue-600 dark:text-blue-400",
+                      isCompleted && "text-blue-600 dark:text-blue-400",
                       !isActive &&
                         !isCompleted &&
-                        "text-slate-500 dark:text-slate-400"
+                        "text-slate-500 dark:text-slate-400",
                     )}
                   >
                     {step.label}
@@ -118,7 +120,7 @@ export function DesignStepper({
                     "mx-2 h-0.5 flex-1 transition-colors sm:mx-4",
                     stepIndex < currentIndex
                       ? "bg-blue-500 dark:bg-blue-600"
-                      : "bg-slate-200 dark:bg-slate-700"
+                      : "bg-slate-200 dark:bg-slate-700",
                   )}
                 />
               )}
@@ -129,4 +131,3 @@ export function DesignStepper({
     </div>
   );
 }
-

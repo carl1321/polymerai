@@ -61,7 +61,7 @@ export default function AgentChatPage() {
   // Ensure the chat model follows the selected agent's configured model (if any).
   useEffect(() => {
     // Agent type currently exposes `model` (not `model_name`) from the backend.
-    if (!agent || !agent.model) return;
+    if (!agent?.model) return;
     if (settings.context.model_name === agent.model) return;
     setSettings("context", { model_name: agent.model });
   }, [agent, settings.context.model_name, setSettings]);

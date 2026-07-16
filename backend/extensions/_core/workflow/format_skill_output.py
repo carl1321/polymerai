@@ -20,9 +20,7 @@ from extensions._core.workflow.workflow_output_paths import (
 
 logger = logging.getLogger(__name__)
 
-_FILE_FIELD_NAMES = frozenset(
-    {"contcar", "poscar", "poscar_path", "chgcar", "work_dir", "workdir", "potcar", "outcar", "vasprun"}
-)
+_FILE_FIELD_NAMES = frozenset({"contcar", "poscar", "poscar_path", "chgcar", "work_dir", "workdir", "potcar", "outcar", "vasprun"})
 
 
 def _try_parse_json_loose(text: str) -> Any | None:
@@ -57,6 +55,8 @@ def _validate_llm_json_shape(
     *,
     output_format: str,
     output_fields: list[dict[str, Any]],
+    work_root: str | None = None,
+    require_existing_files: bool = False,
 ) -> bool:
     if parsed is None:
         return False
@@ -88,10 +88,15 @@ def _validate_llm_json_shape(
             if val is None:
                 return False
             if field.get("type") == "File":
-                if not is_file_ref(val) and not (
-                    isinstance(val, dict) and str(val.get("file") or "").strip()
-                ):
+                if not is_file_ref(val) and not (isinstance(val, dict) and str(val.get("file") or "").strip()):
                     if val in (None, ""):
+                        return False
+                    # Bare strings like "CONTCAR" are not usable file refs.
+                    if isinstance(val, str) and not str(val).strip().startswith(("/", "nodes/", "inputs/", "outputs/")):
+                        return False
+                if require_existing_files and work_root:
+                    ref = val if is_file_ref(val) else to_relative_file_ref(work_root, val)
+                    if not file_ref_exists(work_root, ref):
                         return False
                 continue
             if val == "":
@@ -102,10 +107,11 @@ def _validate_llm_json_shape(
 _SKILL_ARTIFACT_NAMES: dict[str, tuple[str, ...]] = {
     "POTCAR": ("POTCAR",),
     "potcar": ("POTCAR",),
-    "relax_poscar": ("CONTCAR", "POSCAR"),
+    "relax_poscar": ("CONTCAR", "POSCAR", "RELAX_POSCAR"),
     "poscar_path": ("POSCAR", "result.POSCAR"),
     "poscar": ("POSCAR", "result.POSCAR"),
 }
+_ARTIFACT_SUBDIRS = ("", "relax", "outputs", "outputs/relax")
 
 
 def _artifact_paths_for_field(
@@ -118,10 +124,12 @@ def _artifact_paths_for_field(
     wd = Path(node_work_dir)
     names = _SKILL_ARTIFACT_NAMES.get(field_name, (field_name,))
     out: list[Path] = []
-    for name in names:
-        out.append(wd / name)
-        if "." not in name:
-            out.append(wd / f"result.{name}")
+    for sub in _ARTIFACT_SUBDIRS:
+        base = wd / sub if sub else wd
+        for name in names:
+            out.append(base / name)
+            if "." not in name:
+                out.append(base / f"result.{name}")
     return out
 
 
@@ -396,15 +404,18 @@ def format_skill_output(
             out["output"]["_awaiting_external"] = True
         return out
 
-    has_schema = bool(
-        output_fields and isinstance(output_fields, list) and len(output_fields) > 0
-    )
+    has_schema = bool(output_fields and isinstance(output_fields, list) and len(output_fields) > 0)
 
     if has_schema:
         parsed_llm = _try_parse_json_loose(llm_response or "")
-        if not _validate_llm_json_shape(
-            parsed_llm, output_format=output_format, output_fields=output_fields
-        ):
+        llm_ok = _validate_llm_json_shape(
+            parsed_llm,
+            output_format=output_format,
+            output_fields=output_fields,
+            work_root=work_dir_hint,
+            require_existing_files=True,
+        )
+        if not llm_ok:
             fallback = _build_schema_payload_from_exec(
                 exec_body,
                 output_fields,
@@ -412,13 +423,14 @@ def format_skill_output(
                 node_work_dir=node_work_dir,
             )
             if fallback and _validate_llm_json_shape(
-                fallback, output_format=output_format, output_fields=output_fields
+                fallback,
+                output_format=output_format,
+                output_fields=output_fields,
+                work_root=work_dir_hint,
+                require_existing_files=True,
             ):
                 return format_node_output(fallback, output_format, output_fields)
-            err_msg = (
-                "LLM final response must be valid JSON strictly matching "
-                "the node output schema (all required fields present)"
-            )
+            err_msg = "LLM final response must be valid JSON strictly matching the node output schema (all required fields present)"
             wrapped = format_node_output(
                 {"errors": err_msg, "success": False},
                 output_format,

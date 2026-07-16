@@ -1,5 +1,5 @@
-import { getBackendBaseURL } from "@/core/config";
 import { getAuthHeaders } from "@/core/auth";
+import { getBackendBaseURL } from "@/core/config";
 
 export interface WorkflowToolParameter {
   name: string;
@@ -38,13 +38,17 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const detail = (data as { detail?: string }).detail ?? res.statusText;
-    throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+    throw new Error(
+      typeof detail === "string" ? detail : JSON.stringify(detail),
+    );
   }
   return data as T;
 }
 
 export async function getWorkflowTool(id: string): Promise<WorkflowToolItem> {
-  const data = await apiFetch<{ tool: WorkflowToolItem }>(`${CATALOG_API}/${id}`);
+  const data = await apiFetch<{ tool: WorkflowToolItem }>(
+    `${CATALOG_API}/${id}`,
+  );
   return data.tool;
 }
 
@@ -56,7 +60,9 @@ export async function listWorkflowTools(
   if (allStatus) params.set("all_status", "true");
   if (scriptOnly) params.set("script_only", "true");
   const q = params.toString() ? `?${params.toString()}` : "";
-  const data = await apiFetch<{ tools: WorkflowToolItem[] }>(`${CATALOG_API}${q}`);
+  const data = await apiFetch<{ tools: WorkflowToolItem[] }>(
+    `${CATALOG_API}${q}`,
+  );
   return data.tools ?? [];
 }
 
@@ -87,10 +93,13 @@ export async function updateWorkflowTool(
     enabled: boolean;
   }>,
 ): Promise<WorkflowToolItem> {
-  const data = await apiFetch<{ tool: Record<string, unknown> }>(`${CATALOG_API}/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(body),
-  });
+  const data = await apiFetch<{ tool: Record<string, unknown> }>(
+    `${CATALOG_API}/${id}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(body),
+    },
+  );
   return mapToolRow(data.tool);
 }
 
@@ -128,7 +137,10 @@ export async function uploadWorkflowToolTestFile(
   toolId: string,
   file: File,
   field?: string,
-): Promise<{ file: { filename: string; path: string; relativePath: string }; field?: string }> {
+): Promise<{
+  file: { filename: string; path: string; relativePath: string };
+  field?: string;
+}> {
   const base = getBackendBaseURL() || "";
   const form = new FormData();
   form.append("file", file);
@@ -141,9 +153,14 @@ export async function uploadWorkflowToolTestFile(
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const detail = (data as { detail?: string }).detail ?? res.statusText;
-    throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+    throw new Error(
+      typeof detail === "string" ? detail : JSON.stringify(detail),
+    );
   }
-  return data as { file: { filename: string; path: string; relativePath: string }; field?: string };
+  return data as {
+    file: { filename: string; path: string; relativePath: string };
+    field?: string;
+  };
 }
 
 export async function downloadWorkflowToolTestFile(
@@ -157,7 +174,9 @@ export async function downloadWorkflowToolTestFile(
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     const detail = (data as { detail?: string }).detail ?? res.statusText;
-    throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+    throw new Error(
+      typeof detail === "string" ? detail : JSON.stringify(detail),
+    );
   }
   const blob = await res.blob();
   const objectUrl = URL.createObjectURL(blob);
@@ -172,22 +191,37 @@ export async function deleteWorkflowTool(id: string): Promise<void> {
   await apiFetch<{ ok: boolean }>(`${CATALOG_API}/${id}`, { method: "DELETE" });
 }
 
-export async function publishWorkflowTool(id: string): Promise<WorkflowToolItem> {
-  const data = await apiFetch<{ tool: Record<string, unknown> }>(`${CATALOG_API}/${id}/publish`, {
-    method: "POST",
-  });
+export async function publishWorkflowTool(
+  id: string,
+): Promise<WorkflowToolItem> {
+  const data = await apiFetch<{ tool: Record<string, unknown> }>(
+    `${CATALOG_API}/${id}/publish`,
+    {
+      method: "POST",
+    },
+  );
   return mapToolRow(data.tool);
 }
 
-export async function importSystemWorkflowTools(): Promise<{ imported: number }> {
-  return apiFetch<{ imported: number }>(`${CATALOG_API}/import-system`, { method: "POST" });
+export async function importSystemWorkflowTools(): Promise<{
+  imported: number;
+}> {
+  return apiFetch<{ imported: number }>(`${CATALOG_API}/import-system`, {
+    method: "POST",
+  });
 }
 
-export async function setWorkflowToolEnabled(id: string, enabled: boolean): Promise<WorkflowToolItem> {
-  const data = await apiFetch<{ tool: Record<string, unknown> }>(`${CATALOG_API}/${id}/enabled`, {
-    method: "PATCH",
-    body: JSON.stringify({ enabled }),
-  });
+export async function setWorkflowToolEnabled(
+  id: string,
+  enabled: boolean,
+): Promise<WorkflowToolItem> {
+  const data = await apiFetch<{ tool: Record<string, unknown> }>(
+    `${CATALOG_API}/${id}/enabled`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ enabled }),
+    },
+  );
   return mapToolRow(data.tool);
 }
 
@@ -195,7 +229,8 @@ function mapToolRow(row: Record<string, unknown>): WorkflowToolItem {
   return {
     id: String(row.id ?? ""),
     name: String(row.name ?? ""),
-    displayName: row.display_name != null ? String(row.display_name) : undefined,
+    displayName:
+      row.display_name != null ? String(row.display_name) : undefined,
     description: String(row.description ?? ""),
     source: String(row.source ?? "script"),
     sourceRef: row.source_ref != null ? String(row.source_ref) : undefined,

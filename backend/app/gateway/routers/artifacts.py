@@ -2,9 +2,8 @@ import logging
 import mimetypes
 import zipfile
 from pathlib import Path
-from urllib.parse import quote
-
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, PlainTextResponse, Response

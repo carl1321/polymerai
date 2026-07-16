@@ -1037,6 +1037,7 @@ def wrap_command_with_shared_venv(command: str) -> str:
         f"{command}"
     )
 
+
 def _apply_cwd_prefix(command: str, thread_data: ThreadDataState | None) -> str:
     """Prepend 'cd <workspace> &&' so relative paths are anchored to the thread workspace.
 

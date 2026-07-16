@@ -18,7 +18,8 @@ export async function loadArtifactContent({
   if (filepath.endsWith(".skill")) {
     enhancedFilepath = filepath + "/SKILL.md";
   }
-  const isHtml = enhancedFilepath.endsWith(".html") || enhancedFilepath.endsWith(".htm");
+  const isHtml =
+    enhancedFilepath.endsWith(".html") || enhancedFilepath.endsWith(".htm");
   const url = urlOfArtifact({
     filepath: enhancedFilepath,
     threadId,
@@ -27,7 +28,9 @@ export async function loadArtifactContent({
   });
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to load artifact (${response.status}): ${enhancedFilepath}`);
+    throw new Error(
+      `Failed to load artifact (${response.status}): ${enhancedFilepath}`,
+    );
   }
   const text = await response.text();
   return { content: text, url };

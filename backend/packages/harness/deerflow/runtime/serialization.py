@@ -33,13 +33,7 @@ except Exception:  # pragma: no cover
 def _normalize_image_path(path: str) -> str:
     candidate = path.strip()
     lowered = candidate.lower()
-    if (
-        candidate.startswith("/")
-        or "://" in candidate
-        or lowered.startswith("data:")
-        or lowered.startswith("blob:")
-        or lowered.startswith("#")
-    ):
+    if candidate.startswith("/") or "://" in candidate or lowered.startswith("data:") or lowered.startswith("blob:") or lowered.startswith("#"):
         return path
     if _RELATIVE_IMAGE_NAME_RE.match(candidate):
         return f"{_OUTPUTS_PREFIX}{candidate}"

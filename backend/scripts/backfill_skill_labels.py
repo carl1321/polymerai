@@ -39,12 +39,7 @@ def _row_needs_backfill(row: dict, *, only_empty: bool) -> bool:
 
 
 def _translate(skill_name: str, skill_md: str) -> tuple[str, str]:
-    prompt = (
-        "你是技能信息翻译助手。请根据给定的 SKILL.md 内容，输出中文技能名称和中文简介。"
-        "返回严格 JSON，格式："
-        '{"laber_name":"...","laber_description":"..."}。'
-        "laber_name 不超过 20 字，laber_description 不超过 120 字。不要输出其他内容。"
-    )
+    prompt = '你是技能信息翻译助手。请根据给定的 SKILL.md 内容，输出中文技能名称和中文简介。返回严格 JSON，格式：{"laber_name":"...","laber_description":"..."}。laber_name 不超过 20 字，laber_description 不超过 120 字。不要输出其他内容。'
     content = (skill_md or "").strip()
     if len(content) > 6000:
         content = content[:6000]
@@ -72,10 +67,7 @@ def main() -> None:
     parser.add_argument(
         "--only-empty",
         action="store_true",
-        help=(
-            "Only update rows that still look unlocalized: empty laber fields, or "
-            "laber_name equals skill name (metadata init English placeholder)."
-        ),
+        help=("Only update rows that still look unlocalized: empty laber fields, or laber_name equals skill name (metadata init English placeholder)."),
     )
     args = parser.parse_args()
 

@@ -9,7 +9,7 @@ export function groupSkillsByCategory(
 ): { groupKey: string; label: string; items: Skill[] }[] {
   const byGroup = new Map<string, Skill[]>();
   for (const s of skills) {
-    const key = (s.group && s.group.trim()) || s.category || "other";
+    const key = s.group?.trim() || s.category || "other";
     if (!byGroup.has(key)) byGroup.set(key, []);
     byGroup.get(key)!.push(s);
   }
@@ -25,7 +25,12 @@ export function groupSkillsByCategory(
     })
     .map(([groupKey, items]) => ({
       groupKey,
-      label: groupKey === "public" ? "公共" : groupKey === "custom" ? "自定义" : groupKey,
+      label:
+        groupKey === "public"
+          ? "公共"
+          : groupKey === "custom"
+            ? "自定义"
+            : groupKey,
       items,
     }));
 }

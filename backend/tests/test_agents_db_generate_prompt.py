@@ -113,4 +113,3 @@ def test_generate_prompt_semantic_skill_and_guardrail(tmp_path, monkeypatch):
     rerank_payload = json.loads(rerank_messages[1].content)
     assert "skills" in rerank_payload
     assert set(rerank_payload["skills"][0].keys()) == {"name", "description"}
-

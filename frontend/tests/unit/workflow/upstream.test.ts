@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { Edge, Node } from "@xyflow/react";
+import { describe, expect, it } from "vitest";
 
 import {
   buildDefaultLlmPromptFromUpstream,
@@ -11,7 +11,12 @@ import {
 } from "@/components/workflow/editor/utils/upstream";
 
 const nodes: Node[] = [
-  { id: "start", type: "start", position: { x: 0, y: 0 }, data: { taskName: "开始" } },
+  {
+    id: "start",
+    type: "start",
+    position: { x: 0, y: 0 },
+    data: { taskName: "开始" },
+  },
   {
     id: "a",
     type: "llm",
@@ -30,7 +35,12 @@ const nodes: Node[] = [
       outputFields: [{ name: "potcar", type: "File" }],
     },
   },
-  { id: "relax", type: "llm", position: { x: 0, y: 0 }, data: { taskName: "弛豫" } },
+  {
+    id: "relax",
+    type: "llm",
+    position: { x: 0, y: 0 },
+    data: { taskName: "弛豫" },
+  },
 ];
 
 const edges: Edge[] = [
@@ -46,7 +56,9 @@ describe("getTransitiveUpstreamNodes", () => {
   });
 
   it("direct upstream is only immediate parent", () => {
-    expect(getDirectUpstreamNodes("relax", nodes, edges).map((n) => n.id)).toEqual(["b"]);
+    expect(
+      getDirectUpstreamNodes("relax", nodes, edges).map((n) => n.id),
+    ).toEqual(["b"]);
   });
 });
 
@@ -67,7 +79,12 @@ describe("llmPromptSource", () => {
       resolveLlmPromptSource({ llmPrompt: auto }, "relax", nodes, edges),
     ).toBe("auto");
     expect(
-      resolveLlmPromptSource({ llmPrompt: "custom", llmPromptSource: "manual" }, "relax", nodes, edges),
+      resolveLlmPromptSource(
+        { llmPrompt: "custom", llmPromptSource: "manual" },
+        "relax",
+        nodes,
+        edges,
+      ),
     ).toBe("manual");
   });
 });

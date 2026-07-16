@@ -3,17 +3,18 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+import { WorkflowEditor } from "@/components/workflow/editor/WorkflowEditor";
 import { getWorkflow, getDraft, saveDraft } from "@/core/api/workflows";
 import type { Workflow, WorkflowDraft } from "@/core/api/workflows";
-import { WorkflowEditor } from "@/components/workflow/editor/WorkflowEditor";
 
 export default function WorkflowEditorPage() {
   const params = useParams();
   const router = useRouter();
   const workflowId = params.id as string;
-  
+
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [draft, setDraft] = useState<WorkflowDraft | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,11 +28,11 @@ export default function WorkflowEditorPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // 加载工作流基本信息
       const workflowData = await getWorkflow(workflowId);
       setWorkflow(workflowData);
-      
+
       // 加载草稿（如果有）
       try {
         const draftData = await getDraft(workflowId);
@@ -49,7 +50,10 @@ export default function WorkflowEditorPage() {
     }
   };
 
-  const handleSave = async (graph: { nodes: any[]; edges: any[] }, isAutosave: boolean = false) => {
+  const handleSave = async (
+    graph: { nodes: any[]; edges: any[] },
+    isAutosave = false,
+  ) => {
     try {
       const savedDraft = await saveDraft(workflowId, {
         graph,
@@ -68,7 +72,9 @@ export default function WorkflowEditorPage() {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <div className="text-lg font-semibold">加载中...</div>
-          <div className="text-sm text-muted-foreground mt-2">正在加载工作流编辑器</div>
+          <div className="text-muted-foreground mt-2 text-sm">
+            正在加载工作流编辑器
+          </div>
         </div>
       </div>
     );
@@ -78,11 +84,11 @@ export default function WorkflowEditorPage() {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <div className="text-lg font-semibold text-destructive">加载失败</div>
-          <div className="text-sm text-muted-foreground mt-2">{error}</div>
+          <div className="text-destructive text-lg font-semibold">加载失败</div>
+          <div className="text-muted-foreground mt-2 text-sm">{error}</div>
           <button
             onClick={() => router.back()}
-            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 mt-4 rounded-md px-4 py-2"
           >
             返回
           </button>
@@ -98,7 +104,7 @@ export default function WorkflowEditorPage() {
           <div className="text-lg font-semibold">工作流不存在</div>
           <button
             onClick={() => router.back()}
-            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 mt-4 rounded-md px-4 py-2"
           >
             返回
           </button>
@@ -124,4 +130,3 @@ export default function WorkflowEditorPage() {
     </div>
   );
 }
-

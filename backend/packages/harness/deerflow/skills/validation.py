@@ -68,10 +68,7 @@ def _validate_skill_frontmatter(skill_dir: Path) -> tuple[bool, str, str | None]
 
     # Naming convention: start with lowercase letter, then lowercase letters/digits/hyphen/underscore.
     if not re.match(r"^[a-z][a-z0-9_-]{0,63}$", name):
-        return False, (
-            f"Name '{name}' must start with a lowercase letter and contain only "
-            "lowercase letters, digits, hyphens, or underscores"
-        ), None
+        return False, (f"Name '{name}' must start with a lowercase letter and contain only lowercase letters, digits, hyphens, or underscores"), None
     if len(name) > 64:
         return False, f"Name is too long ({len(name)} characters). Maximum is 64 characters.", None
 

@@ -4,7 +4,6 @@
 import asyncio
 import logging
 import os
-from typing import List, Optional, Union
 
 from langchain_community.tools import BraveSearch
 from langchain_community.tools.arxiv import ArxivQueryRun
@@ -15,14 +14,14 @@ from langchain_community.utilities import (
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field, SecretStr
 
-from extensions._core.config import SELECTED_SEARCH_ENGINE, SearchEngine, load_yaml_config
-from extensions.toolbox.agentic_tools.search import get_web_search_tool
+from extensions._core.config import SELECTED_SEARCH_ENGINE, SearchEngine
 from extensions.toolbox.agentic_tools.decorators import create_logged_tool
-from extensions.toolbox.agentic_tools.tavily_search.tavily_search_results_with_images import (
-    TavilySearchWithImages,
-)
+from extensions.toolbox.agentic_tools.search import get_web_search_tool
 from extensions.toolbox.agentic_tools.tavily_search.tavily_search_api_wrapper import (
     EnhancedTavilySearchAPIWrapper,
+)
+from extensions.toolbox.agentic_tools.tavily_search.tavily_search_results_with_images import (
+    TavilySearchWithImages,
 )
 
 logger = logging.getLogger(__name__)
@@ -118,14 +117,14 @@ def get_literature_search_tool(max_search_results: int, literature_focus: bool =
     - 增加学术站点权重
     - 过滤非学术来源
     """
-    
+
     if literature_focus:
         logger.info("Using literature-focused search with academic priority")
-        
+
         # Academic domains to prioritize
         academic_domains = [
             "arxiv.org",
-            "scholar.google.com", 
+            "scholar.google.com",
             "pubmed.ncbi.nlm.nih.gov",
             "ieee.org",
             "acm.org",
@@ -140,14 +139,14 @@ def get_literature_search_tool(max_search_results: int, literature_focus: bool =
             "researchgate.net",
             "academia.edu",
             "edu.cn",  # Chinese academic institutions
-            "edu",     # General educational institutions
+            "edu",  # General educational institutions
         ]
-        
+
         # Non-academic domains to exclude or deprioritize
         exclude_domains = [
             "wikipedia.org",  # Keep for basic definitions but deprioritize
             "reddit.com",
-            "quora.com", 
+            "quora.com",
             "stackoverflow.com",  # Keep for technical but not academic
             "medium.com",
             "blogspot.com",
@@ -159,7 +158,7 @@ def get_literature_search_tool(max_search_results: int, literature_focus: bool =
             "youtube.com",
             "tiktok.com",
         ]
-        
+
         # Configure search based on selected engine
         if SELECTED_SEARCH_ENGINE == SearchEngine.TAVILY.value:
             return LoggedTavilySearch(
@@ -205,9 +204,26 @@ def get_literature_search_tool(max_search_results: int, literature_focus: bool =
 # arXiv 检索仅支持英文简短关键词（2–8 词），不支持中文或长句；需先转英文再查
 _ARXIV_QUERY_MAX_WORDS = 8
 _ARXIV_LEADING_STOP = (
-    "what is ", "what are ", "how to ", "how do ", "how does ", "why ", "when ",
-    "where ", "which ", "who ", "can you ", "could you ", "please ",
-    "什么是", "有哪些", "怎么", "如何", "为什么", "哪些", "请",
+    "what is ",
+    "what are ",
+    "how to ",
+    "how do ",
+    "how does ",
+    "why ",
+    "when ",
+    "where ",
+    "which ",
+    "who ",
+    "can you ",
+    "could you ",
+    "please ",
+    "什么是",
+    "有哪些",
+    "怎么",
+    "如何",
+    "为什么",
+    "哪些",
+    "请",
 )
 _ARXIV_TO_ENGLISH_PROMPT = """Convert the following search topic into 2-8 English keywords suitable for arXiv paper search. Output ONLY the keywords on one line (e.g. "perovskite solar cell efficiency stability"), no explanation, no quotes. arXiv does NOT support Chinese or long sentences."""
 
@@ -228,6 +244,7 @@ def _query_to_english_keywords(normalized_query: str) -> str:
         return normalized_query
     try:
         from langchain_core.messages import HumanMessage
+
         from extensions._core.llms.llm import get_llm_by_type
 
         llm = get_llm_by_type("basic")
@@ -264,7 +281,7 @@ def _normalize_arxiv_query(query: str) -> str:
             break
     words = s.split()
     if len(words) > _ARXIV_QUERY_MAX_WORDS:
-        s = " ".join(words[: _ARXIV_QUERY_MAX_WORDS])
+        s = " ".join(words[:_ARXIV_QUERY_MAX_WORDS])
     s = s.strip() or query.strip()
     # 中文或含 CJK 时必须转成英文简短关键词，否则 arXiv 无法检索
     if _has_cjk(s):
@@ -379,11 +396,13 @@ def get_literature_research_tools(max_search_results: int, literature_focus: boo
     """
     tools = []
     if literature_focus:
-        tools.extend([
-            get_web_search_tool(max_search_results),
-            get_arxiv_search_tool(max_search_results),
-            get_literature_search_tool(max_search_results, literature_focus=True),
-        ])
+        tools.extend(
+            [
+                get_web_search_tool(max_search_results),
+                get_arxiv_search_tool(max_search_results),
+                get_literature_search_tool(max_search_results, literature_focus=True),
+            ]
+        )
     else:
         tools.append(get_web_search_tool(max_search_results))
     return tools

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { Edge, Node } from "@xyflow/react";
+
 import type { WorkflowRunNodeExecution } from "@/core/api/workflows";
 
 export const LOOP_PADDING = {
@@ -20,7 +21,9 @@ export type ExecutionStatus =
   | "skipped"
   | "cancelled";
 
-export function mapRunTaskStatusToExecutionStatus(status: string): ExecutionStatus {
+export function mapRunTaskStatusToExecutionStatus(
+  status: string,
+): ExecutionStatus {
   const st = String(status || "").toLowerCase();
   if (st === "pending") return "ready";
   if (st === "running" || st === "awaiting_external") return "running";
@@ -39,9 +42,15 @@ export function normalizeNodesData(nodes: Node[]): Node[] {
     let displayName: string;
 
     if (nodeData.taskName) {
-      taskName = typeof nodeData.taskName === "string" ? nodeData.taskName : String(nodeData.taskName);
+      taskName =
+        typeof nodeData.taskName === "string"
+          ? nodeData.taskName
+          : String(nodeData.taskName);
     } else if (nodeData.nodeName) {
-      taskName = typeof nodeData.nodeName === "string" ? nodeData.nodeName : String(nodeData.nodeName);
+      taskName =
+        typeof nodeData.nodeName === "string"
+          ? nodeData.nodeName
+          : String(nodeData.nodeName);
     } else {
       if (node.type === "start") {
         taskName = "start";
@@ -64,7 +73,10 @@ export function normalizeNodesData(nodes: Node[]): Node[] {
       }
     }
 
-    if (node.type === "tool" && (taskName === "工具" || taskName.startsWith("工具"))) {
+    if (
+      node.type === "tool" &&
+      (taskName === "工具" || taskName.startsWith("工具"))
+    ) {
       taskName = taskName === "工具" ? "tool" : `tool${taskName.slice(2)}`;
     }
 
@@ -109,8 +121,12 @@ export function processNodesLayout(nodes: Node[]): Node[] {
     if (node.type === "loop") {
       const loopWidthRaw = node.data?.loopWidth ?? node.data?.loop_width;
       const loopHeightRaw = node.data?.loopHeight ?? node.data?.loop_height;
-      const loopWidthNum = typeof loopWidthRaw === "number" ? loopWidthRaw : Number(loopWidthRaw);
-      const loopHeightNum = typeof loopHeightRaw === "number" ? loopHeightRaw : Number(loopHeightRaw);
+      const loopWidthNum =
+        typeof loopWidthRaw === "number" ? loopWidthRaw : Number(loopWidthRaw);
+      const loopHeightNum =
+        typeof loopHeightRaw === "number"
+          ? loopHeightRaw
+          : Number(loopHeightRaw);
       const loopWidth = Number.isFinite(loopWidthNum) ? loopWidthNum : 600;
       const loopHeight = Number.isFinite(loopHeightNum) ? loopHeightNum : 400;
       return {
@@ -141,7 +157,9 @@ export function processNodesLayout(nodes: Node[]): Node[] {
       return node;
     }
 
-    const loopNode = normalized.find((n) => n.id === loopId && n.type === "loop");
+    const loopNode = normalized.find(
+      (n) => n.id === loopId && n.type === "loop",
+    );
     if (!loopNode) {
       return {
         ...node,
@@ -159,8 +177,10 @@ export function processNodesLayout(nodes: Node[]): Node[] {
     let position = node.position;
 
     if (node.parentId !== loopNode.id) {
-      const relativeX = node.position.x - loopNode.position.x - LOOP_PADDING.left;
-      const relativeY = node.position.y - loopNode.position.y - LOOP_PADDING.top;
+      const relativeX =
+        node.position.x - loopNode.position.x - LOOP_PADDING.left;
+      const relativeY =
+        node.position.y - loopNode.position.y - LOOP_PADDING.top;
       position = {
         x: LOOP_PADDING.left + Math.max(0, relativeX),
         y: LOOP_PADDING.top + Math.max(0, relativeY),
@@ -261,4 +281,8 @@ export function buildGraphFromReleaseSpec(
   return { nodes, edges };
 }
 
-export const ACTIVE_RUN_STATUSES = new Set(["running", "queued", "awaiting_external"]);
+export const ACTIVE_RUN_STATUSES = new Set([
+  "running",
+  "queued",
+  "awaiting_external",
+]);

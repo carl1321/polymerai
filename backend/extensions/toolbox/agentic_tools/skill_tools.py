@@ -4,11 +4,12 @@ Config tools[].use points to e.g. skill_tools:generate_sam_molecules; we resolve
 by scanning the skills root (from config or default) for any skill with tool.py
 that defines that attribute.
 """
+
 import importlib.util
 import logging
-from pathlib import Path
-import re
 import os
+import re
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ def _get_skills_root() -> Path:
     """Skills root: config.skills.get_skills_path() or loader default."""
     try:
         from deerflow.config import get_app_config
+
         p = get_app_config().skills.get_skills_path()
         if isinstance(p, Path) and p.exists():
             return p
@@ -29,6 +31,7 @@ def _get_skills_root() -> Path:
         pass
     # Fallback: loader default (repo-local skills/)
     from deerflow.skills.loader import get_skills_root_path
+
     return get_skills_root_path()
 
 
@@ -86,9 +89,6 @@ def __getattr__(name: str):
         return _load_tool_from_file(path, attr)
     resolved = _find_tool_in_skills(name)
     if resolved is None:
-        raise AttributeError(
-            f"module {__name__!r} has no attribute {name!r}. "
-            f"No skill under skills root has tool.py defining {name!r}."
-        )
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}. No skill under skills root has tool.py defining {name!r}.")
     _resolve_cache[name] = resolved
     return _load_tool_from_file(resolved[0], resolved[1])

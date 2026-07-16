@@ -4,7 +4,15 @@
 // Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
 // SPDX-License-Identifier: MIT
 
+import { Play, Loader2 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
+
+import {
+  extractMoleculesFromWorkflowResult,
+  extractMoleculesFromEndNode,
+  parseDimensionScoresFromOptDes,
+} from "@/app/workspace/new-sam/utils/molecule";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -13,27 +21,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Play, Loader2 } from "lucide-react";
-import { listWorkflows, getDraft, executeWorkflowStream, type Workflow, type WorkflowExecutionEvent } from "@/core/api/workflow";
 import {
-  extractMoleculesFromWorkflowResult,
-  extractMoleculesFromEndNode,
-  parseDimensionScoresFromOptDes,
-} from "@/app/workspace/new-sam/utils/molecule";
-import { toast } from "sonner";
-import type { DesignObjective, Constraint, ExecutionResult, Molecule } from "../types";
+  listWorkflows,
+  getDraft,
+  executeWorkflowStream,
+  type Workflow,
+  type WorkflowExecutionEvent,
+} from "@/core/api/workflow";
+
+import type {
+  DesignObjective,
+  Constraint,
+  ExecutionResult,
+  Molecule,
+} from "../types";
 
 interface WorkflowRunnerPanelProps {
   objective: DesignObjective;
   constraints: Constraint[];
   onExecutionStart: (workflowId: string, runId: string) => void;
-  onExecutionComplete: (result: ExecutionResult, molecules: Molecule[], nodeOutputs: Record<string, any>) => void;
+  onExecutionComplete: (
+    result: ExecutionResult,
+    molecules: Molecule[],
+    nodeOutputs: Record<string, any>,
+  ) => void;
   onExecutionError: (error: string) => void;
   onLogUpdate: (lines: string[]) => void;
   onNodeOutputsUpdate: (outputs: Record<string, any>) => void;
   onNodeStart?: (nodeId: string) => void;
   onNodeEnd?: (nodeId: string, iteration?: number, loopId?: string) => void;
-  onIterationNodeOutputsUpdate?: (iterationNodeOutputs: Map<number, Record<string, any>>) => void;
+  onIterationNodeOutputsUpdate?: (
+    iterationNodeOutputs: Map<number, Record<string, any>>,
+  ) => void;
   onWorkflowGraphLoad: (graph: { nodes: any[]; edges: any[] }) => void;
   executionState: "idle" | "running" | "completed" | "failed";
 }
@@ -61,9 +80,12 @@ export function WorkflowRunnerPanel({
   const [loadingWorkflow, setLoadingWorkflow] = useState(false);
   const [workflowLoaded, setWorkflowLoaded] = useState(false);
   const workflowNodeOutputsRef = useRef<Record<string, any>>({});
-  const iterationNodeOutputsRef = useRef<Map<number, Record<string, any>>>(new Map());
+  const iterationNodeOutputsRef = useRef<Map<number, Record<string, any>>>(
+    new Map(),
+  );
   const workflowGraphRef = useRef<{ nodes: any[]; edges: any[] } | null>(null);
-  const [workflowEvaluationModel, setWorkflowEvaluationModel] = useState<string>("Qwen-235B-Instruct");
+  const [workflowEvaluationModel, setWorkflowEvaluationModel] =
+    useState<string>("Qwen-235B-Instruct");
 
   // 构建工作流输入
   const buildWorkflowStartInput = useCallback(() => {
@@ -105,12 +127,12 @@ export function WorkflowRunnerPanel({
   // 加载选中的工作流
   const loadSelectedWorkflow = useCallback(async () => {
     if (!selectedWorkflowId) return;
-    
+
     try {
       setLoadingWorkflow(true);
       setWorkflowLoaded(false);
       const draft = await getDraft(selectedWorkflowId);
-      
+
       if (draft.graph) {
         const graph = {
           nodes: draft.graph.nodes || [],
@@ -150,7 +172,7 @@ export function WorkflowRunnerPanel({
 
     try {
       workflowNodeOutputsRef.current = {}; // 重置节点输出
-      
+
       // 准备输入参数
       const startInput = buildWorkflowStartInput();
       const inputs: Record<string, any> = {
@@ -173,7 +195,7 @@ export function WorkflowRunnerPanel({
       if (onIterationNodeOutputsUpdate) {
         onIterationNodeOutputsUpdate(new Map());
       }
-      
+
       try {
         for await (const event of executeWorkflowStream({
           workflowId: selectedWorkflowId,
@@ -189,7 +211,12 @@ export function WorkflowRunnerPanel({
               // onLogUpdate([`>>> 工作流运行已启动 (run_id: ${runId})`]);
             }
             toast.success("工作流运行已启动");
-          } else if (event.type === "log" || event.type === "node_start" || event.type === "node_success" || event.type === "node_error") {
+          } else if (
+            event.type === "log" ||
+            event.type === "node_start" ||
+            event.type === "node_success" ||
+            event.type === "node_error"
+          ) {
             const logEvent =
               event.type === "node_start"
                 ? "node_start"
@@ -209,7 +236,7 @@ export function WorkflowRunnerPanel({
                       return { message: rawPayload };
                     }
                   })()
-                : (rawPayload || {});
+                : rawPayload || {};
 
             if (nodeId) {
               if (logEvent === "node_start") {
@@ -224,60 +251,86 @@ export function WorkflowRunnerPanel({
                   // 收集节点输出
                   const outputs = payload.outputs || {};
                   workflowNodeOutputsRef.current[nodeId] = outputs;
-                  
+
                   // 展开 outputs 的内部 key（解决循环节点输出的嵌套问题）
-                  const flattenedOutputs: Record<string, any> = { [nodeId]: outputs };
+                  const flattenedOutputs: Record<string, any> = {
+                    [nodeId]: outputs,
+                  };
                   if (outputs && typeof outputs === "object") {
-                    for (const [innerKey, innerValue] of Object.entries(outputs)) {
+                    for (const [innerKey, innerValue] of Object.entries(
+                      outputs,
+                    )) {
                       if (innerValue && typeof innerValue === "object") {
-                        if ("passed_items" in innerValue || "pending_items" in innerValue || "iterations" in innerValue) {
+                        if (
+                          "passed_items" in innerValue ||
+                          "pending_items" in innerValue ||
+                          "iterations" in innerValue
+                        ) {
                           workflowNodeOutputsRef.current[innerKey] = innerValue;
                           flattenedOutputs[innerKey] = innerValue;
                         }
                       }
                     }
                   }
-                  
+
                   // 从 payload 中提取迭代信息
-                  const iteration = payload.iteration !== undefined ? payload.iteration : null;
+                  const iteration =
+                    payload.iteration !== undefined ? payload.iteration : null;
                   const loopId = payload.loop_id || null;
-                  
+
                   // 如果节点属于某个迭代，将其输出添加到对应迭代的集合中
                   if (iteration !== null && typeof iteration === "number") {
                     if (!iterationNodeOutputsRef.current.has(iteration)) {
                       iterationNodeOutputsRef.current.set(iteration, {});
                     }
-                    const iterOutputs = iterationNodeOutputsRef.current.get(iteration)!;
+                    const iterOutputs =
+                      iterationNodeOutputsRef.current.get(iteration)!;
                     iterOutputs[nodeId] = outputs;
                     // 同时展开内部 key
                     if (outputs && typeof outputs === "object") {
-                      for (const [innerKey, innerValue] of Object.entries(outputs)) {
+                      for (const [innerKey, innerValue] of Object.entries(
+                        outputs,
+                      )) {
                         if (innerValue && typeof innerValue === "object") {
-                          if ("passed_items" in innerValue || "pending_items" in innerValue || "iterations" in innerValue) {
+                          if (
+                            "passed_items" in innerValue ||
+                            "pending_items" in innerValue ||
+                            "iterations" in innerValue
+                          ) {
                             iterOutputs[innerKey] = innerValue;
                           }
                         }
                       }
                     }
-                    
+
                     // 通知迭代节点输出更新
                     if (onIterationNodeOutputsUpdate) {
-                      onIterationNodeOutputsUpdate(new Map(iterationNodeOutputsRef.current));
+                      onIterationNodeOutputsUpdate(
+                        new Map(iterationNodeOutputsRef.current),
+                      );
                     }
                   }
-                  
+
                   // 通知节点执行完成
                   if (onNodeEnd) {
-                    onNodeEnd(nodeId, iteration !== null ? iteration : undefined, loopId || undefined);
+                    onNodeEnd(
+                      nodeId,
+                      iteration !== null ? iteration : undefined,
+                      loopId || undefined,
+                    );
                   }
-                  
+
                   onNodeOutputsUpdate(flattenedOutputs);
                 } else {
-                  onLogUpdate([`>>> 节点 ${nodeId} 执行失败: ${payload.error || "未知错误"}`]);
+                  onLogUpdate([
+                    `>>> 节点 ${nodeId} 执行失败: ${payload.error || "未知错误"}`,
+                  ]);
                   hasError = true;
                 }
               } else if (logEvent === "node_error") {
-                onLogUpdate([`>>> 节点 ${nodeId} 发生错误: ${payload?.error || payload?.message || "未知错误"}`]);
+                onLogUpdate([
+                  `>>> 节点 ${nodeId} 发生错误: ${payload?.error || payload?.message || "未知错误"}`,
+                ]);
                 hasError = true;
               }
             }
@@ -288,16 +341,20 @@ export function WorkflowRunnerPanel({
               if (Object.keys(workflowNodeOutputsRef.current).length > 0) {
                 try {
                   // 1) 先找循环节点输出（有 passed_items/pending_items/iterations）
-                  const loopNodeOutput = Object.values(workflowNodeOutputsRef.current).find((v: any) => {
+                  const loopNodeOutput = Object.values(
+                    workflowNodeOutputsRef.current,
+                  ).find((v: any) => {
                     if (!v || typeof v !== "object") return false;
                     return (
-                      Array.isArray((v as any).passed_items) &&
-                      Array.isArray((v as any).pending_items) &&
-                      typeof (v as any).iterations === "number"
+                      Array.isArray(v.passed_items) &&
+                      Array.isArray(v.pending_items) &&
+                      typeof v.iterations === "number"
                     );
-                  }) as any;
+                  });
 
-                  const passedItems: any[] = Array.isArray(loopNodeOutput?.passed_items)
+                  const passedItems: any[] = Array.isArray(
+                    loopNodeOutput?.passed_items,
+                  )
                     ? loopNodeOutput.passed_items
                     : [];
 
@@ -306,44 +363,55 @@ export function WorkflowRunnerPanel({
                     // 关键点：候选集合仍以 passed_items 为准（通过筛选），但展示信息尽量来自同一“最终评估”来源，避免分数与描述对不上。
                     const endEvaluated = extractMoleculesFromEndNode(
                       workflowNodeOutputsRef.current,
-                      workflowGraphRef.current
+                      workflowGraphRef.current,
                     );
                     const endBySmiles = new Map<string, Partial<Molecule>>();
                     const normalizeSmiles = (s: string) => s.trim();
                     for (const m of endEvaluated) {
-                      if (m?.smiles) endBySmiles.set(normalizeSmiles(m.smiles), m);
+                      if (m?.smiles)
+                        endBySmiles.set(normalizeSmiles(m.smiles), m);
                     }
 
                     const picked = passedItems
-                      .filter((it) => it && typeof it === "object" && typeof it.smiles === "string" && it.smiles.length > 0)
+                      .filter(
+                        (it) =>
+                          it &&
+                          typeof it === "object" &&
+                          typeof it.smiles === "string" &&
+                          it.smiles.length > 0,
+                      )
                       .map((it) => {
                         const id = it.id;
                         const total =
-                          typeof it.score === "number"
-                            ? it.score
-                            : 0;
+                          typeof it.score === "number" ? it.score : 0;
                         const smiles = normalizeSmiles(it.smiles);
                         const endMol = endBySmiles.get(smiles);
                         const dimScores =
-                          typeof it.opt_des === "string" && it.opt_des.length > 0
+                          typeof it.opt_des === "string" &&
+                          it.opt_des.length > 0
                             ? parseDimensionScoresFromOptDes(it.opt_des)
                             : null;
 
                         const surfaceAnchoring =
-                          endMol?.score?.surfaceAnchoring ?? dimScores?.surfaceAnchoring;
+                          endMol?.score?.surfaceAnchoring ??
+                          dimScores?.surfaceAnchoring;
                         const energyLevel =
                           endMol?.score?.energyLevel ?? dimScores?.energyLevel;
                         const packingDensity =
-                          endMol?.score?.packingDensity ?? dimScores?.packingDensity;
+                          endMol?.score?.packingDensity ??
+                          dimScores?.packingDensity;
 
                         // 描述优先用最终评估节点的 description（如果存在），否则回退到 passed_items 的 opt_des
                         const description =
                           endMol?.analysis?.description ||
-                          (typeof it.opt_des === "string" ? it.opt_des : undefined);
+                          (typeof it.opt_des === "string"
+                            ? it.opt_des
+                            : undefined);
                         return {
                           index: typeof id === "number" ? id : undefined,
                           smiles,
-                          imageUrl: endMol?.imageUrl || it.imageUrl || it.image_url,
+                          imageUrl:
+                            endMol?.imageUrl || it.imageUrl || it.image_url,
                           properties: endMol?.properties || it.properties,
                           score: {
                             // total 以 passed_items 的 score 为准（筛选/最终候选的权威总分）
@@ -357,7 +425,9 @@ export function WorkflowRunnerPanel({
                             : endMol?.analysis,
                         } as Molecule;
                       })
-                      .sort((a, b) => (b.score?.total || 0) - (a.score?.total || 0))
+                      .sort(
+                        (a, b) => (b.score?.total || 0) - (a.score?.total || 0),
+                      )
                       .slice(0, 10);
 
                     // index 兜底：如果没有 id，就用展示序号
@@ -366,18 +436,22 @@ export function WorkflowRunnerPanel({
                       index: typeof m.index === "number" ? m.index : idx + 1,
                     }));
 
-                    onLogUpdate([`>>> 最终候选分子（通过筛选）: ${molecules.length} 个`]);
+                    onLogUpdate([
+                      `>>> 最终候选分子（通过筛选）: ${molecules.length} 个`,
+                    ]);
                   } else {
                     // 2) 如果没有 passed_items，再尝试从 end 节点/旧逻辑提取（兼容性）
                     const partialMolecules = extractMoleculesFromEndNode(
                       workflowNodeOutputsRef.current,
-                      workflowGraphRef.current
+                      workflowGraphRef.current,
                     );
 
                     const finalMolecules =
                       partialMolecules.length > 0
                         ? partialMolecules
-                        : extractMoleculesFromWorkflowResult(workflowNodeOutputsRef.current);
+                        : extractMoleculesFromWorkflowResult(
+                            workflowNodeOutputsRef.current,
+                          );
 
                     // 注意：不要在这里做硬阈值过滤，否则会导致候选分子面板/历史记录里显示为 0。
                     // 如需阈值筛选，应交由 UI 展示层或由用户配置。
@@ -394,21 +468,28 @@ export function WorkflowRunnerPanel({
                     })) as Molecule[];
 
                     if (molecules.length > 0) {
-                      const ge8 = molecules.filter((m) => (m.score?.total || 0) >= 8).length;
+                      const ge8 = molecules.filter(
+                        (m) => (m.score?.total || 0) >= 8,
+                      ).length;
                       onLogUpdate([
                         `>>> 从工作流输出提取了 ${molecules.length} 个候选分子（其中评分 >= 8：${ge8} 个）`,
                       ]);
                     }
                   }
                 } catch (err) {
-                  console.warn("Failed to extract molecules from end node:", err);
+                  console.warn(
+                    "Failed to extract molecules from end node:",
+                    err,
+                  );
                 }
               }
-              
+
               // 工作流完成日志（调试用，主日志会显示更友好的信息）
               // onLogUpdate([`>>> 工作流执行完成`]);
-              toast.success(`工作流执行完成${molecules.length > 0 ? `，提取了 ${molecules.length} 个分子` : ""}`);
-              
+              toast.success(
+                `工作流执行完成${molecules.length > 0 ? `，提取了 ${molecules.length} 个分子` : ""}`,
+              );
+
               onExecutionComplete(
                 {
                   mode: "workflow",
@@ -421,7 +502,7 @@ export function WorkflowRunnerPanel({
                   },
                 },
                 molecules,
-                workflowNodeOutputsRef.current
+                workflowNodeOutputsRef.current,
               );
             } else {
               const errorMsg = event.error || "工作流执行失败";
@@ -453,7 +534,9 @@ export function WorkflowRunnerPanel({
         disabled={executionState === "running" || loadingWorkflows}
       >
         <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder={loadingWorkflows ? "加载中..." : "选择工作流"} />
+          <SelectValue
+            placeholder={loadingWorkflows ? "加载中..." : "选择工作流"}
+          />
         </SelectTrigger>
         <SelectContent>
           {workflows.map((wf) => (
@@ -463,10 +546,12 @@ export function WorkflowRunnerPanel({
           ))}
         </SelectContent>
       </Select>
-      
+
       <Button
         onClick={executeWorkflow}
-        disabled={!selectedWorkflowId || !workflowLoaded || executionState === "running"}
+        disabled={
+          !selectedWorkflowId || !workflowLoaded || executionState === "running"
+        }
         size="sm"
         className="flex items-center gap-2"
       >

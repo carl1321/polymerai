@@ -88,6 +88,7 @@ def test_multiline_yaml_folded_description(tmp_path):
     assert result.description == "This is a multiline description for a skill.\nIt spans multiple lines."
     assert result.license == "MIT"
 
+
 def test_parse_multiline_description(tmp_path):
     """Multi-line YAML descriptions are collapsed correctly by yaml.safe_load."""
     front_matter = "name: my-skill\ndescription: >\n  A folded\n  description"

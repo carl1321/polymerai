@@ -1,5 +1,6 @@
-import { getBackendBaseURL } from "../config";
 import { getAuthHeaders } from "@/core/auth";
+
+import { getBackendBaseURL } from "../config";
 import { isStaticWebsiteOnly } from "../static-mode";
 
 import type { ModelsResponse } from "./types";

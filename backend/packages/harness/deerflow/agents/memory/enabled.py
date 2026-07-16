@@ -5,7 +5,8 @@ import threading
 import time
 from uuid import UUID
 
-from extensions._core.agents_db import get_agent as db_get_agent, get_agent_by_name
+from extensions._core.agents_db import get_agent as db_get_agent
+from extensions._core.agents_db import get_agent_by_name
 from extensions._core.app_db import get_app_db_connection
 
 logger = logging.getLogger(__name__)

@@ -11,7 +11,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import StructuredTool
@@ -88,11 +88,7 @@ def _generate_outline(topic: str, content: str, style: str, audience: str, lang:
     user_content = content.strip() if content else f"主题：{topic.strip()}"
     if not user_content:
         raise ValueError("请提供 topic 或 content")
-    human = (
-        f"请生成 {slides} 页左右的幻灯片大纲。\n"
-        f"风格 style={style}，受众 audience={audience}，语言 lang={lang}。\n\n"
-        f"内容或主题：\n{user_content}"
-    )
+    human = f"请生成 {slides} 页左右的幻灯片大纲。\n风格 style={style}，受众 audience={audience}，语言 lang={lang}。\n\n内容或主题：\n{user_content}"
     messages = [SystemMessage(content=OUTLINE_SYSTEM), HumanMessage(content=human)]
     resp = llm.invoke(messages)
     text = (resp.content if hasattr(resp, "content") else str(resp)) or ""
@@ -149,10 +145,7 @@ def _parse_outline(outline: str) -> dict[str, Any]:
 def _generate_slide_image_prompt(slide_title: str, slide_content: str, style_instructions: str) -> str:
     """根据单页规格生成一句文生图 prompt。"""
     llm = get_llm_by_type("basic")
-    content = (
-        f"STYLE_INSTRUCTIONS:\n{style_instructions[:1500]}\n\n"
-        f"本页标题: {slide_title}\n本页要点:\n{slide_content[:800]}"
-    )
+    content = f"STYLE_INSTRUCTIONS:\n{style_instructions[:1500]}\n\n本页标题: {slide_title}\n本页要点:\n{slide_content[:800]}"
     messages = [SystemMessage(content=IMAGE_PROMPT_SYSTEM), HumanMessage(content=content)]
     resp = llm.invoke(messages)
     text = (resp.content if hasattr(resp, "content") else str(resp)) or ""
@@ -244,9 +237,7 @@ def _run_slide_deck(
         preview_urls = []
         for i, slide in enumerate(slides_list):
             idx = i + 1
-            short_prompt = _generate_slide_image_prompt(
-                slide.get("title", ""), slide.get("content", ""), style_instructions
-            )
+            short_prompt = _generate_slide_image_prompt(slide.get("title", ""), slide.get("content", ""), style_instructions)
             if not short_prompt:
                 short_prompt = f"Professional slide: {slide.get('title', '')}"
             try:

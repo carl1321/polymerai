@@ -21,7 +21,9 @@ export function Welcome({
   const searchParams = useSearchParams();
   const isUltra = useMemo(() => mode === "ultra", [mode]);
   const skillMode = searchParams.get("mode") === "skill";
-  const hasSpecificSkill = Boolean((searchParams.get("skill_name") || "").trim());
+  const hasSpecificSkill = Boolean(
+    (searchParams.get("skill_name") || "").trim(),
+  );
   const showSkillCreateWelcome = skillMode && !hasSpecificSkill;
   const colors = useMemo(() => {
     if (isUltra) {
@@ -52,12 +54,21 @@ export function Welcome({
         )}
       </div>
       <div className="text-muted-foreground text-sm">
-        {(showSkillCreateWelcome ? t.welcome.createYourOwnSkillDescription : t.welcome.description).includes("\n") ? (
+        {(showSkillCreateWelcome
+          ? t.welcome.createYourOwnSkillDescription
+          : t.welcome.description
+        ).includes("\n") ? (
           <pre className="font-sans whitespace-pre">
-            {showSkillCreateWelcome ? t.welcome.createYourOwnSkillDescription : t.welcome.description}
+            {showSkillCreateWelcome
+              ? t.welcome.createYourOwnSkillDescription
+              : t.welcome.description}
           </pre>
         ) : (
-          <p>{showSkillCreateWelcome ? t.welcome.createYourOwnSkillDescription : t.welcome.description}</p>
+          <p>
+            {showSkillCreateWelcome
+              ? t.welcome.createYourOwnSkillDescription
+              : t.welcome.description}
+          </p>
         )}
       </div>
     </div>

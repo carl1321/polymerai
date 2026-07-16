@@ -3,7 +3,11 @@
 
 "use client";
 
+import { Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+
+import { Button } from "~/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,12 +16,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
-import { toast } from "sonner";
-import { Upload } from "lucide-react";
 
 export type StartInputFieldDef = {
   key: string;
@@ -57,12 +58,18 @@ export function WorkflowRunDialog({
   submitting,
   onSubmit,
 }: WorkflowRunDialogProps) {
-  const fields = useMemo(() => startInputs.filter((f) => f.key?.trim()), [startInputs]);
+  const fields = useMemo(
+    () => startInputs.filter((f) => f.key?.trim()),
+    [startInputs],
+  );
   const pathFieldDefs = useMemo(
     () => fields.filter((f) => f.type === "path"),
     [fields],
   );
-  const pathKeys = useMemo(() => pathFieldDefs.map((f) => f.key), [pathFieldDefs]);
+  const pathKeys = useMemo(
+    () => pathFieldDefs.map((f) => f.key),
+    [pathFieldDefs],
+  );
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [filesByKey, setFilesByKey] = useState<Record<string, File | null>>({});
@@ -94,7 +101,11 @@ export function WorkflowRunDialog({
 
   const handleSubmit = async () => {
     for (const f of fields) {
-      if (f.required && f.type !== "path" && !String(values[f.key] ?? "").trim()) {
+      if (
+        f.required &&
+        f.type !== "path" &&
+        !String(values[f.key] ?? "").trim()
+      ) {
         toast.error(`请填写：${f.label || f.key}`);
         return;
       }
@@ -139,7 +150,11 @@ export function WorkflowRunDialog({
       fileFieldKeys = ["poscar_path"];
     }
 
-    if (showFileUpload && pathFieldDefs.some((f) => f.required) && files.length === 0) {
+    if (
+      showFileUpload &&
+      pathFieldDefs.some((f) => f.required) &&
+      files.length === 0
+    ) {
       toast.error("请上传所需附件");
       return;
     }
@@ -163,11 +178,12 @@ export function WorkflowRunDialog({
     await onSubmit({ values: numeric, files, fileFieldKeys });
   };
 
-  const acceptHint = startFiles?.accept ?? ".vasp,.cif,.poscar,.POSCAR,.CONTCAR";
+  const acceptHint =
+    startFiles?.accept ?? ".vasp,.cif,.poscar,.POSCAR,.CONTCAR";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
         <DialogHeader>
           <DialogTitle>运行工作流</DialogTitle>
           <DialogDescription>
@@ -198,14 +214,19 @@ export function WorkflowRunDialog({
                   {f.required ? " *" : ""}
                 </Label>
                 {f.type === "path" ? (
-                  <p className="text-xs text-muted-foreground mt-1">请在下方附件区选择文件。</p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    请在下方附件区选择文件。
+                  </p>
                 ) : (
                   <Input
                     id={`run-${f.key}`}
                     type={f.type === "number" ? "number" : "text"}
                     value={values[f.key] ?? ""}
                     onChange={(e) =>
-                      setValues((prev) => ({ ...prev, [f.key]: e.target.value }))
+                      setValues((prev) => ({
+                        ...prev,
+                        [f.key]: e.target.value,
+                      }))
                     }
                     placeholder={f.default}
                     className="mt-1"
@@ -215,7 +236,7 @@ export function WorkflowRunDialog({
             ))}
 
           {showFileUpload && usePerFieldUpload && (
-            <div className="space-y-3 rounded-md border bg-muted/20 p-3">
+            <div className="bg-muted/20 space-y-3 rounded-md border p-3">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Upload className="h-4 w-4" />
                 上传附件
@@ -237,7 +258,7 @@ export function WorkflowRunDialog({
                     }}
                   />
                   {filesByKey[f.key] ? (
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-muted-foreground mt-1 text-xs">
                       已选：{filesByKey[f.key]!.name}
                     </p>
                   ) : null}
@@ -247,13 +268,14 @@ export function WorkflowRunDialog({
           )}
 
           {showFileUpload && !usePerFieldUpload && (
-            <div className="space-y-2 rounded-md border bg-muted/20 p-3">
+            <div className="bg-muted/20 space-y-2 rounded-md border p-3">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Upload className="h-4 w-4" />
                 上传附件
               </div>
-              <p className="text-xs text-muted-foreground">
-                支持 POSCAR、CONTCAR、.vasp 等；将保存到 inputs/ 并写入 poscar_path（若未单独配置字段）。
+              <p className="text-muted-foreground text-xs">
+                支持 POSCAR、CONTCAR、.vasp 等；将保存到 inputs/ 并写入
+                poscar_path（若未单独配置字段）。
               </p>
               <Input
                 type="file"
@@ -262,7 +284,7 @@ export function WorkflowRunDialog({
                 onChange={handleGenericFiles}
               />
               {genericFiles.length > 0 && (
-                <ul className="text-xs text-muted-foreground list-disc pl-4">
+                <ul className="text-muted-foreground list-disc pl-4 text-xs">
                   {genericFiles.map((f) => (
                     <li key={f.name}>{f.name}</li>
                   ))}
@@ -270,10 +292,13 @@ export function WorkflowRunDialog({
               )}
             </div>
           )}
-
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
             取消
           </Button>
           <Button onClick={() => void handleSubmit()} disabled={submitting}>

@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 _FRONTMATTER_RE = re.compile(r"^---\s*\n.*?\n---\s*\n", re.DOTALL)
 
@@ -17,6 +18,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.tools import BaseTool
 
 logger = logging.getLogger(__name__)
+
 
 def _read_skill_markdown(skill) -> str:
     """Load SKILL.md body from deerflow Skill (metadata only, no .content attr)."""
@@ -56,7 +58,7 @@ def _inject_skills_prompt(system_prompt: str | None, skill_names: list[str] | No
         "(--config, --executor, --potcar, work_dir, etc.), and call run_skill again before finishing.\n"
         "3. Only after run_skill returns async_envelope with status=submitted, reply with ONLY valid JSON "
         "strictly matching the output JSON Schema in this system message (no markdown fences, no extra text).\n"
-        "4. Include every required field; File fields use {\"file\": \"relative/path\"} under workflow work_root.\n\n"
+        '4. Include every required field; File fields use {"file": "relative/path"} under workflow work_root.\n\n'
     )
     combined = prefix + skills_text
     if system_prompt:

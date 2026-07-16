@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock, patch
 
-import pytest
-
+from extensions._core.workflow_tools.db import DEFAULT_SCRIPT_TEMPLATE
 from extensions._core.workflow_tools.workflow_tool_deps import (
-    DepsInstallResult,
     _is_conflict_output,
     extract_import_packages,
 )
-from extensions._core.workflow_tools.db import DEFAULT_SCRIPT_TEMPLATE
 from extensions._core.workflow_tools.workflow_tool_loader import (
     metadata_to_cached_schema,
     parse_missing_module,
@@ -31,13 +27,13 @@ def test_parse_missing_module():
 
 
 def test_parse_script_error_line():
-    tb = '''Traceback (most recent call last):
+    tb = """Traceback (most recent call last):
   File "/tmp/wf_tool_x/tool.py", line 12, in <module>
     main()
   File "/tmp/wf_tool_x/tool.py", line 8, in smiles_build
     return 1 / 0
 ZeroDivisionError: division by zero
-'''
+"""
     assert parse_script_error_line(tb) == 8
 
 

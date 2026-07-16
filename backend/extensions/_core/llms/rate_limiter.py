@@ -11,7 +11,6 @@ import asyncio
 import logging
 import time
 from collections import deque
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +48,7 @@ class LLMRateLimiter:
             self._call_times.append(time.time())
 
 
-_global_rate_limiter: Optional[LLMRateLimiter] = None
+_global_rate_limiter: LLMRateLimiter | None = None
 
 
 def get_llm_rate_limiter() -> LLMRateLimiter:
@@ -62,4 +61,3 @@ def get_llm_rate_limiter() -> LLMRateLimiter:
 async def acquire_llm_call_permission() -> None:
     limiter = get_llm_rate_limiter()
     await limiter.acquire()
-

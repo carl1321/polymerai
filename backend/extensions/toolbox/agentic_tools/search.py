@@ -3,7 +3,6 @@
 
 import logging
 import os
-from typing import List, Optional
 
 from langchain_community.tools import (
     BraveSearch,
@@ -48,17 +47,13 @@ def get_web_search_tool(max_search_results: int):
 
     if SELECTED_SEARCH_ENGINE == SearchEngine.TAVILY.value:
         # Only get and apply include/exclude domains for Tavily
-        include_domains: Optional[List[str]] = search_config.get("include_domains", [])
-        exclude_domains: Optional[List[str]] = search_config.get("exclude_domains", [])
+        include_domains: list[str] | None = search_config.get("include_domains", [])
+        exclude_domains: list[str] | None = search_config.get("exclude_domains", [])
         include_raw_content = search_config.get("include_raw_content", True)
-        include_images: Optional[bool] = search_config.get("include_images", True)
-        include_image_descriptions: Optional[bool] = (
-            include_images and search_config.get("include_image_descriptions", True)
-        )
+        include_images: bool | None = search_config.get("include_images", True)
+        include_image_descriptions: bool | None = include_images and search_config.get("include_image_descriptions", True)
 
-        logger.info(
-            f"Tavily search configuration loaded: include_domains={include_domains}, exclude_domains={exclude_domains}"
-        )
+        logger.info(f"Tavily search configuration loaded: include_domains={include_domains}, exclude_domains={exclude_domains}")
 
         return LoggedTavilySearch(
             name="web_search",
@@ -100,9 +95,7 @@ def get_web_search_tool(max_search_results: int):
         )
     elif SELECTED_SEARCH_ENGINE == SearchEngine.WIKIPEDIA.value:
         wiki_lang = search_config.get("wikipedia_lang", "en")
-        wiki_doc_content_chars_max = search_config.get(
-            "wikipedia_doc_content_chars_max", 4000
-        )
+        wiki_doc_content_chars_max = search_config.get("wikipedia_doc_content_chars_max", 4000)
         return LoggedWikipediaSearch(
             name="web_search",
             api_wrapper=WikipediaAPIWrapper(

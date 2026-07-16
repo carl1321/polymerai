@@ -1,8 +1,7 @@
+import re
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
-import re
-from unittest.mock import patch
 
 import pytest
 from _router_auth_helpers import make_authed_test_app
@@ -337,6 +336,8 @@ def test_update_thread_state_syncs_title_to_thread_store_display_name():
         "New Title",
         user_id=uid_str,
     )
+
+
 # ---------------------------------------------------------------------------
 # ISO 8601 timestamp contract (issue #2594)
 # ---------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 
 import base64
 import logging
-from typing import Annotated, Optional
+from typing import Annotated
 
 from langchain_core.tools import tool
 
@@ -20,16 +20,16 @@ logger = logging.getLogger(__name__)
 def tts_tool(
     text: Annotated[str, "The text to convert to speech."],
     voice: Annotated[
-        Optional[str],
+        str | None,
         "Voice type: 'male' or 'female'. Defaults to 'female'.",
     ] = "female",
     encoding: Annotated[
-        Optional[str],
+        str | None,
         "Audio encoding format: 'mp3' or 'wav'. Defaults to 'mp3'.",
     ] = "mp3",
 ) -> str:
     """Convert text to speech using Volcengine TTS API.
-    
+
     This tool takes text input and converts it to speech audio.
     Returns a message indicating success or failure.
     """
@@ -97,4 +97,3 @@ def tts_tool(
         error_msg = f"Failed to convert text to speech: {repr(e)}"
         logger.error(error_msg, exc_info=True)
         return f"错误：{error_msg}"
-

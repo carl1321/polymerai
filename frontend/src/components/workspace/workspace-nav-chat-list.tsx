@@ -34,7 +34,8 @@ export function WorkspaceNavChatList() {
         {EXTENSION_SIDEBAR_ENTRIES.map((entry) => {
           const Icon = EXTENSION_ICONS[entry.iconName];
           const label =
-            entry.label ?? (entry.labelKey ? t.sidebar[entry.labelKey] : entry.href);
+            entry.label ??
+            (entry.labelKey ? t.sidebar[entry.labelKey] : entry.href);
           const isActive =
             entry.pathMatch === "/workspace/toolbox"
               ? pathname === entry.pathMatch

@@ -11,13 +11,43 @@ from pathlib import Path
 from typing import Any
 
 from deerflow.skills.loader import get_skills_root_path
-
 from extensions._core.workflow.workflow_output_paths import is_file_ref, resolve_file_value
 
 _PATH_LIKE = re.compile(r"(?<!nodes)(/[^\s\"']+)")
 _WORKFLOW_REL_PATH = re.compile(r"nodes/[^\s\"']+")
 _TEMPLATE_VAR = re.compile(r"\{\{([^}]+)\}\}")
 _STRUCTURE_REF_KEYS = ("poscar_path", "poscar", "structure", "contcar")
+_STRUCTURE_NAME_HINTS = ("POSCAR", "CONTCAR")
+_STRUCTURE_SUFFIXES = (".vasp", ".poscar", ".cif")
+
+
+def _looks_like_potcar(path: Path) -> bool:
+    """Reject POTCAR / misnamed copies so they are never used as structure input."""
+    name = path.name.upper()
+    if name == "POTCAR" or name.endswith(".POTCAR"):
+        return True
+    try:
+        head = path.read_text(encoding="utf-8", errors="ignore")[:400]
+    except OSError:
+        return False
+    upper = head.upper()
+    return "PAW_" in upper or "VRHFIN" in upper or "TITEL" in upper
+
+
+def is_structure_file(path: str | Path | None) -> bool:
+    if not path:
+        return False
+    p = Path(path)
+    if not p.is_file():
+        return False
+    if _looks_like_potcar(p):
+        return False
+    name = p.name.upper()
+    if any(hint in name for hint in _STRUCTURE_NAME_HINTS) or name in _STRUCTURE_NAME_HINTS:
+        return True
+    if p.suffix.lower() in _STRUCTURE_SUFFIXES:
+        return True
+    return False
 
 
 def resolve_shared_vasp_config() -> Path | None:
@@ -63,9 +93,7 @@ def resolve_workflow_work_dir(work_dir: str | None, ctx: dict[str, Any]) -> Path
 
     if work_root:
         root = Path(str(work_root)).resolve()
-        fallback = Path(str(default_dir)).resolve() if default_dir else root / "nodes" / str(
-            ctx.get("workflow_node_id") or "step"
-        )
+        fallback = Path(str(default_dir)).resolve() if default_dir else root / "nodes" / str(ctx.get("workflow_node_id") or "step")
         if not raw or raw.startswith("/mnt") or "user-data" in raw or raw.startswith("~"):
             return fallback
         candidate = Path(raw).expanduser()
@@ -114,6 +142,13 @@ def _path_from_value(val: Any, work_root: str | None) -> str | None:
     return None
 
 
+def _structure_path_from_value(val: Any, work_root: str | None) -> str | None:
+    found = _path_from_value(val, work_root)
+    if found and is_structure_file(found):
+        return found
+    return None
+
+
 def find_structure_path(
     *,
     node_outputs: dict[str, Any] | None,
@@ -124,7 +159,7 @@ def find_structure_path(
     """POSCAR/structure absolute path from start node outputs or resolved prompt."""
     if ctx and ctx.get("structure_path"):
         sp = str(ctx["structure_path"])
-        if Path(sp).is_file():
+        if is_structure_file(sp):
             return str(Path(sp).resolve())
 
     if node_outputs:
@@ -134,15 +169,15 @@ def find_structure_path(
             for key in ("output", "input"):
                 block = out.get(key)
                 if isinstance(block, dict):
-                    for val in block.values():
-                        found = _path_from_value(val, work_root)
-                        if found:
-                            return found
                     for field in ("poscar_path", "poscar", "structure", "contcar", "input"):
-                        found = _path_from_value(block.get(field), work_root)
+                        found = _structure_path_from_value(block.get(field), work_root)
                         if found:
                             return found
-                found = _path_from_value(block, work_root)
+                    for val in block.values():
+                        found = _structure_path_from_value(val, work_root)
+                        if found:
+                            return found
+                found = _structure_path_from_value(block, work_root)
                 if found:
                     return found
 
@@ -151,25 +186,21 @@ def find_structure_path(
             line = line.strip()
             if not line or line.startswith("{{"):
                 continue
-            found = _path_from_value(line, work_root)
+            found = _structure_path_from_value(line, work_root)
             if found:
                 return found
         text = prompt.strip().strip('"').strip("'")
-        if text and (text.startswith("/") or text.startswith("~")) and Path(text).is_file():
+        if text and (text.startswith("/") or text.startswith("~")) and is_structure_file(text):
             return str(Path(text).expanduser().resolve())
         for rel in _WORKFLOW_REL_PATH.findall(prompt):
-            found = _path_from_value(rel, work_root)
+            found = _structure_path_from_value(rel, work_root)
             if found:
                 return found
         for match in _PATH_LIKE.findall(prompt):
             p = Path(match)
             if not p.is_absolute() and work_root:
                 p = (Path(work_root) / str(match).lstrip("/")).resolve()
-            if p.is_file() and (
-                "POSCAR" in p.name.upper()
-                or p.name.upper() in ("POSCAR", "CONTCAR", "POTCAR")
-                or p.suffix.lower() in (".vasp", ".poscar")
-            ):
+            if is_structure_file(p):
                 return str(p)
 
     return None
@@ -216,13 +247,11 @@ def extract_file_refs_from_prompt(
 def structure_path_from_refs(file_refs: dict[str, str]) -> str | None:
     for key in _STRUCTURE_REF_KEYS:
         path = file_refs.get(key)
-        if path and Path(path).is_file():
+        if path and is_structure_file(path):
             return path
     for path in file_refs.values():
-        if path and Path(path).is_file():
-            name = Path(path).name.upper()
-            if "POSCAR" in name or name in ("POSCAR", "CONTCAR", "POTCAR"):
-                return path
+        if path and is_structure_file(path):
+            return path
     return None
 
 

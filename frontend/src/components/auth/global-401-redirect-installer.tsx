@@ -11,4 +11,3 @@ export function Global401RedirectInstaller() {
 
   return null;
 }
-

@@ -19,9 +19,7 @@ from deerflow.skills.loader import get_skills_root_path
 logger = logging.getLogger(__name__)
 
 _SKILLS_PUBLIC_MOUNT = "/mnt/skills/public"
-_SHARED_VENV_PYTHON = (
-    Path(__file__).resolve().parents[3] / ".deer-flow" / ".venv" / "bin" / "python"
-)
+_SHARED_VENV_PYTHON = Path(__file__).resolve().parents[3] / ".deer-flow" / ".venv" / "bin" / "python"
 
 
 def _shared_skill_python() -> str | None:
@@ -39,7 +37,6 @@ def _wrap_shell_with_shared_venv(command: str) -> str:
         out = out.split("&&", 1)[-1].strip() if "&&" in out else out
     out = out.replace("python ", f'"{py}" ', 1).replace("python3 ", f'"{py}" ', 1)
     return prefix + out
-
 
 
 def _skills_repo_root() -> Path:
@@ -90,11 +87,7 @@ def _find_entry_script(skill_dir: Path) -> Path | None:
         candidate = skill_dir / name
         if candidate.is_file():
             return candidate
-    scripts = [
-        p
-        for p in (skill_dir / "scripts").glob("*.py")
-        if p.name not in ("__init__.py", "init_mongodb.py") and p.is_file()
-    ]
+    scripts = [p for p in (skill_dir / "scripts").glob("*.py") if p.name not in ("__init__.py", "init_mongodb.py") and p.is_file()]
     if len(scripts) == 1:
         return scripts[0]
     return None
@@ -179,10 +172,7 @@ def _apply_detach_requirement(
     out["success"] = False
     out["detach_error"] = True
     out["error_kind"] = "submit_failed" if int(out.get("exit_code") or 0) != 0 else "missing_envelope"
-    out["error"] = (
-        f"Skill {skill_name!r} did not emit a detach envelope (status=submitted). "
-        "Inspect stderr, fix argv (--config, --executor, --potcar, etc.), and call run_skill again."
-    )
+    out["error"] = f"Skill {skill_name!r} did not emit a detach envelope (status=submitted). Inspect stderr, fix argv (--config, --executor, --potcar, etc.), and call run_skill again."
     return out
 
 
@@ -190,9 +180,7 @@ def _run_subprocess(cmd: list[str], *, cwd: Path, timeout: int, env: dict[str, s
     merged_env = {**os.environ, **_subprocess_env_extra(), **(env or {})}
     public_root = str(_skills_repo_root() / "public")
     existing_pp = merged_env.get("PYTHONPATH", "").strip()
-    merged_env["PYTHONPATH"] = (
-        f"{public_root}{os.pathsep}{existing_pp}" if existing_pp else public_root
-    )
+    merged_env["PYTHONPATH"] = f"{public_root}{os.pathsep}{existing_pp}" if existing_pp else public_root
     node_outputs = cwd / "outputs"
     node_outputs.mkdir(parents=True, exist_ok=True)
     merged_env.setdefault("POLYMER_BUILD_OUTPUTS", str(node_outputs))
@@ -253,9 +241,7 @@ def run_skill(
 
     entry = _find_entry_script(skill_dir)
     if entry is None:
-        raise FileNotFoundError(
-            f"Skill {skill_name!r} has no scripts/run.py or single scripts/*.py entry"
-        )
+        raise FileNotFoundError(f"Skill {skill_name!r} has no scripts/run.py or single scripts/*.py entry")
 
     cmd = _build_argv(entry, argv, kwargs)
     result = _run_subprocess(cmd, cwd=cwd, timeout=sync_timeout)

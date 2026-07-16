@@ -1,6 +1,7 @@
 "use client";
 
 import { getBackendBaseURL } from "@/core/config";
+
 import { getAuthHeaders } from "./token";
 
 const ADMIN_USERS_PREFIX = "/api/admin/users";
@@ -82,7 +83,9 @@ export interface CreateUserBody {
   role_ids?: string[];
 }
 
-export async function createUser(body: CreateUserBody): Promise<Record<string, unknown>> {
+export async function createUser(
+  body: CreateUserBody,
+): Promise<Record<string, unknown>> {
   const res = await adminFetch(ADMIN_USERS_PREFIX, {
     method: "POST",
     body: JSON.stringify(body),

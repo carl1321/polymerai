@@ -187,7 +187,11 @@ export default function NewAgentPage() {
     async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || thread.isLoading) return;
-      await sendMessage(threadId, { text: trimmed, files: [] }, { agent_name: agentName });
+      await sendMessage(
+        threadId,
+        { text: trimmed, files: [] },
+        { agent_name: agentName },
+      );
     },
     [agentName, sendMessage, thread.isLoading, threadId],
   );
@@ -352,9 +356,7 @@ export default function NewAgentPage() {
                       <Button
                         onClick={() =>
                           agent?.id &&
-                          router.push(
-                            `/workspace/agents/${agent.id}/chats/new`,
-                          )
+                          router.push(`/workspace/agents/${agent.id}/chats/new`)
                         }
                         disabled={!agent?.id}
                       >

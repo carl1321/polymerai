@@ -3,7 +3,7 @@
 
 import logging
 import os
-from typing import Annotated, Optional
+from typing import Annotated
 
 from langchain_core.tools import tool
 from langchain_experimental.utilities import PythonREPL
@@ -43,10 +43,10 @@ def _is_python_repl_enabled() -> bool:
 logger = logging.getLogger(__name__)
 
 # REPL will be initialized lazily when needed
-_repl_instance: Optional[PythonREPL] = None
+_repl_instance: PythonREPL | None = None
 
 
-def _get_repl() -> Optional[PythonREPL]:
+def _get_repl() -> PythonREPL | None:
     """Get or create REPL instance, checking enablement status."""
     global _repl_instance
     if _is_python_repl_enabled():
@@ -59,9 +59,7 @@ def _get_repl() -> Optional[PythonREPL]:
 @tool
 @log_io
 def python_repl_tool(
-    code: Annotated[
-        str, "The python code to execute to do further analysis or calculation."
-    ],
+    code: Annotated[str, "The python code to execute to do further analysis or calculation."],
 ):
     """Use this to execute python code and do data analysis or calculation. If you want to see the output of a value,
     you should print it out with `print(...)`. This is visible to the user."""
@@ -69,11 +67,7 @@ def python_repl_tool(
     # Check if the tool is enabled and get REPL instance
     repl = _get_repl()
     if repl is None:
-        error_msg = (
-            "Python REPL tool is disabled. Set PYTHON_REPL.enabled: true in config.yaml "
-            "(or DEER_FLOW_CONFIG_PATH file), or set ENABLE_PYTHON_REPL=true. "
-            "Restart the gateway after changing config if needed."
-        )
+        error_msg = "Python REPL tool is disabled. Set PYTHON_REPL.enabled: true in config.yaml (or DEER_FLOW_CONFIG_PATH file), or set ENABLE_PYTHON_REPL=true. Restart the gateway after changing config if needed."
         logger.warning(error_msg)
         return f"Tool disabled: {error_msg}"
 

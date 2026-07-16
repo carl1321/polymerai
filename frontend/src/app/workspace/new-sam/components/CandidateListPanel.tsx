@@ -4,16 +4,22 @@
 // Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
 // SPDX-License-Identifier: MIT
 
+import { ChevronDown, Box } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import {
+  getScoreColor,
+  formatScore,
+  extractDimScoresFromResolvedInputsPrompt,
+} from "@/app/workspace/new-sam/utils/molecule";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, Box } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,14 +27,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { getScoreColor, formatScore, extractDimScoresFromResolvedInputsPrompt } from "@/app/workspace/new-sam/utils/molecule";
+import { Progress } from "@/components/ui/progress";
 import { apiRequest } from "@/core/api/api-client";
 import { executeTool } from "@/core/api/tools";
+
 import type { Molecule, Constraint, DesignObjective } from "../types";
+
 import { ConstraintSatisfactionPanel } from "./ConstraintSatisfactionPanel";
-import { MoleculeOptimizationHistory } from "./MoleculeOptimizationHistory";
 import { Molecule3DViewer } from "./Molecule3DViewer";
+import { MoleculeOptimizationHistory } from "./MoleculeOptimizationHistory";
 
 interface CandidateListPanelProps {
   molecules: Molecule[];
@@ -62,7 +69,9 @@ export function CandidateListPanel({
   workflowGraph,
 }: CandidateListPanelProps) {
   const [processedMolecules, setProcessedMolecules] = useState<Molecule[]>([]);
-  const [selectedMolecule, setSelectedMolecule] = useState<Molecule | null>(null);
+  const [selectedMolecule, setSelectedMolecule] = useState<Molecule | null>(
+    null,
+  );
   const processedImagesRef = useRef<Set<string>>(new Set());
   const imageUrlMapRef = useRef<Map<string, string>>(new Map()); // SMILES -> imageUrl 缓存
   const processingSeqRef = useRef(0); // 用于取消过期的异步处理（避免旧请求覆盖新列表）
@@ -88,14 +97,18 @@ export function CandidateListPanel({
       if (!iterOutputs) continue;
       for (const nodeOutput of Object.values(iterOutputs)) {
         if (!nodeOutput || typeof nodeOutput !== "object") continue;
-        const iterationOutputs = (nodeOutput as any).iteration_outputs;
+        const iterationOutputs = nodeOutput.iteration_outputs;
         if (!Array.isArray(iterationOutputs)) continue;
 
-        const entry = iterationOutputs.find((x: any) => x && typeof x === "object" && x.iteration === iter);
+        const entry = iterationOutputs.find(
+          (x: any) => x && typeof x === "object" && x.iteration === iter,
+        );
         const promptText = entry?.resolved_inputs?.prompt;
         if (typeof promptText !== "string" || promptText.length === 0) continue;
 
-        const dimsById = extractDimScoresFromResolvedInputsPrompt(promptText) as Map<number | string, DimScores>;
+        const dimsById = extractDimScoresFromResolvedInputsPrompt(
+          promptText,
+        ) as Map<number | string, DimScores>;
         for (const [id, dims] of dimsById.entries()) {
           const prev = m.get(id) || {};
           // 以最新一轮为准覆盖（只覆盖有值的维度）
@@ -119,7 +132,8 @@ export function CandidateListPanel({
       const seq = ++processingSeqRef.current;
       const isStale = () => processingSeqRef.current !== seq;
 
-      const sourceMolecules = molecules.length > 0 ? molecules : (initialMolecules || []);
+      const sourceMolecules =
+        molecules.length > 0 ? molecules : initialMolecules || [];
       if (sourceMolecules.length === 0) {
         setProcessedMolecules([]);
         return;
@@ -129,7 +143,9 @@ export function CandidateListPanel({
         // 先“立刻”展示基础信息（SMILES/分数/约束等），图片和评估结果再逐个补齐
         const baseList: Molecule[] = sourceMolecules.map((mol, idx) => {
           const smiles = mol.smiles || "";
-          const cachedUrl = smiles ? imageUrlMapRef.current.get(smiles) : undefined;
+          const cachedUrl = smiles
+            ? imageUrlMapRef.current.get(smiles)
+            : undefined;
           return {
             index: mol.index || idx + 1,
             smiles,
@@ -146,7 +162,7 @@ export function CandidateListPanel({
         const updateOne = (updated: Molecule) => {
           if (isStale()) return;
           setProcessedMolecules((prev) =>
-            prev.map((m) => (m.index === updated.index ? updated : m))
+            prev.map((m) => (m.index === updated.index ? updated : m)),
           );
         };
 
@@ -165,14 +181,21 @@ export function CandidateListPanel({
             } else if (!processedImagesRef.current.has(next.smiles)) {
               try {
                 processedImagesRef.current.add(next.smiles);
-                const visResult = await executeTool("visualize_molecules_tool", {
-                  smiles_text: `${next.index}. SMILES: ${next.smiles}`,
-                });
-                const imageIdMatch = visResult.match(/<!--\s*MOLECULAR_IMAGE_ID:([a-f0-9\-]+)\s*-->/i);
+                const visResult = await executeTool(
+                  "visualize_molecules_tool",
+                  {
+                    smiles_text: `${next.index}. SMILES: ${next.smiles}`,
+                  },
+                );
+                const imageIdMatch =
+                  /<!--\s*MOLECULAR_IMAGE_ID:([a-f0-9\-]+)\s*-->/i.exec(
+                    visResult,
+                  );
                 if (imageIdMatch) {
                   next.imageUrl = `/molecular_images/${imageIdMatch[1]}.svg`;
                 } else {
-                  const imageUrlMatch = visResult.match(/\/molecular_images\/[a-f0-9\-]+\.svg/i);
+                  const imageUrlMatch =
+                    /\/molecular_images\/[a-f0-9\-]+\.svg/i.exec(visResult);
                   if (imageUrlMatch) next.imageUrl = imageUrlMatch[0];
                 }
                 if (next.imageUrl) {
@@ -182,14 +205,20 @@ export function CandidateListPanel({
                   processedImagesRef.current.delete(next.smiles); // 允许重试
                 }
               } catch (err) {
-                console.error(`[CandidateListPanel] ✗ Failed to visualize molecule ${next.index}:`, err);
+                console.error(
+                  `[CandidateListPanel] ✗ Failed to visualize molecule ${next.index}:`,
+                  err,
+                );
                 processedImagesRef.current.delete(next.smiles); // 允许重试
               }
             }
           }
 
           // 2) 评估：缺字段才补齐（不阻塞列表展示）
-          const needsEvaluation = (mol: Molecule, constraints: Constraint[]): boolean => {
+          const needsEvaluation = (
+            mol: Molecule,
+            constraints: Constraint[],
+          ): boolean => {
             if (!mol.smiles || !objective?.text) return false;
 
             const enabledConstraints = constraints.filter((c) => c.enabled);
@@ -207,7 +236,11 @@ export function CandidateListPanel({
                   if (isMissing(mol.score?.packingDensity)) return true;
                   break;
                 case "energy_level":
-                  if (isMissing(mol.properties?.HOMO) || isMissing(mol.properties?.LUMO)) return true;
+                  if (
+                    isMissing(mol.properties?.HOMO) ||
+                    isMissing(mol.properties?.LUMO)
+                  )
+                    return true;
                   break;
               }
             }
@@ -217,7 +250,11 @@ export function CandidateListPanel({
 
           // 重要：历史记录加载/已完成状态不应再触发大模型评估（应优先展示数据库中已有信息）。
           // 仅在“运行中”才允许按需补齐缺失字段，避免每次打开历史都调用 LLM。
-          if (executionState === "running" && needsEvaluation(next, constraints) && objective?.text) {
+          if (
+            executionState === "running" &&
+            needsEvaluation(next, constraints) &&
+            objective?.text
+          ) {
             try {
               const evalResult = await apiRequest<{
                 success: boolean;
@@ -254,7 +291,9 @@ export function CandidateListPanel({
                   v === undefined || v === null || Number.isNaN(v);
 
                 next.score = {
-                  total: !isMissing(next.score?.total) ? next.score!.total : evalResult.score.total,
+                  total: !isMissing(next.score?.total)
+                    ? next.score!.total
+                    : evalResult.score.total,
                   surfaceAnchoring: !isMissing(next.score?.surfaceAnchoring)
                     ? next.score!.surfaceAnchoring
                     : evalResult.score.surfaceAnchoring,
@@ -273,9 +312,15 @@ export function CandidateListPanel({
 
                 if (evalResult.properties) {
                   next.properties = {
-                    HOMO: !isMissing(next.properties?.HOMO) ? next.properties!.HOMO : evalResult.properties.HOMO,
-                    LUMO: !isMissing(next.properties?.LUMO) ? next.properties!.LUMO : evalResult.properties.LUMO,
-                    DM: !isMissing(next.properties?.DM) ? next.properties!.DM : evalResult.properties.DM,
+                    HOMO: !isMissing(next.properties?.HOMO)
+                      ? next.properties!.HOMO
+                      : evalResult.properties.HOMO,
+                    LUMO: !isMissing(next.properties?.LUMO)
+                      ? next.properties!.LUMO
+                      : evalResult.properties.LUMO,
+                    DM: !isMissing(next.properties?.DM)
+                      ? next.properties!.DM
+                      : evalResult.properties.DM,
                   };
                 }
                 updateOne(next);
@@ -308,11 +353,16 @@ export function CandidateListPanel({
             const sa = next.score.surfaceAnchoring;
             const el = next.score.energyLevel;
             const pd = next.score.packingDensity;
-            const dims = [sa, el, pd].filter((v) => typeof v === "number") as number[];
+            const dims = [sa, el, pd].filter((v) => typeof v === "number");
             const totalMissing =
-              next.score.total === undefined || next.score.total === null || Number.isNaN(next.score.total);
+              next.score.total === undefined ||
+              next.score.total === null ||
+              Number.isNaN(next.score.total);
             if (totalMissing && dims.length > 0) {
-              next.score.total = Math.round((dims.reduce((a, b) => a + b, 0) / dims.length) * 10) / 10;
+              next.score.total =
+                Math.round(
+                  (dims.reduce((a, b) => a + b, 0) / dims.length) * 10,
+                ) / 10;
             }
             updateOne(next);
           }
@@ -321,13 +371,16 @@ export function CandidateListPanel({
         // 控制并发，避免同时触发过多图片/评估请求
         const CONCURRENCY = 3;
         const queue = [...baseList];
-        const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
-          while (queue.length > 0 && !isStale()) {
-            const item = queue.shift();
-            if (!item) break;
-            await processOne(item);
-          }
-        });
+        const workers = Array.from(
+          { length: Math.min(CONCURRENCY, queue.length) },
+          async () => {
+            while (queue.length > 0 && !isStale()) {
+              const item = queue.shift();
+              if (!item) break;
+              await processOne(item);
+            }
+          },
+        );
         await Promise.all(workers);
       } catch (err) {
         console.error("[CandidateListPanel] Failed to process molecules:", err);
@@ -345,15 +398,16 @@ export function CandidateListPanel({
 
   // 按总分排序
   const sortedMolecules = [...processedMolecules].sort(
-    (a, b) => (b.score?.total || 0) - (a.score?.total || 0)
+    (a, b) => (b.score?.total || 0) - (a.score?.total || 0),
   );
-
 
   if (executionState === "idle" && sortedMolecules.length === 0) {
     return (
       <div className="flex h-full flex-col bg-white dark:bg-slate-900">
         <div className="border-b border-slate-200 px-4 py-2 dark:border-slate-700">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">候选分子</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            候选分子
+          </h3>
         </div>
         <div className="flex flex-1 items-center justify-center p-8 text-center text-slate-500 dark:text-slate-400">
           <p className="text-sm">请先执行工作流以生成候选分子</p>
@@ -374,7 +428,9 @@ export function CandidateListPanel({
           <Card key={molecule.index} className="shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
-                <CardTitle className="text-sm">分子 #{molecule.index}</CardTitle>
+                <CardTitle className="text-sm">
+                  分子 #{molecule.index}
+                </CardTitle>
                 {molecule.score && (
                   <Badge
                     className={`${getScoreColor(molecule.score.total)} bg-opacity-10`}
@@ -394,33 +450,44 @@ export function CandidateListPanel({
                       alt={`Molecule ${molecule.index}`}
                       className="max-h-32 max-w-full"
                       onError={(e) => {
-                        console.error(`[CandidateListPanel] Failed to load image for molecule ${molecule.index}: ${molecule.imageUrl}`);
+                        console.error(
+                          `[CandidateListPanel] Failed to load image for molecule ${molecule.index}: ${molecule.imageUrl}`,
+                        );
                         const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
+                        target.style.display = "none";
                         const parent = target.parentElement;
                         if (parent) {
-                          const fallback = document.createElement('div');
-                          fallback.className = 'flex items-center justify-center text-xs text-slate-500';
+                          const fallback = document.createElement("div");
+                          fallback.className =
+                            "flex items-center justify-center text-xs text-slate-500";
                           fallback.textContent = molecule.smiles;
                           parent.appendChild(fallback);
                         }
                       }}
                       onLoad={() => {
-                        console.log(`[CandidateListPanel] Successfully loaded image for molecule ${molecule.index}: ${molecule.imageUrl}`);
+                        console.log(
+                          `[CandidateListPanel] Successfully loaded image for molecule ${molecule.index}: ${molecule.imageUrl}`,
+                        );
                       }}
                     />
                   </div>
                   {/* 3D 结构：支持拖拽旋转、滚轮缩放 */}
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full text-xs">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs"
+                      >
                         <Box className="mr-1.5 h-3.5 w-3.5" />
                         3D 结构（旋转/缩放）
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl">
                       <DialogHeader>
-                        <DialogTitle>分子 #{molecule.index} · 3D 结构</DialogTitle>
+                        <DialogTitle>
+                          分子 #{molecule.index} · 3D 结构
+                        </DialogTitle>
                       </DialogHeader>
                       <Molecule3DViewer
                         smiles={molecule.smiles}
@@ -439,14 +506,20 @@ export function CandidateListPanel({
                   {molecule.smiles && (
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="w-full text-xs">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs"
+                        >
                           <Box className="mr-1.5 h-3.5 w-3.5" />
                           3D 结构（旋转/缩放）
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-2xl">
                         <DialogHeader>
-                          <DialogTitle>分子 #{molecule.index} · 3D 结构</DialogTitle>
+                          <DialogTitle>
+                            分子 #{molecule.index} · 3D 结构
+                          </DialogTitle>
                         </DialogHeader>
                         <Molecule3DViewer
                           smiles={molecule.smiles}
@@ -470,13 +543,22 @@ export function CandidateListPanel({
                     {molecule.score.surfaceAnchoring !== undefined && (
                       <div>
                         <div className="mb-1 flex items-center justify-between text-xs">
-                          <span className="text-slate-600 dark:text-slate-400">表面锚定强度</span>
-                          <span className={getScoreColor(molecule.score.surfaceAnchoring)}>
+                          <span className="text-slate-600 dark:text-slate-400">
+                            表面锚定强度
+                          </span>
+                          <span
+                            className={getScoreColor(
+                              molecule.score.surfaceAnchoring,
+                            )}
+                          >
                             {formatScore(molecule.score.surfaceAnchoring)}
                           </span>
                         </div>
                         <Progress
-                          value={Math.min(100, Math.max(0, molecule.score.surfaceAnchoring * 10))}
+                          value={Math.min(
+                            100,
+                            Math.max(0, molecule.score.surfaceAnchoring * 10),
+                          )}
                           className="h-1.5"
                         />
                       </div>
@@ -484,13 +566,22 @@ export function CandidateListPanel({
                     {molecule.score.energyLevel !== undefined && (
                       <div>
                         <div className="mb-1 flex items-center justify-between text-xs">
-                          <span className="text-slate-600 dark:text-slate-400">能级匹配</span>
-                          <span className={getScoreColor(molecule.score.energyLevel)}>
+                          <span className="text-slate-600 dark:text-slate-400">
+                            能级匹配
+                          </span>
+                          <span
+                            className={getScoreColor(
+                              molecule.score.energyLevel,
+                            )}
+                          >
                             {formatScore(molecule.score.energyLevel)}
                           </span>
                         </div>
                         <Progress
-                          value={Math.min(100, Math.max(0, molecule.score.energyLevel * 10))}
+                          value={Math.min(
+                            100,
+                            Math.max(0, molecule.score.energyLevel * 10),
+                          )}
                           className="h-1.5"
                         />
                       </div>
@@ -498,13 +589,22 @@ export function CandidateListPanel({
                     {molecule.score.packingDensity !== undefined && (
                       <div>
                         <div className="mb-1 flex items-center justify-between text-xs">
-                          <span className="text-slate-600 dark:text-slate-400">膜致密度</span>
-                          <span className={getScoreColor(molecule.score.packingDensity)}>
+                          <span className="text-slate-600 dark:text-slate-400">
+                            膜致密度
+                          </span>
+                          <span
+                            className={getScoreColor(
+                              molecule.score.packingDensity,
+                            )}
+                          >
                             {formatScore(molecule.score.packingDensity)}
                           </span>
                         </div>
                         <Progress
-                          value={Math.min(100, Math.max(0, molecule.score.packingDensity * 10))}
+                          value={Math.min(
+                            100,
+                            Math.max(0, molecule.score.packingDensity * 10),
+                          )}
                           className="h-1.5"
                         />
                       </div>
@@ -559,8 +659,8 @@ export function CandidateListPanel({
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="pt-2">
-                    <MoleculeOptimizationHistory 
-                      molecule={molecule} 
+                    <MoleculeOptimizationHistory
+                      molecule={molecule}
                       iterationSnapshots={iterationSnapshots}
                       iterationNodeOutputs={iterationNodeOutputs}
                       workflowGraph={workflowGraph}

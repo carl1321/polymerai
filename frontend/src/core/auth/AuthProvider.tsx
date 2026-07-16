@@ -54,7 +54,7 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps) {
 
   const getAccessTokenFromCookie = useCallback((): string | null => {
     if (typeof document === "undefined") return null;
-    const match = document.cookie.match(/(?:^|;\s*)access_token=([^;]+)/);
+    const match = /(?:^|;\s*)access_token=([^;]+)/.exec(document.cookie);
     const token = match?.[1];
     return token ? decodeURIComponent(token) : null;
   }, []);

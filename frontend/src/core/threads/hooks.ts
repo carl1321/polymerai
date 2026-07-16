@@ -35,6 +35,7 @@ import { useUpdateSubtask } from "../tasks/context";
 import type { UploadedFileInfo } from "../uploads";
 import { promptInputFilePartToFile, uploadFiles } from "../uploads";
 
+import { fetchThreadTokenUsage } from "./api";
 import {
   errorSummaryLine,
   formatAsyncTaskMarkdown,
@@ -43,7 +44,6 @@ import {
   type ThreadAsyncTaskUiState,
 } from "./async-task-card";
 import { joinActiveRunIfStaleOrMissing } from "./join-active-run";
-import { fetchThreadTokenUsage } from "./api";
 import { threadTokenUsageQueryKey } from "./token-usage";
 import type {
   AgentThread,
@@ -659,8 +659,7 @@ export function useThreadStream({
     onCreated(meta) {
       handleStreamStart(meta.thread_id);
       setOnStreamThreadId(meta.thread_id);
-      const agentMeta =
-        context.agent_name ?? context.agent_id;
+      const agentMeta = context.agent_name ?? context.agent_id;
       if (agentMeta && !isMock) {
         void getAPIClient()
           .threads.update(meta.thread_id, {
@@ -1852,7 +1851,6 @@ export function useThreadHistory(threadId: string) {
     loadMore: loadMessages,
   };
 }
-
 
 export function useDeleteThread() {
   const queryClient = useQueryClient();

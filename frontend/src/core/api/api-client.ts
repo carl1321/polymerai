@@ -136,7 +136,10 @@ export function createPublicShareLangGraphClient(
  * 通用网关 API 请求函数（兼容 agentic_workflow 风格）。
  * path 不需要以 /api 开头，例如 "new-sam/execution-history"。
  */
-export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+export async function apiRequest<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const base = getBackendBaseURL() || "";
   const url = `${base}/api${normalizedPath}`;
@@ -146,7 +149,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     ...(init?.headers ?? {}),
   };
   const res = await fetch(url, { ...init, headers });
-  const json = (await res.json().catch(() => ({})));
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(json?.detail ?? res.statusText ?? "Request failed");
   }

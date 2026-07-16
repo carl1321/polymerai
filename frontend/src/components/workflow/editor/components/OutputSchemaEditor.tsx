@@ -3,12 +3,19 @@
 
 "use client";
 
+import { Plus, Trash2, Info, Circle } from "lucide-react";
 import { useState, useEffect } from "react";
+
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import { Plus, Trash2, Info, Circle } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 
 export type OutputFormatType = "json" | "array";
 export type OutputFieldType = "String" | "Integer" | "Boolean" | "File";
@@ -76,7 +83,9 @@ export function OutputSchemaEditor({
   };
 
   const updateField = (index: number, field: Partial<OutputField>) => {
-    const updated = localFields.map((f, i) => (i === index ? { ...f, ...field } : f));
+    const updated = localFields.map((f, i) =>
+      i === index ? { ...f, ...field } : f,
+    );
     setLocalFields(updated);
 
     // 验证字段名
@@ -98,10 +107,10 @@ export function OutputSchemaEditor({
   return (
     <div className="space-y-4">
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Label>输出</Label>
-            <Info className="h-4 w-4 text-muted-foreground" />
+            <Info className="text-muted-foreground h-4 w-4" />
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -116,14 +125,14 @@ export function OutputSchemaEditor({
         </div>
 
         <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground font-medium">
+          <div className="text-muted-foreground grid grid-cols-2 gap-2 text-xs font-medium">
             <div>变量名</div>
             <div>变量类型</div>
           </div>
 
           {/* 自定义字段 */}
           {localFields.map((field, index) => (
-            <div key={index} className="grid grid-cols-2 gap-2 items-start">
+            <div key={index} className="grid grid-cols-2 items-start gap-2">
               <div>
                 <Input
                   value={field.name}
@@ -132,13 +141,15 @@ export function OutputSchemaEditor({
                   className={errors[index] ? "border-red-500" : ""}
                 />
                 {errors[index] && (
-                  <p className="text-xs text-red-500 mt-1">{errors[index]}</p>
+                  <p className="mt-1 text-xs text-red-500">{errors[index]}</p>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 <Select
                   value={field.type}
-                  onValueChange={(val) => updateField(index, { type: val as OutputFieldType })}
+                  onValueChange={(val) =>
+                    updateField(index, { type: val as OutputFieldType })
+                  }
                 >
                   <SelectTrigger className="h-9">
                     <SelectValue />
@@ -163,11 +174,11 @@ export function OutputSchemaEditor({
           ))}
         </div>
 
-        <p className="text-xs text-muted-foreground mt-2">
-          输出格式：JSON 对象数组 [{}]。File 类型在结果中存为 {"{"}"file": "相对 work_root 路径"{"}"}。
+        <p className="text-muted-foreground mt-2 text-xs">
+          输出格式：JSON 对象数组 [{}]。File 类型在结果中存为 {"{"}"file": "相对
+          work_root 路径"{"}"}。
         </p>
       </div>
     </div>
   );
 }
-

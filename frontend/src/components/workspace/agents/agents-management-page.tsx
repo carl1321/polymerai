@@ -3,19 +3,31 @@
 
 "use client";
 
+import {
+  ArrowLeft,
+  ArrowUp,
+  Bot,
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  GitBranch,
+  Globe,
+  Loader2,
+  MessageSquare,
+  Pencil,
+  Save,
+  Search,
+  Sparkles,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowUp, Bot, BookOpen, ChevronDown, ChevronRight, Copy, GitBranch, Globe, Loader2, MessageSquare, Pencil, Save, Search, Sparkles, Trash2, Upload } from "lucide-react";
-import { motion } from "motion/react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -24,22 +36,35 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { PromptRichEditor } from "@/components/workspace/agents/prompt-rich-editor";
-import { useRedirectOn401 } from "@/extensions/auth";
+import {
+  listAgents,
+  getAgent,
+  createAgent,
+  updateAgent,
+  deleteAgent,
+  generateAgentPrompt,
+} from "@/core/agents";
+import { listWorkflows } from "@/core/api/workflows";
 import { me } from "@/core/auth/api";
-import { listAgents, getAgent, createAgent, updateAgent, deleteAgent, generateAgentPrompt } from "@/core/agents";
+import { loadModels } from "@/core/models/api";
 import {
   disablePublicLink,
   getPublicLinkStatus,
   publishAgent,
   rotatePublicToken,
 } from "@/core/public-agent/api";
-import { listWorkflows } from "@/core/api/workflows";
 import { getSkillByName, loadSkills } from "@/core/skills/api";
 import type { Skill } from "@/core/skills/type";
+import { useRedirectOn401 } from "@/extensions/auth";
+import { cn } from "@/lib/utils";
 import { queryRAGResources } from "~/core/api/rag";
-import { loadModels } from "@/core/models/api";
 import type { Resource } from "~/core/messages";
 
 /** 编排页提示词默认模板（与 agentic_workflow 一致） */
@@ -119,10 +144,14 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
   const [headerNameValue, setHeaderNameValue] = useState("");
 
   const [showStep1Dialog, setShowStep1Dialog] = useState(false);
-  const [workflows, setWorkflows] = useState<{ id: string; name: string }[]>([]);
+  const [workflows, setWorkflows] = useState<{ id: string; name: string }[]>(
+    [],
+  );
   const [skills, setSkills] = useState<Skill[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
-  const [models, setModels] = useState<{ name: string; display_name?: string }[]>([]);
+  const [models, setModels] = useState<
+    { name: string; display_name?: string }[]
+  >([]);
 
   const orchestrationSnapshotRef = useRef<Partial<AgentCreatePayload>>({});
 
@@ -192,9 +221,16 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
           loadSkills(),
           loadModels(),
         ]);
-        setWorkflows((wfRes.workflows || []).map((w: any) => ({ id: w.id, name: w.name })));
+        setWorkflows(
+          (wfRes.workflows || []).map((w: any) => ({ id: w.id, name: w.name })),
+        );
         setSkills(Array.isArray(skillsList) ? skillsList : []);
-        setModels((modelsList?.models ?? []).map((m: any) => ({ name: m.name, display_name: m.display_name || m.name })));
+        setModels(
+          (modelsList?.models ?? []).map((m: any) => ({
+            name: m.name,
+            display_name: m.display_name || m.name,
+          })),
+        );
       } catch {
         // ignore
       }
@@ -229,8 +265,10 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
           opener: detail.opener ?? undefined,
           knowledge_base_ids: detail.knowledge_base_ids ?? [],
           tool_names: detail.tool_names ?? [],
-          skill_names: detail.kind === "swarm" ? [] : (detail.skill_names ?? []),
-          workflow_ids: detail.kind === "swarm" ? [] : (detail.workflow_ids ?? []),
+          skill_names:
+            detail.kind === "swarm" ? [] : (detail.skill_names ?? []),
+          workflow_ids:
+            detail.kind === "swarm" ? [] : (detail.workflow_ids ?? []),
           model_name: detail.model_name ?? undefined,
           kind: detail.kind ?? "dedicated",
           member_dedicated_ids: detail.member_dedicated_ids ?? [],
@@ -295,7 +333,8 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
     try {
       setSaving(true);
       setError(null);
-      const isSwarm = (body.kind ?? agentDetail?.kind ?? "dedicated") === "swarm";
+      const isSwarm =
+        (body.kind ?? agentDetail?.kind ?? "dedicated") === "swarm";
       const payload = { ...body } as Partial<AgentCreatePayload>;
       if (isSwarm) {
         payload.skill_names = [];
@@ -334,7 +373,9 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
 
   if (showBuildPanel && agentDetail) {
     const canManageAgent =
-      !currentUserId || !agentDetail.user_id || agentDetail.user_id === currentUserId;
+      !currentUserId ||
+      !agentDetail.user_id ||
+      agentDetail.user_id === currentUserId;
     const lastSavedAt = agentDetail.updated_at
       ? new Date(agentDetail.updated_at).toLocaleString("zh-CN", {
           year: "numeric",
@@ -349,14 +390,14 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
     return (
       <div className="flex h-full w-full flex-col bg-[#F5F5F5] dark:bg-slate-900">
         {error && (
-          <div className="mx-6 mt-2 rounded-md bg-red-50 dark:bg-red-950/30 px-4 py-2 text-sm text-red-600 dark:text-red-400">
+          <div className="mx-6 mt-2 rounded-md bg-red-50 px-4 py-2 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
             {error}
           </div>
         )}
 
         {/* 顶栏：返回、头像、名称、个人空间·对话型 草稿…、编排|统计、保存、发布&集成（与 agentic_workflow 一致） */}
-        <header className="shrink-0 flex items-center justify-between px-6 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-          <div className="flex items-center gap-3 min-w-0">
+        <header className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 py-3 dark:border-slate-700 dark:bg-slate-900">
+          <div className="flex min-w-0 items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
@@ -375,7 +416,9 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
                   if (v && v !== agentDetail.name) {
                     try {
                       await updateAgent(agentDetail.id, { name: v });
-                      const refreshed = (await getAgent(agentDetail.id)) as unknown as DbAgent;
+                      const refreshed = (await getAgent(
+                        agentDetail.id,
+                      )) as unknown as DbAgent;
                       setAgentDetail(refreshed);
                       await loadAgents();
                     } catch (e) {
@@ -395,8 +438,8 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
                 autoFocus
               />
             ) : (
-              <div className="flex items-center gap-1.5 min-w-0">
-                <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <h1 className="truncate text-lg font-semibold text-slate-900 dark:text-slate-100">
                   {agentDetail.name}
                 </h1>
                 <Button
@@ -415,30 +458,34 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
                 </Button>
               </div>
             )}
-            <div className="h-8 w-8 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden shrink-0">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-200 dark:bg-slate-700">
               {agentDetail.avatar ? (
-                <img src={agentDetail.avatar} alt="" className="w-full h-full object-cover" />
+                <img
+                  src={agentDetail.avatar}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <Bot className="h-4 w-4 text-slate-500" />
               )}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+            <p className="truncate text-xs text-slate-500 dark:text-slate-400">
               个人空间 · 对话型 草稿最后保存于 {lastSavedAt}
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => void handleSaveNow()}
               disabled={saving || !canManageAgent}
             >
-              <Save className="h-4 w-4 mr-2" />
+              <Save className="mr-2 h-4 w-4" />
               保存
             </Button>
             <Button
               size="sm"
-              className="bg-[#1890FF] hover:bg-[#40a9ff] text-white"
+              className="bg-[#1890FF] text-white hover:bg-[#40a9ff]"
               onClick={() => setShareAgent(agentDetail)}
               disabled={!canManageAgent}
             >
@@ -448,19 +495,25 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
         </header>
 
         {/* 两栏：左 提示词 | 右 配置（去掉右侧调试预览） */}
-        <div className="flex-1 flex min-h-0">
+        <div className="flex min-h-0 flex-1">
           <AgentBuildForm
             key={agentDetail.id}
             agent={agentDetail}
             canManage={canManageAgent}
-            dedicatedOptions={agents.filter((a) => (a.kind ?? "dedicated") === "dedicated" && a.id !== agentDetail.id)}
+            dedicatedOptions={agents.filter(
+              (a) =>
+                (a.kind ?? "dedicated") === "dedicated" &&
+                a.id !== agentDetail.id,
+            )}
             workflows={workflows}
             skills={skills}
             resources={resources}
             models={models}
             saving={saving}
             onSave={handleSaveEdit}
-            onDelete={canManageAgent ? () => handleDelete(agentDetail.id) : undefined}
+            onDelete={
+              canManageAgent ? () => handleDelete(agentDetail.id) : undefined
+            }
             onCancel={() => setSelectedId(null)}
             layout="orchestration"
             defaultPromptTemplate={DEFAULT_PROMPT_TEMPLATE}
@@ -477,14 +530,14 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
   return (
     <div className="flex h-full w-full flex-col bg-[#F5F5F5] dark:bg-slate-900">
       {error && (
-        <div className="mx-6 mt-2 rounded-md bg-red-50 dark:bg-red-950/30 px-4 py-2 text-sm text-red-600 dark:text-red-400">
+        <div className="mx-6 mt-2 rounded-md bg-red-50 px-4 py-2 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
           {error}
         </div>
       )}
 
-      <div className="relative shrink-0 mx-6 mt-4 rounded-xl overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#1e3a5f] to-[#0f172a] dark:from-slate-900 dark:via-blue-950/50 dark:to-slate-900 p-8 text-white shadow-lg min-height-[140px]">
-        <h2 className="text-xl font-bold mb-2">智能体</h2>
-        <p className="text-sm text-white/90 max-w-2xl">
+      <div className="min-height-[140px] relative mx-6 mt-4 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-[#0f172a] via-[#1e3a5f] to-[#0f172a] p-8 text-white shadow-lg dark:from-slate-900 dark:via-blue-950/50 dark:to-slate-900">
+        <h2 className="mb-2 text-xl font-bold">智能体</h2>
+        <p className="max-w-2xl text-sm text-white/90">
           创建与管理智能体，配置人设、提示词、知识库与工具。
         </p>
         <div className="absolute right-4 bottom-4 flex gap-2">
@@ -506,16 +559,20 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
       <div className="flex-1 overflow-y-auto">
         <div className="px-6 py-4">
           {loading ? (
-            <div className="py-12 text-center text-slate-500 dark:text-slate-400">加载中...</div>
+            <div className="py-12 text-center text-slate-500 dark:text-slate-400">
+              加载中...
+            </div>
           ) : agents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center min-h-[200px] text-center">
-              <div className="w-20 h-20 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+            <div className="flex min-h-[200px] flex-col items-center justify-center text-center">
+              <div className="mb-3 flex h-20 w-20 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
                 <Bot className="h-10 w-10 text-slate-400 dark:text-slate-500" />
               </div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">暂无智能体</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                暂无智能体
+              </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {agents.map((a) => (
                 <motion.div
                   key={a.id}
@@ -525,86 +582,97 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
                 >
                   <div
                     className={cn(
-                      "w-full rounded-2xl border transition-all flex flex-col overflow-hidden bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-md hover:shadow-lg",
+                      "flex w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md transition-all hover:shadow-lg dark:border-slate-700 dark:bg-slate-800",
                       selectedId === a.id
-                        ? "ring-2 ring-[#1890FF] dark:ring-blue-500 border-[#1890FF] dark:border-blue-500"
+                        ? "border-[#1890FF] ring-2 ring-[#1890FF] dark:border-blue-500 dark:ring-blue-500"
                         : "hover:border-slate-300 dark:hover:border-slate-600",
                     )}
                   >
                     {(() => {
                       const canManage =
-                        !currentUserId || !a.user_id || a.user_id === currentUserId;
+                        !currentUserId ||
+                        !a.user_id ||
+                        a.user_id === currentUserId;
                       return (
                         <>
-                    <button
-                      type="button"
-                      onClick={() => handleSelect(a.id)}
-                      className="w-full text-left flex flex-col flex-1 min-h-0"
-                      title={canManage ? "进入详情" : "可查看详情（只读）"}
-                    >
-                      <div className="aspect-[4/3] w-full bg-slate-100/80 dark:bg-slate-700/50 flex items-center justify-center overflow-hidden">
-                        {a.avatar ? (
-                          <img src={a.avatar} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Bot className="h-16 w-16 text-slate-300 dark:text-slate-500" />
-                        )}
-                      </div>
-                      <div className="p-5 flex flex-col gap-1.5">
-                        <h3 className="font-semibold text-base text-slate-900 dark:text-slate-100 line-clamp-1">
-                          {a.name}
-                        </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-                          {a.description || "暂无描述"}
-                        </p>
-                        <div className="mt-2">
-                          <span className="text-xs text-slate-400 dark:text-slate-500">
-                            对话型 · {(a.visibility ?? "user") === "org" ? "公有" : "私有"}
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-                    <div className="px-4 pb-4 pt-0 flex items-center justify-between gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0 text-slate-400 hover:text-red-600 dark:hover:text-red-400"
-                        title="删除"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!canManage) return;
-                          if (confirm("确定要删除该智能体吗？")) {
-                            void handleDelete(a.id);
-                          }
-                        }}
-                        disabled={deletingId === a.id || !canManage}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-9 shrink-0 text-xs"
-                          title="公开访问链接"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShareAgent(a);
-                          }}
-                        >
-                          <Globe className="h-3.5 w-3.5" />
-                          公开
-                        </Button>
-                        <Link
-                          href={`/workspace/agents/${a.id}/chats/new`}
-                          className="inline-flex items-center gap-2 rounded-lg bg-[#E6F7FF] dark:bg-blue-950/40 px-4 py-2.5 text-sm font-medium text-[#1890FF] dark:text-blue-400 hover:opacity-90 transition-opacity shadow-sm"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MessageSquare className="h-4 w-4 shrink-0" />
-                          对话
-                        </Link>
-                      </div>
-                    </div>
+                          <button
+                            type="button"
+                            onClick={() => handleSelect(a.id)}
+                            className="flex min-h-0 w-full flex-1 flex-col text-left"
+                            title={
+                              canManage ? "进入详情" : "可查看详情（只读）"
+                            }
+                          >
+                            <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-slate-100/80 dark:bg-slate-700/50">
+                              {a.avatar ? (
+                                <img
+                                  src={a.avatar}
+                                  alt=""
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <Bot className="h-16 w-16 text-slate-300 dark:text-slate-500" />
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-1.5 p-5">
+                              <h3 className="line-clamp-1 text-base font-semibold text-slate-900 dark:text-slate-100">
+                                {a.name}
+                              </h3>
+                              <p className="line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
+                                {a.description || "暂无描述"}
+                              </p>
+                              <div className="mt-2">
+                                <span className="text-xs text-slate-400 dark:text-slate-500">
+                                  对话型 ·{" "}
+                                  {(a.visibility ?? "user") === "org"
+                                    ? "公有"
+                                    : "私有"}
+                                </span>
+                              </div>
+                            </div>
+                          </button>
+                          <div className="flex items-center justify-between gap-2 px-4 pt-0 pb-4">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0 text-slate-400 hover:text-red-600 dark:hover:text-red-400"
+                              title="删除"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!canManage) return;
+                                if (confirm("确定要删除该智能体吗？")) {
+                                  void handleDelete(a.id);
+                                }
+                              }}
+                              disabled={deletingId === a.id || !canManage}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <div className="flex flex-wrap items-center justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-9 shrink-0 text-xs"
+                                title="公开访问链接"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShareAgent(a);
+                                }}
+                              >
+                                <Globe className="h-3.5 w-3.5" />
+                                公开
+                              </Button>
+                              <Link
+                                href={`/workspace/agents/${a.id}/chats/new`}
+                                className="inline-flex items-center gap-2 rounded-lg bg-[#E6F7FF] px-4 py-2.5 text-sm font-medium text-[#1890FF] shadow-sm transition-opacity hover:opacity-90 dark:bg-blue-950/40 dark:text-blue-400"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MessageSquare className="h-4 w-4 shrink-0" />
+                                对话
+                              </Link>
+                            </div>
+                          </div>
                         </>
                       );
                     })()}
@@ -627,7 +695,8 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
             <DialogTitle>公开访问</DialogTitle>
             <DialogDescription>
               生成免登录链接，访客仅可与该智能体对话（不包含工作区其它功能）。请妥善保管
-              token。默认有效期 1 天（24 小时），到期自动失效。你可以按天数调整。
+              token。默认有效期 1 天（24
+              小时），到期自动失效。你可以按天数调整。
             </DialogDescription>
           </DialogHeader>
           {shareAgent && (
@@ -648,7 +717,9 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
                       setShareExpiresDays(1);
                       return;
                     }
-                    setShareExpiresDays(Math.min(365, Math.max(1, Math.floor(n))));
+                    setShareExpiresDays(
+                      Math.min(365, Math.max(1, Math.floor(n))),
+                    );
                   }}
                   className="w-40"
                 />
@@ -671,17 +742,18 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
                     </code>
                   </p>
                   <p className="text-muted-foreground">
-                    完整链接中的 token 仅在创建或轮换时显示一次；若遗失请使用「轮换密钥」。
+                    完整链接中的 token
+                    仅在创建或轮换时显示一次；若遗失请使用「轮换密钥」。
                   </p>
                 </div>
               )}
               {lastPublishUrl && (
                 <div className="space-y-2">
-                  <p className="text-amber-600 dark:text-amber-400 text-xs font-medium">
+                  <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
                     请立即复制以下链接（关闭后将无法再次查看 token）：
                   </p>
                   <div className="bg-muted flex items-start gap-2 rounded-md p-2">
-                    <code className="wrap-break-word grow text-[11px] leading-snug">
+                    <code className="grow text-[11px] leading-snug wrap-break-word">
                       {lastPublishUrl}
                     </code>
                     <Button
@@ -715,12 +787,13 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
                     .then((res) => {
                       const full = `${typeof window !== "undefined" ? window.location.origin : ""}${res.url_path}`;
                       setLastPublishUrl(full);
-                      setShareInfo({ published: true, link: { slug: res.slug } });
+                      setShareInfo({
+                        published: true,
+                        link: { slug: res.slug },
+                      });
                     })
                     .catch((e) =>
-                      setShareError(
-                        e instanceof Error ? e.message : String(e),
-                      ),
+                      setShareError(e instanceof Error ? e.message : String(e)),
                     )
                     .finally(() => setShareLoading(false));
                 }}
@@ -741,9 +814,7 @@ export function AgentsManagementPage({ onBack }: AgentsManagementPageProps) {
                       setLastPublishUrl(full);
                     })
                     .catch((e) =>
-                      setShareError(
-                        e instanceof Error ? e.message : String(e),
-                      ),
+                      setShareError(e instanceof Error ? e.message : String(e)),
                     )
                     .finally(() => setShareLoading(false));
                 }}
@@ -801,7 +872,13 @@ function Step1Form({
   onCancel,
   saving,
 }: {
-  onSubmit: (name: string, description: string, avatar: string, kind: "dedicated" | "swarm", visibility: "user" | "org") => void;
+  onSubmit: (
+    name: string,
+    description: string,
+    avatar: string,
+    kind: "dedicated" | "swarm",
+    visibility: "user" | "org",
+  ) => void;
   onCancel: () => void;
   saving: boolean;
 }) {
@@ -814,7 +891,7 @@ function Step1Form({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
+    if (!file?.type.startsWith("image/")) return;
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
@@ -906,7 +983,7 @@ function Step1Form({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="h-20 w-20 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 flex flex-col items-center justify-center gap-1 text-slate-500 hover:border-[#1890FF] hover:text-[#1890FF] transition-colors"
+            className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 text-slate-500 transition-colors hover:border-[#1890FF] hover:text-[#1890FF] dark:border-slate-600"
           >
             <span className="text-xs">上传图片</span>
           </button>
@@ -918,7 +995,11 @@ function Step1Form({
             onChange={handleFileChange}
           />
           {avatar && (
-            <img src={avatar} alt="" className="h-20 w-20 rounded-lg object-cover border border-slate-200" />
+            <img
+              src={avatar}
+              alt=""
+              className="h-20 w-20 rounded-lg border border-slate-200 object-cover"
+            />
           )}
         </div>
       </div>
@@ -965,10 +1046,12 @@ interface AgentBuildFormProps {
 }
 
 /** Group skills by group (if set) then by category for display. */
-function groupSkillsByCategory(skills: Skill[]): { groupKey: string; label: string; items: Skill[] }[] {
+function groupSkillsByCategory(
+  skills: Skill[],
+): { groupKey: string; label: string; items: Skill[] }[] {
   const byGroup = new Map<string, Skill[]>();
   for (const s of skills) {
-    const key = (s.group && s.group.trim()) || s.category || "other";
+    const key = s.group?.trim() || s.category || "other";
     if (!byGroup.has(key)) byGroup.set(key, []);
     byGroup.get(key)!.push(s);
   }
@@ -984,7 +1067,12 @@ function groupSkillsByCategory(skills: Skill[]): { groupKey: string; label: stri
     })
     .map(([groupKey, items]) => ({
       groupKey,
-      label: groupKey === "public" ? "公共" : groupKey === "custom" ? "自定义" : groupKey,
+      label:
+        groupKey === "public"
+          ? "公共"
+          : groupKey === "custom"
+            ? "自定义"
+            : groupKey,
       items,
     }));
 }
@@ -1009,20 +1097,38 @@ function AgentBuildForm({
   const [name, setName] = useState(agent.name);
   const [description, setDescription] = useState(agent.description ?? "");
   const [systemPrompt, setSystemPrompt] = useState(
-    agent.system_prompt?.trim() ? agent.system_prompt : (defaultPromptTemplate || "")
+    agent.system_prompt?.trim()
+      ? agent.system_prompt
+      : defaultPromptTemplate || "",
   );
-  const [userPromptTemplate, setUserPromptTemplate] = useState(agent.user_prompt_template ?? "");
+  const [userPromptTemplate, setUserPromptTemplate] = useState(
+    agent.user_prompt_template ?? "",
+  );
   const [opener, setOpener] = useState(agent.opener ?? "");
-  const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>(agent.suggested_questions ?? []);
+  const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>(
+    agent.suggested_questions ?? [],
+  );
   const [suggestedInput, setSuggestedInput] = useState("");
-  const [knowledgeBaseIds, setKnowledgeBaseIds] = useState<string[]>(agent.knowledge_base_ids ?? []);
+  const [knowledgeBaseIds, setKnowledgeBaseIds] = useState<string[]>(
+    agent.knowledge_base_ids ?? [],
+  );
   const [toolNames, setToolNames] = useState<string[]>(agent.tool_names ?? []);
-  const [skillNames, setSkillNames] = useState<string[]>(agent.skill_names ?? []);
-  const [workflowIds, setWorkflowIds] = useState<string[]>(agent.workflow_ids ?? []);
-  const [defaultWorkflowId, setDefaultWorkflowId] = useState(agent.default_workflow_id ?? "");
+  const [skillNames, setSkillNames] = useState<string[]>(
+    agent.skill_names ?? [],
+  );
+  const [workflowIds, setWorkflowIds] = useState<string[]>(
+    agent.workflow_ids ?? [],
+  );
+  const [defaultWorkflowId, setDefaultWorkflowId] = useState(
+    agent.default_workflow_id ?? "",
+  );
   const [modelName, setModelName] = useState(agent.model_name ?? "");
-  const [memoryEnabled, setMemoryEnabled] = useState(agent.memory_enabled ?? false);
-  const [visibility, setVisibility] = useState<"user" | "org">((agent.visibility as "user" | "org") || "user");
+  const [memoryEnabled, setMemoryEnabled] = useState(
+    agent.memory_enabled ?? false,
+  );
+  const [visibility, setVisibility] = useState<"user" | "org">(
+    agent.visibility! || "user",
+  );
   const [avatar, setAvatar] = useState(agent.avatar ?? "");
   const [skillSearchQuery, setSkillSearchQuery] = useState("");
   const [workflowSearchQuery, setWorkflowSearchQuery] = useState("");
@@ -1031,21 +1137,32 @@ function AgentBuildForm({
   );
   const [skillGroupFilter, setSkillGroupFilter] = useState<string>("all");
   const [knowledgeSearchQuery, setKnowledgeSearchQuery] = useState("");
-  const [expandedSkills, setExpandedSkills] = useState<Record<string, boolean>>({});
+  const [expandedSkills, setExpandedSkills] = useState<Record<string, boolean>>(
+    {},
+  );
   const [autoGenerating, setAutoGenerating] = useState(false);
-  const [autoGenerateError, setAutoGenerateError] = useState<string | null>(null);
-  const [missingSkillDetails, setMissingSkillDetails] = useState<Record<string, Skill>>({});
+  const [autoGenerateError, setAutoGenerateError] = useState<string | null>(
+    null,
+  );
+  const [missingSkillDetails, setMissingSkillDetails] = useState<
+    Record<string, Skill>
+  >({});
   const allowedKnowledgeBaseIds = useMemo(
-    () => new Set(resources.map((r) => r.uri.replace("rag://dataset/", "") || r.uri)),
-    [resources]
+    () =>
+      new Set(
+        resources.map((r) => r.uri.replace("rag://dataset/", "") || r.uri),
+      ),
+    [resources],
   );
   const sanitizeKnowledgeBaseIds = useCallback(
     (ids: string[]) => ids.filter((id) => allowedKnowledgeBaseIds.has(id)),
-    [allowedKnowledgeBaseIds]
+    [allowedKnowledgeBaseIds],
   );
 
   const displayResources = useMemo(() => {
-    const seen = new Set(resources.map((r) => r.uri.replace("rag://dataset/", "") || r.uri));
+    const seen = new Set(
+      resources.map((r) => r.uri.replace("rag://dataset/", "") || r.uri),
+    );
     const missing = knowledgeBaseIds
       .filter((id) => !seen.has(id))
       .map((id) => ({
@@ -1056,7 +1173,9 @@ function AgentBuildForm({
   }, [resources, knowledgeBaseIds]);
 
   useEffect(() => {
-    const missing = skillNames.filter((name) => !skills.some((s) => s.name === name));
+    const missing = skillNames.filter(
+      (name) => !skills.some((s) => s.name === name),
+    );
     if (missing.length === 0) {
       setMissingSkillDetails({});
       return;
@@ -1090,15 +1209,18 @@ function AgentBuildForm({
     const seen = new Set(skills.map((s) => s.name));
     const missing = skillNames
       .filter((name) => !seen.has(name))
-      .map((name) => missingSkillDetails[name] ?? ({
-        name,
-        description: "",
-        category: "custom",
-        license: null,
-        enabled: true,
-        group: "通用",
-        group_name: "通用",
-      })) as Skill[];
+      .map(
+        (name) =>
+          missingSkillDetails[name] ?? {
+            name,
+            description: "",
+            category: "custom",
+            license: null,
+            enabled: true,
+            group: "通用",
+            group_name: "通用",
+          },
+      );
     return [...missing, ...skills];
   }, [skills, skillNames, missingSkillDetails]);
 
@@ -1106,7 +1228,9 @@ function AgentBuildForm({
   const skillToolMap = (() => {
     const out: Record<string, string[]> = {};
     for (const s of displaySkills) {
-      const toolList = (s.tool_names ?? []).filter((x): x is string => typeof x === "string" && x.trim().length > 0);
+      const toolList = (s.tool_names ?? []).filter(
+        (x): x is string => typeof x === "string" && x.trim().length > 0,
+      );
       out[s.name] = Array.from(new Set(toolList));
     }
     return out;
@@ -1126,17 +1250,21 @@ function AgentBuildForm({
       system_prompt: systemPrompt.trim() || undefined,
       user_prompt_template: userPromptTemplate.trim() || undefined,
       opener: opener.trim() || undefined,
-      suggested_questions: suggestedQuestions.length ? suggestedQuestions : undefined,
+      suggested_questions: suggestedQuestions.length
+        ? suggestedQuestions
+        : undefined,
       knowledge_base_ids: nextKnowledgeBaseIds,
       tool_names: toolNames.length ? toolNames : undefined,
       skill_names: agent.kind === "swarm" ? [] : skillNames,
       workflow_ids: agent.kind === "swarm" ? [] : workflowIds,
-      default_workflow_id: agent.kind === "swarm" ? undefined : (defaultWorkflowId || undefined),
+      default_workflow_id:
+        agent.kind === "swarm" ? undefined : defaultWorkflowId || undefined,
       model_name: modelName || undefined,
       memory_enabled: memoryEnabled,
       visibility,
-      kind: (agent.kind ?? "dedicated") as "dedicated" | "swarm",
-      member_dedicated_ids: agent.kind === "swarm" ? memberDedicatedIds : undefined,
+      kind: agent.kind ?? "dedicated",
+      member_dedicated_ids:
+        agent.kind === "swarm" ? memberDedicatedIds : undefined,
       avatar: avatar.trim() || undefined,
     });
   };
@@ -1155,19 +1283,23 @@ function AgentBuildForm({
 
   const toggleKnowledge = (uri: string) => {
     const id = uri.replace("rag://dataset/", "") || uri;
-    setKnowledgeBaseIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setKnowledgeBaseIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   };
 
   const toggleSkill = (name: string) => {
     setSkillNames((prev) => {
-      const next = prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name];
+      const next = prev.includes(name)
+        ? prev.filter((x) => x !== name)
+        : [...prev, name];
       const mergedTools = Array.from(
         new Set(
           next.flatMap((sn) => {
             const tools = skillToolMap[sn] ?? [];
             return Array.isArray(tools) ? tools : [];
-          })
-        )
+          }),
+        ),
       );
       // B 模式：取消 skill 时重新计算“已选技能工具合集”，避免交叉技能共用工具被误删。
       setToolNames(mergedTools);
@@ -1178,14 +1310,20 @@ function AgentBuildForm({
   const toggleTool = (toolName: string) => {
     const t = toolName.trim();
     if (!t) return;
-    setToolNames((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+    setToolNames((prev) =>
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t],
+    );
   };
 
   const toggleWorkflow = (id: string) => {
-    setWorkflowIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setWorkflowIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   };
   const toggleMember = (id: string) => {
-    setMemberDedicatedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setMemberDedicatedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   };
 
   useEffect(() => {
@@ -1200,10 +1338,25 @@ function AgentBuildForm({
       model_name: modelName || undefined,
       memory_enabled: memoryEnabled,
       visibility,
-      kind: (agent.kind ?? "dedicated") as "dedicated" | "swarm",
-      member_dedicated_ids: agent.kind === "swarm" ? memberDedicatedIds : undefined,
+      kind: agent.kind ?? "dedicated",
+      member_dedicated_ids:
+        agent.kind === "swarm" ? memberDedicatedIds : undefined,
     });
-  }, [systemPrompt, opener, knowledgeBaseIds, toolNames, skillNames, workflowIds, modelName, memoryEnabled, visibility, agent.kind, memberDedicatedIds, onSnapshotChange, sanitizeKnowledgeBaseIds]);
+  }, [
+    systemPrompt,
+    opener,
+    knowledgeBaseIds,
+    toolNames,
+    skillNames,
+    workflowIds,
+    modelName,
+    memoryEnabled,
+    visibility,
+    agent.kind,
+    memberDedicatedIds,
+    onSnapshotChange,
+    sanitizeKnowledgeBaseIds,
+  ]);
 
   const applyAutoGenerateConfig = useCallback(async () => {
     if (!agent.id) return;
@@ -1217,8 +1370,8 @@ function AgentBuildForm({
           nextSkillNames.flatMap((sn) => {
             const tools = skillToolMap[sn] ?? [];
             return Array.isArray(tools) ? tools : [];
-          })
-        )
+          }),
+        ),
       );
       const supplementPrompt = (result.supplement_prompt || "").trim();
       if (!supplementPrompt) return;
@@ -1241,28 +1394,40 @@ function AgentBuildForm({
   // 编排页布局：左 提示词 | 中 配置 | 右 调试与预览（与 agentic_workflow 一致）
   if (layout === "orchestration") {
     const filteredResources = knowledgeSearchQuery.trim()
-      ? displayResources.filter((r) => (r.title || r.uri).toLowerCase().includes(knowledgeSearchQuery.toLowerCase()))
+      ? displayResources.filter((r) =>
+          (r.title || r.uri)
+            .toLowerCase()
+            .includes(knowledgeSearchQuery.toLowerCase()),
+        )
       : displayResources;
     const groupKeys = skillGroups.map((g) => g.groupKey);
     const baseSkills =
       skillGroupFilter === "all"
         ? displaySkills
-        : displaySkills.filter((s) => ((s.group && s.group.trim()) || s.category) === skillGroupFilter);
+        : displaySkills.filter(
+            (s) => (s.group?.trim() || s.category) === skillGroupFilter,
+          );
     const filteredSkills = skillSearchQuery.trim()
-      ? baseSkills.filter((s) => (s.name + " " + (s.description || "")).toLowerCase().includes(skillSearchQuery.toLowerCase()))
+      ? baseSkills.filter((s) =>
+          (s.name + " " + (s.description || ""))
+            .toLowerCase()
+            .includes(skillSearchQuery.toLowerCase()),
+        )
       : baseSkills;
     const filteredWorkflows = workflowSearchQuery.trim()
-      ? workflows.filter((w) => w.name.toLowerCase().includes(workflowSearchQuery.toLowerCase()))
+      ? workflows.filter((w) =>
+          w.name.toLowerCase().includes(workflowSearchQuery.toLowerCase()),
+        )
       : workflows;
 
     return (
-      <form onSubmit={handleSubmit} className="flex flex-1 min-h-0 flex-col">
-        <div className="flex flex-1 min-h-0 overflow-hidden bg-slate-100/80 dark:bg-slate-800/50 gap-3 p-3">
-          <div className="flex flex-1 flex-col min-w-0 min-h-0">
-            <div className="shrink-0 flex items-center justify-end bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-t-xl px-4 py-2.5 border-b border-slate-200/80 dark:border-slate-700">
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 gap-3 overflow-hidden bg-slate-100/80 p-3 dark:bg-slate-800/50">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="flex shrink-0 items-center justify-end rounded-t-xl border border-b border-slate-200 border-slate-200/80 bg-white px-4 py-2.5 dark:border-slate-600 dark:border-slate-700 dark:bg-slate-900">
               <button
                 type="button"
-                className="flex items-center gap-1.5 text-sm font-medium hover:opacity-90 transition-opacity"
+                className="flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-90"
                 onClick={() => {
                   if (!canManage) return;
                   void applyAutoGenerateConfig();
@@ -1272,15 +1437,23 @@ function AgentBuildForm({
                 {autoGenerating ? (
                   <>
                     <Loader2 className="h-4 w-4 shrink-0 animate-spin text-sky-500 dark:text-sky-400" />
-                    <span className="text-sky-500 dark:text-sky-400">生成中...</span>
+                    <span className="text-sky-500 dark:text-sky-400">
+                      生成中...
+                    </span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-4 w-4 text-sky-400 shrink-0" />
+                    <Sparkles className="h-4 w-4 shrink-0 text-sky-400" />
                     <span className="inline-flex items-baseline gap-0.5">
-                      <span className="bg-gradient-to-r from-indigo-500 to-purple-600 dark:from-indigo-400 dark:to-purple-500 bg-clip-text text-transparent">AI</span>
-                      <span className="text-sky-500 dark:text-sky-400">一键生成</span>
-                      <span className="bg-gradient-to-r from-indigo-500 to-purple-600 dark:from-indigo-400 dark:to-purple-500 bg-clip-text text-transparent">配置</span>
+                      <span className="bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent dark:from-indigo-400 dark:to-purple-500">
+                        AI
+                      </span>
+                      <span className="text-sky-500 dark:text-sky-400">
+                        一键生成
+                      </span>
+                      <span className="bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent dark:from-indigo-400 dark:to-purple-500">
+                        配置
+                      </span>
                     </span>
                   </>
                 )}
@@ -1294,13 +1467,19 @@ function AgentBuildForm({
                 一键生成失败：{autoGenerateError}
               </div>
             ) : null}
-            <div className="flex flex-1 min-h-0 gap-3 pt-0">
+            <div className="flex min-h-0 flex-1 gap-3 pt-0">
               {/* 左栏：提示词（单块富文本编辑，# 角色、## 目标 等在编辑框内即加粗加大换色） */}
-              <aside className="w-[520px] shrink-0 flex flex-col overflow-hidden rounded-b-xl rounded-t-none border border-t-0 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 shadow-sm">
-                <div className="flex-1 flex flex-col min-h-0 px-4 py-3 overflow-y-auto">
-                  <Label className="text-sm font-medium text-[#2d9c8c] dark:text-teal-400 mb-2">提示词 ①</Label>
+              <aside className="flex w-[520px] shrink-0 flex-col overflow-hidden rounded-t-none rounded-b-xl border border-t-0 border-slate-200 bg-white shadow-sm dark:border-slate-600 dark:bg-slate-900">
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-3">
+                  <Label className="mb-2 text-sm font-medium text-[#2d9c8c] dark:text-teal-400">
+                    提示词 ①
+                  </Label>
                   <PromptRichEditor
-                    value={systemPrompt?.trim() ? systemPrompt : defaultPromptTemplate}
+                    value={
+                      systemPrompt?.trim()
+                        ? systemPrompt
+                        : defaultPromptTemplate
+                    }
                     onChange={setSystemPrompt}
                     placeholder="描述角色、目标、技能与流程、输出格式、限制。使用 # 角色、## 目标 等，会显示为有色加粗加大。"
                     minHeight="280px"
@@ -1309,16 +1488,18 @@ function AgentBuildForm({
               </aside>
 
               {/* 中栏：配置 */}
-              <main className="flex-1 min-w-0 flex flex-col overflow-hidden rounded-b-xl rounded-t-none border border-t-0 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 shadow-sm">
+              <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-t-none rounded-b-xl border border-t-0 border-slate-200 bg-white shadow-sm dark:border-slate-600 dark:bg-slate-900">
                 <div className="flex-1 overflow-y-auto px-5 py-4">
-                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">配置</h2>
+                  <h2 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-100">
+                    配置
+                  </h2>
                   <div className="space-y-5">
                     <div>
                       <Label className="text-sm font-medium">模型</Label>
                       <select
                         value={modelName}
                         onChange={(e) => setModelName(e.target.value)}
-                        className="w-full mt-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800"
+                        className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800"
                       >
                         <option value="">未选择</option>
                         {models.map((m) => (
@@ -1328,19 +1509,26 @@ function AgentBuildForm({
                         ))}
                       </select>
                     </div>
-                    <div className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-2">
+                    <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-600">
                       <div>
                         <Label className="text-sm font-medium">开启记忆</Label>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">关闭后该 Agent 不再注入和更新记忆</p>
+                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                          关闭后该 Agent 不再注入和更新记忆
+                        </p>
                       </div>
-                      <Switch checked={memoryEnabled} onCheckedChange={setMemoryEnabled} />
+                      <Switch
+                        checked={memoryEnabled}
+                        onCheckedChange={setMemoryEnabled}
+                      />
                     </div>
                     <div>
                       <Label className="text-sm font-medium">可见性</Label>
                       <select
                         value={visibility}
-                        onChange={(e) => setVisibility(e.target.value as "user" | "org")}
-                        className="w-full mt-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800"
+                        onChange={(e) =>
+                          setVisibility(e.target.value as "user" | "org")
+                        }
+                        className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800"
                       >
                         <option value="user">私有（仅自己）</option>
                         <option value="org">公有（组织内）</option>
@@ -1353,42 +1541,57 @@ function AgentBuildForm({
                         onChange={(e) => setOpener(e.target.value)}
                         placeholder="对话开始时展示"
                         rows={3}
-                        className="mt-1.5 text-sm border-slate-200 dark:border-slate-600 rounded-lg resize-y"
+                        className="mt-1.5 resize-y rounded-lg border-slate-200 text-sm dark:border-slate-600"
                       />
                     </div>
                     <div>
                       <Label className="text-sm font-medium">知识库</Label>
                       <div className="relative mt-1.5">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
                         <Input
                           placeholder="搜索知识库..."
                           value={knowledgeSearchQuery}
-                          onChange={(e) => setKnowledgeSearchQuery(e.target.value)}
-                          className="pl-9 rounded-lg h-9"
+                          onChange={(e) =>
+                            setKnowledgeSearchQuery(e.target.value)
+                          }
+                          className="h-9 rounded-lg pl-9"
                         />
                       </div>
-                      <ScrollArea className="h-[160px] rounded-lg border border-slate-200 dark:border-slate-600 mt-2 p-2">
+                      <ScrollArea className="mt-2 h-[160px] rounded-lg border border-slate-200 p-2 dark:border-slate-600">
                         <div className="space-y-1">
                           {displayResources.length === 0 ? (
-                            <p className="text-sm text-slate-500 dark:text-slate-400 py-4 text-center">暂无知识库资源</p>
+                            <p className="py-4 text-center text-sm text-slate-500 dark:text-slate-400">
+                              暂无知识库资源
+                            </p>
                           ) : filteredResources.length === 0 ? (
-                            <p className="text-sm text-slate-500 dark:text-slate-400 py-4 text-center">没有找到匹配</p>
+                            <p className="py-4 text-center text-sm text-slate-500 dark:text-slate-400">
+                              没有找到匹配
+                            </p>
                           ) : (
                             filteredResources.map((r) => {
-                              const id = r.uri.replace("rag://dataset/", "") || r.uri;
+                              const id =
+                                r.uri.replace("rag://dataset/", "") || r.uri;
                               const checked = knowledgeBaseIds.includes(id);
                               return (
                                 <label
                                   key={r.uri}
                                   className={cn(
-                                    "flex items-start gap-3 p-2 rounded-md cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors",
-                                    checked && "bg-slate-100 dark:bg-slate-800"
+                                    "flex cursor-pointer items-start gap-3 rounded-md p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/80",
+                                    checked && "bg-slate-100 dark:bg-slate-800",
                                   )}
                                 >
-                                  <Checkbox checked={checked} onCheckedChange={() => toggleKnowledge(r.uri)} className="mt-0.5" />
-                                  <div className="flex-1 min-w-0 flex items-center gap-2">
-                                    <BookOpen className="h-4 w-4 text-slate-500 shrink-0" />
-                                    <span className="text-sm truncate">{r.title || r.uri}</span>
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={() =>
+                                      toggleKnowledge(r.uri)
+                                    }
+                                    className="mt-0.5"
+                                  />
+                                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                                    <BookOpen className="h-4 w-4 shrink-0 text-slate-500" />
+                                    <span className="truncate text-sm">
+                                      {r.title || r.uri}
+                                    </span>
                                   </div>
                                 </label>
                               );
@@ -1399,28 +1602,39 @@ function AgentBuildForm({
                     </div>
                     {agent.kind === "swarm" ? (
                       <div>
-                        <Label className="text-sm font-medium">子专用智能体</Label>
-                        <ScrollArea className="h-[220px] rounded-lg border border-slate-200 dark:border-slate-600 mt-2 p-2">
+                        <Label className="text-sm font-medium">
+                          子专用智能体
+                        </Label>
+                        <ScrollArea className="mt-2 h-[220px] rounded-lg border border-slate-200 p-2 dark:border-slate-600">
                           <div className="space-y-1">
                             {dedicatedOptions.length === 0 ? (
-                              <p className="text-sm text-slate-500 dark:text-slate-400 py-4 text-center">
+                              <p className="py-4 text-center text-sm text-slate-500 dark:text-slate-400">
                                 暂无可选专用智能体
                               </p>
                             ) : (
                               dedicatedOptions.map((d) => {
-                                const checked = memberDedicatedIds.includes(d.id);
+                                const checked = memberDedicatedIds.includes(
+                                  d.id,
+                                );
                                 return (
                                   <label
                                     key={d.id}
                                     className={cn(
-                                      "flex items-start gap-3 p-2 rounded-md cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors",
-                                      checked && "bg-slate-100 dark:bg-slate-800",
+                                      "flex cursor-pointer items-start gap-3 rounded-md p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/80",
+                                      checked &&
+                                        "bg-slate-100 dark:bg-slate-800",
                                     )}
                                   >
-                                    <Checkbox checked={checked} onCheckedChange={() => toggleMember(d.id)} className="mt-0.5" />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-medium truncate">{d.name}</div>
-                                      <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                    <Checkbox
+                                      checked={checked}
+                                      onCheckedChange={() => toggleMember(d.id)}
+                                      className="mt-0.5"
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="truncate text-sm font-medium">
+                                        {d.name}
+                                      </div>
+                                      <div className="truncate text-xs text-slate-500 dark:text-slate-400">
                                         {d.description || "暂无描述"}
                                       </div>
                                     </div>
@@ -1434,150 +1648,199 @@ function AgentBuildForm({
                     ) : (
                       <div>
                         <Label className="text-sm font-medium">技能</Label>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">大类</span>
-                        <select
-                          value={skillGroupFilter}
-                          onChange={(e) => setSkillGroupFilter(e.target.value)}
-                          className="text-xs border border-slate-200 dark:border-slate-600 rounded-md px-2 py-1 bg-white dark:bg-slate-800"
-                        >
-                          <option value="all">全部</option>
-                          {groupKeys.map((g) => (
-                            <option key={g} value={g}>
-                              {g}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="relative mt-2">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                        <Input
-                          placeholder="搜索技能..."
-                          value={skillSearchQuery}
-                          onChange={(e) => setSkillSearchQuery(e.target.value)}
-                          className="pl-9 rounded-lg h-9"
-                        />
-                      </div>
-                      <ScrollArea className="h-[320px] rounded-lg border border-slate-200 dark:border-slate-600 mt-2 p-2">
-                        <div className="space-y-1">
-                          {filteredSkills.length === 0 ? (
-                            <p className="text-sm text-slate-500 dark:text-slate-400 py-4 text-center">
-                              {skillSearchQuery ? "没有找到匹配的技能" : "没有可用技能"}
-                            </p>
-                          ) : (
-                            filteredSkills.map((s) => {
-                              const isSelected = skillNames.includes(s.name);
-                              const tools = (s.tool_names ?? []).filter((x): x is string => typeof x === "string" && x.trim().length > 0);
-                              const isExpanded = !!expandedSkills[s.name];
-                              return (
-                                <div
-                                  key={s.name}
-                                  className={cn(
-                                    "rounded-md cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors",
-                                    isSelected && "bg-slate-100 dark:bg-slate-800"
-                                  )}
-                                >
-                                  <div className="flex items-start gap-3 p-2">
-                                    <Checkbox checked={isSelected} onCheckedChange={() => toggleSkill(s.name)} className="mt-0.5" />
-                                    <button
-                                      type="button"
-                                      className="flex-1 min-w-0 text-left"
-                                      onClick={() => (tools.length ? toggleExpandedSkill(s.name) : undefined)}
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        {tools.length ? (
-                                          isExpanded ? (
-                                            <ChevronDown className="h-4 w-4 text-slate-500 shrink-0" />
-                                          ) : (
-                                            <ChevronRight className="h-4 w-4 text-slate-500 shrink-0" />
-                                          )
-                                        ) : (
-                                          <Sparkles className="h-4 w-4 text-slate-500 shrink-0" />
-                                        )}
-                                        <span className="font-medium text-sm truncate">{s.name}</span>
-                                        {tools.length ? (
-                                          <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">
-                                            {tools.length} 工具
-                                          </span>
-                                        ) : null}
-                                      </div>
-                                      {s.description && (
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{s.description}</p>
-                                      )}
-                                    </button>
-                                  </div>
-
-                                  {tools.length && isExpanded ? (
-                                    <div className="pb-2 pl-9 pr-2">
-                                      <div className="space-y-1">
-                                        {tools.map((t) => {
-                                          const checked = toolNames.includes(t);
-                                          return (
-                                            <label
-                                              key={t}
-                                              className={cn(
-                                                "flex items-center gap-2 rounded-md px-2 py-1 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors",
-                                                checked && "bg-slate-50 dark:bg-slate-800"
-                                              )}
-                                            >
-                                              <Checkbox checked={checked} onCheckedChange={() => toggleTool(t)} />
-                                              <span className="text-xs text-slate-700 dark:text-slate-200">{t}</span>
-                                            </label>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  ) : null}
-                                </div>
-                              );
-                            })
-                          )}
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            大类
+                          </span>
+                          <select
+                            value={skillGroupFilter}
+                            onChange={(e) =>
+                              setSkillGroupFilter(e.target.value)
+                            }
+                            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-800"
+                          >
+                            <option value="all">全部</option>
+                            {groupKeys.map((g) => (
+                              <option key={g} value={g}>
+                                {g}
+                              </option>
+                            ))}
+                          </select>
                         </div>
-                      </ScrollArea>
+                        <div className="relative mt-2">
+                          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                          <Input
+                            placeholder="搜索技能..."
+                            value={skillSearchQuery}
+                            onChange={(e) =>
+                              setSkillSearchQuery(e.target.value)
+                            }
+                            className="h-9 rounded-lg pl-9"
+                          />
+                        </div>
+                        <ScrollArea className="mt-2 h-[320px] rounded-lg border border-slate-200 p-2 dark:border-slate-600">
+                          <div className="space-y-1">
+                            {filteredSkills.length === 0 ? (
+                              <p className="py-4 text-center text-sm text-slate-500 dark:text-slate-400">
+                                {skillSearchQuery
+                                  ? "没有找到匹配的技能"
+                                  : "没有可用技能"}
+                              </p>
+                            ) : (
+                              filteredSkills.map((s) => {
+                                const isSelected = skillNames.includes(s.name);
+                                const tools = (s.tool_names ?? []).filter(
+                                  (x): x is string =>
+                                    typeof x === "string" &&
+                                    x.trim().length > 0,
+                                );
+                                const isExpanded = !!expandedSkills[s.name];
+                                return (
+                                  <div
+                                    key={s.name}
+                                    className={cn(
+                                      "cursor-pointer rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/80",
+                                      isSelected &&
+                                        "bg-slate-100 dark:bg-slate-800",
+                                    )}
+                                  >
+                                    <div className="flex items-start gap-3 p-2">
+                                      <Checkbox
+                                        checked={isSelected}
+                                        onCheckedChange={() =>
+                                          toggleSkill(s.name)
+                                        }
+                                        className="mt-0.5"
+                                      />
+                                      <button
+                                        type="button"
+                                        className="min-w-0 flex-1 text-left"
+                                        onClick={() =>
+                                          tools.length
+                                            ? toggleExpandedSkill(s.name)
+                                            : undefined
+                                        }
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          {tools.length ? (
+                                            isExpanded ? (
+                                              <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+                                            ) : (
+                                              <ChevronRight className="h-4 w-4 shrink-0 text-slate-500" />
+                                            )
+                                          ) : (
+                                            <Sparkles className="h-4 w-4 shrink-0 text-slate-500" />
+                                          )}
+                                          <span className="truncate text-sm font-medium">
+                                            {s.name}
+                                          </span>
+                                          {tools.length ? (
+                                            <span className="shrink-0 text-[11px] text-slate-500 dark:text-slate-400">
+                                              {tools.length} 工具
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                        {s.description && (
+                                          <p className="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">
+                                            {s.description}
+                                          </p>
+                                        )}
+                                      </button>
+                                    </div>
+
+                                    {tools.length && isExpanded ? (
+                                      <div className="pr-2 pb-2 pl-9">
+                                        <div className="space-y-1">
+                                          {tools.map((t) => {
+                                            const checked =
+                                              toolNames.includes(t);
+                                            return (
+                                              <label
+                                                key={t}
+                                                className={cn(
+                                                  "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60",
+                                                  checked &&
+                                                    "bg-slate-50 dark:bg-slate-800",
+                                                )}
+                                              >
+                                                <Checkbox
+                                                  checked={checked}
+                                                  onCheckedChange={() =>
+                                                    toggleTool(t)
+                                                  }
+                                                />
+                                                <span className="text-xs text-slate-700 dark:text-slate-200">
+                                                  {t}
+                                                </span>
+                                              </label>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </ScrollArea>
                       </div>
                     )}
 
                     {agent.kind !== "swarm" && (
-                    <div>
-                      <Label className="text-sm font-medium">工作流</Label>
-                      <div className="relative mt-1.5">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                        <Input
-                          placeholder="搜索工作流..."
-                          value={workflowSearchQuery}
-                          onChange={(e) => setWorkflowSearchQuery(e.target.value)}
-                          className="pl-9 rounded-lg h-9"
-                        />
-                      </div>
-                      <ScrollArea className="h-[160px] rounded-lg border border-slate-200 dark:border-slate-600 mt-2 p-2">
-                        <div className="space-y-1">
-                          {filteredWorkflows.length === 0 ? (
-                            <p className="text-sm text-slate-500 dark:text-slate-400 py-4 text-center">
-                              {workflowSearchQuery ? "没有找到匹配的工作流" : "没有可用工作流"}
-                            </p>
-                          ) : (
-                            filteredWorkflows.map((w) => {
-                              const isSelected = workflowIds.includes(w.id);
-                              return (
-                                <label
-                                  key={w.id}
-                                  className={cn(
-                                    "flex items-start gap-3 p-2 rounded-md cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors",
-                                    isSelected && "bg-slate-100 dark:bg-slate-800"
-                                  )}
-                                >
-                                  <Checkbox checked={isSelected} onCheckedChange={() => toggleWorkflow(w.id)} className="mt-0.5" />
-                                  <div className="flex-1 min-w-0 flex items-center gap-2">
-                                    <GitBranch className="h-4 w-4 text-slate-500 shrink-0" />
-                                    <span className="text-sm truncate">{w.name}</span>
-                                  </div>
-                                </label>
-                              );
-                            })
-                          )}
+                      <div>
+                        <Label className="text-sm font-medium">工作流</Label>
+                        <div className="relative mt-1.5">
+                          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                          <Input
+                            placeholder="搜索工作流..."
+                            value={workflowSearchQuery}
+                            onChange={(e) =>
+                              setWorkflowSearchQuery(e.target.value)
+                            }
+                            className="h-9 rounded-lg pl-9"
+                          />
                         </div>
-                      </ScrollArea>
-                    </div>
+                        <ScrollArea className="mt-2 h-[160px] rounded-lg border border-slate-200 p-2 dark:border-slate-600">
+                          <div className="space-y-1">
+                            {filteredWorkflows.length === 0 ? (
+                              <p className="py-4 text-center text-sm text-slate-500 dark:text-slate-400">
+                                {workflowSearchQuery
+                                  ? "没有找到匹配的工作流"
+                                  : "没有可用工作流"}
+                              </p>
+                            ) : (
+                              filteredWorkflows.map((w) => {
+                                const isSelected = workflowIds.includes(w.id);
+                                return (
+                                  <label
+                                    key={w.id}
+                                    className={cn(
+                                      "flex cursor-pointer items-start gap-3 rounded-md p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/80",
+                                      isSelected &&
+                                        "bg-slate-100 dark:bg-slate-800",
+                                    )}
+                                  >
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={() =>
+                                        toggleWorkflow(w.id)
+                                      }
+                                      className="mt-0.5"
+                                    />
+                                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                                      <GitBranch className="h-4 w-4 shrink-0 text-slate-500" />
+                                      <span className="truncate text-sm">
+                                        {w.name}
+                                      </span>
+                                    </div>
+                                  </label>
+                                );
+                              })
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1591,8 +1854,11 @@ function AgentBuildForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-1 min-h-0 flex-col px-6 py-4 gap-4">
-      <Tabs defaultValue="prompt" className="w-full flex-1 flex flex-col">
+    <form
+      onSubmit={handleSubmit}
+      className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-4"
+    >
+      <Tabs defaultValue="prompt" className="flex w-full flex-1 flex-col">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="prompt">提示词</TabsTrigger>
           <TabsTrigger value="basic">基本信息</TabsTrigger>
@@ -1602,7 +1868,10 @@ function AgentBuildForm({
           <TabsTrigger value="model">模型</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="prompt" className="space-y-4 pt-4 flex-1 overflow-y-auto">
+        <TabsContent
+          value="prompt"
+          className="flex-1 space-y-4 overflow-y-auto pt-4"
+        >
           <div>
             <Label className="text-base font-medium">角色提示词</Label>
             <Textarea
@@ -1610,7 +1879,7 @@ function AgentBuildForm({
               onChange={(e) => setSystemPrompt(e.target.value)}
               placeholder="描述这个智能体的角色、目标、流程与限制"
               rows={6}
-              className="font-mono text-sm mt-1"
+              className="mt-1 font-mono text-sm"
             />
           </div>
           <div>
@@ -1620,7 +1889,7 @@ function AgentBuildForm({
               onChange={(e) => setUserPromptTemplate(e.target.value)}
               placeholder="在每次对话前附加的提示词模板，可使用 {{变量名}}"
               rows={3}
-              className="font-mono text-sm mt-1"
+              className="mt-1 font-mono text-sm"
             />
           </div>
           <div>
@@ -1635,12 +1904,14 @@ function AgentBuildForm({
           </div>
           <div>
             <Label>建议的下一步问题</Label>
-            <div className="flex gap-2 mb-2 mt-1">
+            <div className="mt-1 mb-2 flex gap-2">
               <Input
                 value={suggestedInput}
                 onChange={(e) => setSuggestedInput(e.target.value)}
                 placeholder="输入后按回车或点击添加"
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addSuggested())}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && (e.preventDefault(), addSuggested())
+                }
               />
               <Button type="button" variant="outline" onClick={addSuggested}>
                 添加
@@ -1650,7 +1921,7 @@ function AgentBuildForm({
               {suggestedQuestions.map((q, i) => (
                 <span
                   key={i}
-                  className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-sm"
+                  className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-sm dark:bg-slate-800"
                 >
                   {q}
                   <button
@@ -1666,7 +1937,10 @@ function AgentBuildForm({
           </div>
         </TabsContent>
 
-        <TabsContent value="basic" className="space-y-4 pt-4 flex-1 overflow-y-auto">
+        <TabsContent
+          value="basic"
+          className="flex-1 space-y-4 overflow-y-auto pt-4"
+        >
           <div>
             <Label>名称 *</Label>
             <Input
@@ -1701,7 +1975,7 @@ function AgentBuildForm({
             <select
               value={visibility}
               onChange={(e) => setVisibility(e.target.value as "user" | "org")}
-              className="w-full border rounded-md px-3 py-2 bg-white dark:bg-slate-800 mt-1 text-sm border-slate-200 dark:border-slate-600"
+              className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800"
             >
               <option value="user">私有（仅自己）</option>
               <option value="org">公有（组织内）</option>
@@ -1709,9 +1983,12 @@ function AgentBuildForm({
           </div>
         </TabsContent>
 
-        <TabsContent value="knowledge" className="space-y-2 pt-4 flex-1 overflow-y-auto">
+        <TabsContent
+          value="knowledge"
+          className="flex-1 space-y-2 overflow-y-auto pt-4"
+        >
           <Label>关联知识库（多选）</Label>
-          <ScrollArea className="max-h-64 rounded-md border p-2 space-y-1 mt-1">
+          <ScrollArea className="mt-1 max-h-64 space-y-1 rounded-md border p-2">
             {displayResources.length === 0 ? (
               <p className="text-sm text-slate-500">暂无知识库资源</p>
             ) : (
@@ -1719,8 +1996,14 @@ function AgentBuildForm({
                 const id = r.uri.replace("rag://dataset/", "") || r.uri;
                 const checked = knowledgeBaseIds.includes(id);
                 return (
-                  <label key={r.uri} className="flex items-center gap-2 cursor-pointer text-sm">
-                    <Checkbox checked={checked} onCheckedChange={() => toggleKnowledge(r.uri)} />
+                  <label
+                    key={r.uri}
+                    className="flex cursor-pointer items-center gap-2 text-sm"
+                  >
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggleKnowledge(r.uri)}
+                    />
                     <span className="truncate">{r.title || r.uri}</span>
                   </label>
                 );
@@ -1729,18 +2012,21 @@ function AgentBuildForm({
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="skills" className="space-y-2 pt-4 flex-1 overflow-y-auto">
+        <TabsContent
+          value="skills"
+          className="flex-1 space-y-2 overflow-y-auto pt-4"
+        >
           <Label>可用技能（多选）</Label>
           <div className="relative mt-1.5">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
               placeholder="搜索技能..."
-              className="pl-9 rounded-lg h-9"
+              className="h-9 rounded-lg pl-9"
               value={skillSearchQuery}
               onChange={(e) => setSkillSearchQuery(e.target.value)}
             />
           </div>
-          <ScrollArea className="max-h-[320px] rounded-md border p-2 space-y-1 mt-2">
+          <ScrollArea className="mt-2 max-h-[320px] space-y-1 rounded-md border p-2">
             {skillGroups.length === 0 ? (
               <p className="text-sm text-slate-500">没有可用技能</p>
             ) : (
@@ -1748,19 +2034,29 @@ function AgentBuildForm({
                 const filtered = items.filter(
                   (s) =>
                     !skillSearchQuery.trim() ||
-                    (s.name + " " + (s.description || "")).toLowerCase().includes(skillSearchQuery.toLowerCase())
+                    (s.name + " " + (s.description || ""))
+                      .toLowerCase()
+                      .includes(skillSearchQuery.toLowerCase()),
                 );
                 if (filtered.length === 0) return null;
                 return (
                   <div key={groupKey} className="mb-3">
-                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">{label}</div>
+                    <div className="mb-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+                      {label}
+                    </div>
                     <div className="space-y-1">
                       {filtered.map((s) => {
                         const isSelected = skillNames.includes(s.name);
                         return (
-                          <label key={s.name} className="flex items-center gap-2 cursor-pointer text-sm">
-                            <Checkbox checked={isSelected} onCheckedChange={() => toggleSkill(s.name)} />
-                            <Sparkles className="h-4 w-4 text-slate-500 shrink-0" />
+                          <label
+                            key={s.name}
+                            className="flex cursor-pointer items-center gap-2 text-sm"
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleSkill(s.name)}
+                            />
+                            <Sparkles className="h-4 w-4 shrink-0 text-slate-500" />
                             <span className="truncate">{s.name}</span>
                           </label>
                         );
@@ -1773,17 +2069,26 @@ function AgentBuildForm({
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="workflow" className="space-y-4 pt-4 flex-1 overflow-y-auto">
+        <TabsContent
+          value="workflow"
+          className="flex-1 space-y-4 overflow-y-auto pt-4"
+        >
           <Label>关联工作流（多选）</Label>
-          <ScrollArea className="max-h-64 rounded-md border p-2 space-y-1 mt-1">
+          <ScrollArea className="mt-1 max-h-64 space-y-1 rounded-md border p-2">
             {workflows.length === 0 ? (
               <p className="text-sm text-slate-500">没有可用工作流</p>
             ) : (
               workflows.map((w) => {
                 const isSelected = workflowIds.includes(w.id);
                 return (
-                  <label key={w.id} className="flex items-center gap-2 cursor-pointer text-sm">
-                    <Checkbox checked={isSelected} onCheckedChange={() => toggleWorkflow(w.id)} />
+                  <label
+                    key={w.id}
+                    className="flex cursor-pointer items-center gap-2 text-sm"
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleWorkflow(w.id)}
+                    />
                     <GitBranch className="h-4 w-4 text-slate-500" />
                     <span className="truncate">{w.name}</span>
                   </label>
@@ -1796,7 +2101,7 @@ function AgentBuildForm({
             <select
               value={defaultWorkflowId}
               onChange={(e) => setDefaultWorkflowId(e.target.value)}
-              className="w-full border rounded-md px-3 py-2 bg-white dark:bg-slate-800 mt-1 text-sm"
+              className="mt-1 w-full rounded-md border bg-white px-3 py-2 text-sm dark:bg-slate-800"
             >
               <option value="">无</option>
               {workflows
@@ -1810,13 +2115,16 @@ function AgentBuildForm({
           </div>
         </TabsContent>
 
-        <TabsContent value="model" className="space-y-4 pt-4 flex-1 overflow-y-auto">
+        <TabsContent
+          value="model"
+          className="flex-1 space-y-4 overflow-y-auto pt-4"
+        >
           <Label>模型</Label>
           {models.length > 0 ? (
             <select
               value={modelName}
               onChange={(e) => setModelName(e.target.value)}
-              className="w-full border rounded-md px-3 py-2 bg-white dark:bg-slate-800 mt-1 text-sm border-slate-200 dark:border-slate-600"
+              className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800"
             >
               <option value="">未选择</option>
               {models.map((m) => (
@@ -1833,12 +2141,17 @@ function AgentBuildForm({
               className="mt-1"
             />
           )}
-          <div className="flex items-center justify-between rounded-md border border-slate-200 dark:border-slate-600 px-3 py-2">
+          <div className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 dark:border-slate-600">
             <div>
               <Label>开启记忆</Label>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">关闭后该 Agent 不再注入和更新记忆</p>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                关闭后该 Agent 不再注入和更新记忆
+              </p>
             </div>
-            <Switch checked={memoryEnabled} onCheckedChange={setMemoryEnabled} />
+            <Switch
+              checked={memoryEnabled}
+              onCheckedChange={setMemoryEnabled}
+            />
           </div>
         </TabsContent>
       </Tabs>
@@ -1857,7 +2170,7 @@ function AgentBuildForm({
             className="text-red-600 hover:text-red-700"
             onClick={onDelete}
           >
-            <Trash2 className="h-4 w-4 mr-1" />
+            <Trash2 className="mr-1 h-4 w-4" />
             删除
           </Button>
         )}
@@ -1865,4 +2178,3 @@ function AgentBuildForm({
     </form>
   );
 }
-

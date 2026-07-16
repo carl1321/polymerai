@@ -3,21 +3,25 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { BookOpen, Loader2, Search } from "lucide-react";
-import { loadSkills } from "~/core/skills/api";
-import type { Skill } from "~/core/skills/type";
+import { useCallback, useEffect, useState } from "react";
+
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { loadSkills } from "~/core/skills/api";
+import type { Skill } from "~/core/skills/type";
 
 interface SkillWhitelistSelectorProps {
   value?: string[] | null;
   onChange: (skills: string[] | null) => void;
 }
 
-export function SkillWhitelistSelector({ value, onChange }: SkillWhitelistSelectorProps) {
+export function SkillWhitelistSelector({
+  value,
+  onChange,
+}: SkillWhitelistSelectorProps) {
   const selected = value ?? [];
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(false);
@@ -49,14 +53,14 @@ export function SkillWhitelistSelector({ value, onChange }: SkillWhitelistSelect
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <BookOpen className="h-4 w-4 text-muted-foreground" />
+        <BookOpen className="text-muted-foreground h-4 w-4" />
         <Label>技能白名单</Label>
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         勾选后仅注入对应 SKILL.md；不选任何项表示不注入技能文档。
       </p>
       <div className="relative">
-        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Search className="text-muted-foreground absolute top-2.5 left-2 h-4 w-4" />
         <Input
           placeholder="搜索技能…"
           value={searchQuery}
@@ -65,7 +69,7 @@ export function SkillWhitelistSelector({ value, onChange }: SkillWhitelistSelect
         />
       </div>
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+        <div className="text-muted-foreground flex items-center gap-2 py-4 text-sm">
           <Loader2 className="h-4 w-4 animate-spin" />
           加载技能库…
         </div>
@@ -81,17 +85,25 @@ export function SkillWhitelistSelector({ value, onChange }: SkillWhitelistSelect
                     checked={checked}
                     onCheckedChange={(c) => {
                       if (c) {
-                        onChange([...selected.filter((n) => n !== skill.name), skill.name]);
+                        onChange([
+                          ...selected.filter((n) => n !== skill.name),
+                          skill.name,
+                        ]);
                       } else {
                         const next = selected.filter((n) => n !== skill.name);
                         onChange(next.length ? next : []);
                       }
                     }}
                   />
-                  <Label htmlFor={`skill-${skill.name}`} className="text-sm font-normal leading-tight">
+                  <Label
+                    htmlFor={`skill-${skill.name}`}
+                    className="text-sm leading-tight font-normal"
+                  >
                     {skill.name}
                     {skill.description ? (
-                      <span className="block text-xs text-muted-foreground">{skill.description}</span>
+                      <span className="text-muted-foreground block text-xs">
+                        {skill.description}
+                      </span>
                     ) : null}
                   </Label>
                 </div>

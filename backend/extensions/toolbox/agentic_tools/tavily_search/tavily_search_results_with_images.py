@@ -3,7 +3,6 @@
 
 import json
 import logging
-from typing import Dict, List, Optional, Tuple, Union
 
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForToolRun,
@@ -104,15 +103,13 @@ class TavilySearchWithImages(TavilySearchResults):  # type: ignore[override, ove
     Default is False.
     """
 
-    api_wrapper: EnhancedTavilySearchAPIWrapper = Field(
-        default_factory=EnhancedTavilySearchAPIWrapper
-    )  # type: ignore[arg-type]
+    api_wrapper: EnhancedTavilySearchAPIWrapper = Field(default_factory=EnhancedTavilySearchAPIWrapper)  # type: ignore[arg-type]
 
     def _run(
         self,
         query: str,
-        run_manager: Optional[CallbackManagerForToolRun] = None,
-    ) -> Tuple[Union[List[Dict[str, str]], str], Dict]:
+        run_manager: CallbackManagerForToolRun | None = None,
+    ) -> tuple[list[dict[str, str]] | str, dict]:
         """Use the tool."""
         # TODO: remove try/except, should be handled by BaseTool
         try:
@@ -128,19 +125,17 @@ class TavilySearchWithImages(TavilySearchResults):  # type: ignore[override, ove
                 self.include_image_descriptions,
             )
         except Exception as e:
-            logger.error("Tavily search returned error: {}".format(e))
+            logger.error(f"Tavily search returned error: {e}")
             return repr(e), {}
         cleaned_results = self.api_wrapper.clean_results_with_images(raw_results)
-        logger.debug(
-            "sync: %s", json.dumps(cleaned_results, indent=2, ensure_ascii=False)
-        )
+        logger.debug("sync: %s", json.dumps(cleaned_results, indent=2, ensure_ascii=False))
         return cleaned_results, raw_results
 
     async def _arun(
         self,
         query: str,
-        run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> Tuple[Union[List[Dict[str, str]], str], Dict]:
+        run_manager: AsyncCallbackManagerForToolRun | None = None,
+    ) -> tuple[list[dict[str, str]] | str, dict]:
         """Use the tool asynchronously."""
         try:
             raw_results = await self.api_wrapper.raw_results_async(
@@ -155,10 +150,8 @@ class TavilySearchWithImages(TavilySearchResults):  # type: ignore[override, ove
                 self.include_image_descriptions,
             )
         except Exception as e:
-            logger.error("Tavily search returned error: {}".format(e))
+            logger.error(f"Tavily search returned error: {e}")
             return repr(e), {}
         cleaned_results = self.api_wrapper.clean_results_with_images(raw_results)
-        logger.debug(
-            "async: %s", json.dumps(cleaned_results, indent=2, ensure_ascii=False)
-        )
+        logger.debug("async: %s", json.dumps(cleaned_results, indent=2, ensure_ascii=False))
         return cleaned_results, raw_results

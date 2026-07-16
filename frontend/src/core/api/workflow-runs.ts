@@ -1,5 +1,5 @@
-import { getBackendBaseURL } from "@/core/config";
 import { getAuthHeaders } from "@/core/auth";
+import { getBackendBaseURL } from "@/core/config";
 
 const base = () => getBackendBaseURL() || "";
 
@@ -20,9 +20,12 @@ export async function listRuns(
   const qp = new URLSearchParams();
   if (params?.limit != null) qp.set("limit", String(params.limit));
   if (params?.offset != null) qp.set("offset", String(params.offset));
-  const res = await fetch(`${base()}/api/workflows/${workflowId}/runs${qp.toString() ? `?${qp}` : ""}`, {
-    headers: getAuthHeaders(),
-  });
+  const res = await fetch(
+    `${base()}/api/workflows/${workflowId}/runs${qp.toString() ? `?${qp}` : ""}`,
+    {
+      headers: getAuthHeaders(),
+    },
+  );
   const json = (await res.json().catch(() => ({}))) as {
     runs?: WorkflowRun[];
     limit?: number;
@@ -36,4 +39,3 @@ export async function listRuns(
     offset: json.offset ?? params?.offset ?? 0,
   };
 }
-

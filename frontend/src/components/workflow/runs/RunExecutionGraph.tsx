@@ -3,7 +3,6 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -14,11 +13,12 @@ import {
   MiniMap,
 } from "@xyflow/react";
 import type { Node } from "@xyflow/react";
+import { useCallback, useEffect, useMemo } from "react";
 import "@xyflow/react/dist/style.css";
 
-import type { WorkflowRunDetail } from "@/core/api/workflows";
-import { workflowNodeTypes } from "@/components/workflow/graph/workflow-node-types";
 import { buildGraphFromReleaseSpec } from "@/components/workflow/graph/workflow-graph-utils";
+import { workflowNodeTypes } from "@/components/workflow/graph/workflow-node-types";
+import type { WorkflowRunDetail } from "@/core/api/workflows";
 
 type RunExecutionGraphProps = {
   detail: WorkflowRunDetail;
@@ -64,14 +64,14 @@ function RunExecutionGraphInner({
 
   if (!detail.release_spec?.nodes?.length) {
     return (
-      <div className="flex h-[420px] items-center justify-center rounded-md border border-dashed bg-muted/20 text-sm text-muted-foreground">
+      <div className="bg-muted/20 text-muted-foreground flex h-[420px] items-center justify-center rounded-md border border-dashed text-sm">
         该运行无发布版本图，无法还原流程图
       </div>
     );
   }
 
   return (
-    <div className="h-[420px] w-full rounded-md border bg-app overflow-hidden">
+    <div className="bg-app h-[420px] w-full overflow-hidden rounded-md border">
       <ReactFlow
         nodes={displayNodes}
         edges={edges}

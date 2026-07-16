@@ -1,18 +1,14 @@
-import re
-from typing import Dict, List, Optional, Union
-import json
-from .base_tool import BaseTool
 import os
 import random
-import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from .base_tool import BaseTool
 
 # Array of sandbox fusion endpoints
 SANDBOX_FUSION_ENDPOINTS = []
 
 # Fallback to single endpoint if environment variable exists
-if 'SANDBOX_FUSION_ENDPOINT' in os.environ:
-    SANDBOX_FUSION_ENDPOINTS = os.environ['SANDBOX_FUSION_ENDPOINT'].split(',')
+if "SANDBOX_FUSION_ENDPOINT" in os.environ:
+    SANDBOX_FUSION_ENDPOINTS = os.environ["SANDBOX_FUSION_ENDPOINT"].split(",")
 
 
 class PythonInterpreter(BaseTool):
@@ -30,15 +26,15 @@ class PythonInterpreter(BaseTool):
         "required": ["code"],
     }
 
-    def __init__(self, cfg: Optional[Dict] = None):
+    def __init__(self, cfg: dict | None = None):
         super().__init__(cfg)
         # self.summary_mapping = SummaryMapping()
-    
-    def call(self, params, files= None, timeout = 50, **kwargs) -> str:
+
+    def call(self, params, files=None, timeout=50, **kwargs) -> str:
         try:
-            code=params
+            code = params
             last_error = None
-            
+
             # 简化版本：直接返回代码执行结果
             # 在实际环境中，这里应该调用sandbox_fusion
             if SANDBOX_FUSION_ENDPOINTS:
@@ -50,6 +46,6 @@ class PythonInterpreter(BaseTool):
             else:
                 # 简化版本：直接返回代码
                 return f"[Python] Code: {code}\nOutput: [Code execution simulation - use sandbox_fusion for real execution]"
-                
+
         except Exception as e:
             return f"[Python Interpreter Error]: {str(e)}"

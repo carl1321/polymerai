@@ -9,7 +9,6 @@
 import logging
 import re
 from pathlib import Path
-from typing import List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +16,9 @@ logger = logging.getLogger(__name__)
 SLIDE_IMAGE_PATTERN = re.compile(r"^(\d+)-slide-.+\.png$", re.IGNORECASE)
 
 
-def _sorted_slide_images(dir_path: Path) -> List[Path]:
+def _sorted_slide_images(dir_path: Path) -> list[Path]:
     """收集目录下 01-slide-*.png 并按编号排序。"""
-    files: List[Tuple[int, Path]] = []
+    files: list[tuple[int, Path]] = []
     for f in dir_path.iterdir():
         if not f.is_file():
             continue
@@ -49,8 +48,8 @@ def merge_images_to_pptx(slide_deck_dir: Path, output_stem: str) -> Path:
 
     prs = Presentation()
     # 16:9 幻灯片尺寸（Office 默认 16:9 为 13.333 x 7.5 inch）
-    prs.slide_width = Emu(12192000)   # 13.333 in
-    prs.slide_height = Emu(6858000)   # 7.5 in
+    prs.slide_width = Emu(12192000)  # 13.333 in
+    prs.slide_height = Emu(6858000)  # 7.5 in
     blank_layout = prs.slide_layouts[6]  # 空白版式
 
     for img_path in images:
@@ -58,7 +57,8 @@ def merge_images_to_pptx(slide_deck_dir: Path, output_stem: str) -> Path:
         # 图片铺满整页：左边 0，上边 0，宽高等于幻灯片宽高
         slide.shapes.add_picture(
             str(img_path),
-            Emu(0), Emu(0),
+            Emu(0),
+            Emu(0),
             prs.slide_width,
             prs.slide_height,
         )

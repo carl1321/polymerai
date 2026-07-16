@@ -17,7 +17,6 @@ import msgpack
 import psycopg
 from psycopg.rows import dict_row
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CHECKPOINTS_DB = ROOT / "backend/.deer-flow/checkpoints.db"
 DEFAULT_APP_DB = ROOT / "backend/.deer-flow/data/deerflow.db"
@@ -221,9 +220,7 @@ def _ensure_pg_tables(pg_conn: psycopg.Connection) -> None:
         cur.execute("CREATE INDEX IF NOT EXISTS ix_threads_meta_user_id ON threads_meta (user_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS ix_threads_meta_assistant_id ON threads_meta (assistant_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS ix_threads_meta_user_updated ON threads_meta (user_id, updated_at DESC)")
-        cur.execute(
-            "CREATE INDEX IF NOT EXISTS ix_threads_meta_user_status_updated ON threads_meta (user_id, status, updated_at DESC)"
-        )
+        cur.execute("CREATE INDEX IF NOT EXISTS ix_threads_meta_user_status_updated ON threads_meta (user_id, status, updated_at DESC)")
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS users (
@@ -316,15 +313,9 @@ def _ensure_pg_tables(pg_conn: psycopg.Connection) -> None:
 
 
 def _migrate_checkpoint_tables_to_pg(cp_conn: sqlite3.Connection, pg_conn: psycopg.Connection, dry_run: bool) -> dict[str, int]:
-    ck_rows = cp_conn.execute(
-        "SELECT thread_id, checkpoint_ns, checkpoint_id, parent_checkpoint_id, type, checkpoint, metadata FROM checkpoints"
-    ).fetchall()
-    wr_rows = cp_conn.execute(
-        "SELECT thread_id, checkpoint_ns, checkpoint_id, task_id, idx, channel, type, value FROM writes"
-    ).fetchall()
-    st_rows = cp_conn.execute(
-        "SELECT prefix, key, value, created_at, updated_at, expires_at, ttl_minutes FROM store"
-    ).fetchall()
+    ck_rows = cp_conn.execute("SELECT thread_id, checkpoint_ns, checkpoint_id, parent_checkpoint_id, type, checkpoint, metadata FROM checkpoints").fetchall()
+    wr_rows = cp_conn.execute("SELECT thread_id, checkpoint_ns, checkpoint_id, task_id, idx, channel, type, value FROM writes").fetchall()
+    st_rows = cp_conn.execute("SELECT prefix, key, value, created_at, updated_at, expires_at, ttl_minutes FROM store").fetchall()
 
     if dry_run:
         return {"checkpoints": len(ck_rows), "writes": len(wr_rows), "store": len(st_rows)}
@@ -439,8 +430,7 @@ def _migrate_checkpoint_tables_to_pg(cp_conn: sqlite3.Connection, pg_conn: psyco
                                   ttl_minutes=EXCLUDED.ttl_minutes
                     """
                     if store_value_is_jsonb
-                    else
-                    """
+                    else """
                     INSERT INTO store(prefix, key, value, created_at, updated_at, expires_at, ttl_minutes)
                     VALUES (%s,%s,%s,%s,%s,%s,%s)
                     ON CONFLICT (prefix, key)

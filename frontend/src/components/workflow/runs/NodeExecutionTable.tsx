@@ -10,8 +10,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import type { WorkflowRunNodeExecution } from "@/core/api/workflows";
+import { cn } from "@/lib/utils";
+
 import { JsonBlock } from "./JsonBlock";
 import {
   formatDateTime,
@@ -34,7 +35,7 @@ export function NodeExecutionTable({
   onOpenValuesChange,
 }: NodeExecutionTableProps) {
   if (nodes.length === 0) {
-    return <p className="text-sm text-muted-foreground">暂无节点执行记录</p>;
+    return <p className="text-muted-foreground text-sm">暂无节点执行记录</p>;
   }
 
   return (
@@ -50,15 +51,18 @@ export function NodeExecutionTable({
           value={node.id}
           id={`node-exec-${node.node_id}`}
           className={cn(
-            "rounded-md border px-3 scroll-mt-24 border-b-0",
-            highlightNodeId === node.node_id && "ring-2 ring-primary ring-offset-2",
+            "scroll-mt-24 rounded-md border border-b-0 px-3",
+            highlightNodeId === node.node_id &&
+              "ring-primary ring-2 ring-offset-2",
           )}
         >
           <AccordionTrigger className="py-3 hover:no-underline">
             <div className="flex flex-1 flex-wrap items-center gap-2 text-left">
               <span className="font-medium">{node.node_name}</span>
               {node.display_name && node.display_name !== node.node_name ? (
-                <span className="text-xs text-muted-foreground">（{node.display_name}）</span>
+                <span className="text-muted-foreground text-xs">
+                  （{node.display_name}）
+                </span>
               ) : null}
               <Badge variant="outline" className="text-xs">
                 {node.node_type || "node"}
@@ -68,15 +72,22 @@ export function NodeExecutionTable({
                   {node.skill}
                 </Badge>
               ) : null}
-              <Badge variant={runStatusBadgeVariant(node.status)}>{runStatusLabel(node.status)}</Badge>
-              <span className="text-xs text-muted-foreground ml-auto mr-2">
-                {formatDateTime(node.started_at)} → {formatDateTime(node.finished_at)}
-                {node.duration_ms != null ? ` · ${formatDurationMs(node.duration_ms)}` : ""}
+              <Badge variant={runStatusBadgeVariant(node.status)}>
+                {runStatusLabel(node.status)}
+              </Badge>
+              <span className="text-muted-foreground mr-2 ml-auto text-xs">
+                {formatDateTime(node.started_at)} →{" "}
+                {formatDateTime(node.finished_at)}
+                {node.duration_ms != null
+                  ? ` · ${formatDurationMs(node.duration_ms)}`
+                  : ""}
               </span>
             </div>
           </AccordionTrigger>
           <AccordionContent className="space-y-3 pb-4">
-            <p className="text-[10px] text-muted-foreground font-mono">ID: {node.node_id}</p>
+            <p className="text-muted-foreground font-mono text-[10px]">
+              ID: {node.node_id}
+            </p>
             <JsonBlock label="输入" value={node.input} />
             <JsonBlock label="输出" value={node.output} />
             {node.error ? <JsonBlock label="错误" value={node.error} /> : null}

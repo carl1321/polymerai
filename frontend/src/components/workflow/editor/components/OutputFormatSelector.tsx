@@ -3,8 +3,14 @@
 
 "use client";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Label } from "~/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 
 export type OutputFormat = "output" | "array" | "object" | "string" | "number";
 
@@ -15,7 +21,11 @@ interface OutputFormatSelectorProps {
   description?: string;
 }
 
-const FORMAT_OPTIONS: Array<{ value: OutputFormat; label: string; description: string }> = [
+const FORMAT_OPTIONS: Array<{
+  value: OutputFormat;
+  label: string;
+  description: string;
+}> = [
   {
     value: "output",
     label: "输出 (output)",
@@ -66,7 +76,7 @@ export function OutputFormatSelector({
             <div className="flex flex-col items-start">
               <span>{selectedOption.label}</span>
               {selectedOption.description && (
-                <span className="text-xs text-muted-foreground mt-0.5">
+                <span className="text-muted-foreground mt-0.5 text-xs">
                   {selectedOption.description}
                 </span>
               )}
@@ -78,7 +88,7 @@ export function OutputFormatSelector({
             <SelectItem key={option.value} value={option.value}>
               <div className="flex flex-col items-start">
                 <span>{option.label}</span>
-                <span className="text-xs text-muted-foreground mt-0.5">
+                <span className="text-muted-foreground mt-0.5 text-xs">
                   {option.description}
                 </span>
               </div>
@@ -87,9 +97,8 @@ export function OutputFormatSelector({
         </SelectContent>
       </Select>
       {description && (
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <p className="text-muted-foreground text-xs">{description}</p>
       )}
     </div>
   );
 }
-

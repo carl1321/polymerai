@@ -1,8 +1,8 @@
 // Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
 // SPDX-License-Identifier: MIT
 
-import type { WorkflowRunDetail } from "@/core/api/workflows";
 import { ACTIVE_RUN_STATUSES } from "@/components/workflow/graph/workflow-graph-utils";
+import type { WorkflowRunDetail } from "@/core/api/workflows";
 
 export function formatDateTime(value?: string | null): string {
   if (!value) return "-";
@@ -47,13 +47,25 @@ export function asyncTaskStatusLabel(status: string): string {
   return runStatusLabel(status);
 }
 
-const ASYNC_TASK_TERMINAL = new Set(["succeeded", "failed", "cancelled", "timeout"]);
+const ASYNC_TASK_TERMINAL = new Set([
+  "succeeded",
+  "failed",
+  "cancelled",
+  "timeout",
+]);
 
-export function hasActiveAsyncTasks(tasks: { status: string }[] | null | undefined): boolean {
+export function hasActiveAsyncTasks(
+  tasks: { status: string }[] | null | undefined,
+): boolean {
   return (tasks ?? []).some((t) => !ASYNC_TASK_TERMINAL.has(String(t.status)));
 }
 
-const NODE_ACTIVE_STATUSES = new Set(["pending", "ready", "running", "awaiting_external"]);
+const NODE_ACTIVE_STATUSES = new Set([
+  "pending",
+  "ready",
+  "running",
+  "awaiting_external",
+]);
 const NODE_TERMINAL_OK = new Set(["success", "skipped"]);
 
 /** Run is done only when workflow status and every node task are terminal. */
@@ -63,14 +75,20 @@ export function isWorkflowRunComplete(
 ): boolean {
   const st = String(runStatus || "");
   if (ACTIVE_RUN_STATUSES.has(st)) return false;
-  if (nodeTasks.some((t) => NODE_ACTIVE_STATUSES.has(String(t.status)))) return false;
+  if (nodeTasks.some((t) => NODE_ACTIVE_STATUSES.has(String(t.status))))
+    return false;
   if (st === "success") {
-    return nodeTasks.length === 0 || nodeTasks.every((t) => NODE_TERMINAL_OK.has(String(t.status)));
+    return (
+      nodeTasks.length === 0 ||
+      nodeTasks.every((t) => NODE_TERMINAL_OK.has(String(t.status)))
+    );
   }
   return st === "failed" || st === "canceled" || st === "cancelled";
 }
 
-export function shouldPollRunProgress(detail: WorkflowRunDetail | null): boolean {
+export function shouldPollRunProgress(
+  detail: WorkflowRunDetail | null,
+): boolean {
   if (!detail) return false;
   const runStatus = String(detail.run?.status ?? "");
   const nodes = detail.nodes ?? [];
@@ -105,7 +123,11 @@ export function formatJson(value: unknown): string {
 export function isEmptyValue(value: unknown): boolean {
   if (value === null || value === undefined) return true;
   if (typeof value === "string" && !value.trim()) return true;
-  if (typeof value === "object" && !Array.isArray(value) && Object.keys(value as object).length === 0) {
+  if (
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.keys(value).length === 0
+  ) {
     return true;
   }
   return false;

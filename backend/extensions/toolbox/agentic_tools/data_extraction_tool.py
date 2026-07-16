@@ -5,7 +5,7 @@ import base64
 import io
 import json
 import logging
-from typing import Annotated, Optional
+from typing import Annotated
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
@@ -29,7 +29,7 @@ def _extract_pdf_text_from_bytes(content: bytes) -> str:
                 return text
     except Exception:
         pass
-    
+
     # Try PyPDF2 as fallback
     try:
         import PyPDF2
@@ -47,7 +47,7 @@ def _extract_pdf_text_from_bytes(content: bytes) -> str:
             return text
     except Exception:
         pass
-    
+
     # Return empty string if all parsers fail
     return ""
 
@@ -56,26 +56,26 @@ def _extract_xml_text_from_bytes(content: bytes) -> str:
     """Extract text from XML bytes."""
     try:
         import xml.etree.ElementTree as ET
-        
+
         # Try to decode and parse as XML
         root = None
         # Try UTF-8 first (most common)
-        for encoding in ['utf-8', 'utf-8-sig', 'gbk', 'gb2312', 'latin-1', 'iso-8859-1']:
+        for encoding in ["utf-8", "utf-8-sig", "gbk", "gb2312", "latin-1", "iso-8859-1"]:
             try:
                 content_str = content.decode(encoding)
                 root = ET.fromstring(content_str)
                 break
-            except (UnicodeDecodeError, ET.ParseError) as e:
+            except (UnicodeDecodeError, ET.ParseError):
                 continue
-        
+
         if root is None:
             # Last resort: try with error handling
             try:
-                content_str = content.decode('utf-8', errors='ignore')
+                content_str = content.decode("utf-8", errors="ignore")
                 root = ET.fromstring(content_str)
             except ET.ParseError:
                 raise ValueError("Failed to parse XML with any encoding")
-        
+
         # Extract all text content from XML elements
         def extract_text(element):
             text_parts = []
@@ -89,10 +89,10 @@ def _extract_xml_text_from_bytes(content: bytes) -> str:
             for child in element:
                 text_parts.extend(extract_text(child))
             return text_parts
-        
+
         text_parts = extract_text(root)
         text = "\n".join(text_parts).strip()
-        
+
         if text:
             return text
     except Exception as e:
@@ -100,37 +100,38 @@ def _extract_xml_text_from_bytes(content: bytes) -> str:
         # Fallback: try to extract text using regex or simple string operations
         try:
             # Try to decode and extract text between tags
-            content_str = content.decode('utf-8', errors='ignore')
+            content_str = content.decode("utf-8", errors="ignore")
             import re
+
             # Remove XML tags and extract text
-            text = re.sub(r'<[^>]+>', ' ', content_str)
-            text = ' '.join(text.split())  # Normalize whitespace
+            text = re.sub(r"<[^>]+>", " ", content_str)
+            text = " ".join(text.split())  # Normalize whitespace
             if text.strip():
                 return text.strip()
         except Exception as e2:
             logger.warning(f"Failed to extract text using regex fallback: {e2}")
-    
+
     return ""
 
 
 def _extract_text_from_file_bytes(content: bytes, file_name: str = "") -> str:
     """Extract text from file bytes. Automatically detects file type."""
     file_name_lower = file_name.lower() if file_name else ""
-    
+
     # Check file extension or content to determine file type
-    if file_name_lower.endswith('.xml') or content.startswith(b'<?xml') or content.startswith(b'<'):
+    if file_name_lower.endswith(".xml") or content.startswith(b"<?xml") or content.startswith(b"<"):
         # Try XML extraction
         text = _extract_xml_text_from_bytes(content)
         if text:
             return text
         # If XML extraction fails, fall back to PDF
         logger.warning("XML extraction failed, trying PDF parser as fallback...")
-    
+
     # Default to PDF extraction
     return _extract_pdf_text_from_bytes(content)
 
 
-def _optimize_prompt_with_llm(prompt: str, model_name: Optional[str] = None) -> str:
+def _optimize_prompt_with_llm(prompt: str, model_name: str | None = None) -> str:
     """Optimize the extraction prompt using LLM."""
     try:
         if model_name and model_name.strip():
@@ -169,7 +170,7 @@ def _optimize_prompt_with_llm(prompt: str, model_name: Optional[str] = None) -> 
 
 def _extract_material_categories(
     pdf_text: str,
-    model_name: Optional[str] = None,
+    model_name: str | None = None,
 ) -> dict:
     """Extract material, process, and property categories from PDF text."""
     try:
@@ -335,7 +336,7 @@ def _extract_material_data(
     selected_materials: list,
     selected_processes: list,
     selected_properties: list,
-    model_name: Optional[str] = None,
+    model_name: str | None = None,
 ) -> list:
     """Extract material-process-property triplets from PDF text based on selected categories."""
     try:
@@ -422,9 +423,9 @@ def _extract_material_data(
 
 **重要提示**：每个三元组必须是一个完整的对应关系，表示"某个材料在某个工艺条件下具有某个性能"。三个字段（material、process、property）必须同时存在且相互关联。
 
-选择的材料类别：{', '.join(selected_materials) if selected_materials else '无'}
-选择的工艺类别：{', '.join(selected_processes) if selected_processes else '无'}
-选择的性能类别：{', '.join(selected_properties) if selected_properties else '无'}
+选择的材料类别：{", ".join(selected_materials) if selected_materials else "无"}
+选择的工艺类别：{", ".join(selected_processes) if selected_processes else "无"}
+选择的性能类别：{", ".join(selected_properties) if selected_properties else "无"}
 
 请从文献中找出所有满足以下条件的完整三元组：
 - material 属于上述材料类别（或更具体的材料名称）
@@ -469,21 +470,19 @@ def _extract_material_data(
             if not isinstance(table_data, list):
                 logger.warning(f"LLM returned non-list data, converting to list. Type: {type(table_data)}")
                 table_data = []
-            
+
             logger.info(f"[Data Extraction] Successfully parsed {len(table_data)} data rows from LLM response")
-            
+
             # Log compressed sample data for debugging (only first 3 rows, truncated property)
             if len(table_data) > 0:
-                logger.info(f"[Data Extraction] Sample data (first 3 rows, property truncated):")
+                logger.info("[Data Extraction] Sample data (first 3 rows, property truncated):")
                 for i, row in enumerate(table_data[:3], 1):
-                    property_val = row.get('property', 'N/A')
+                    property_val = row.get("property", "N/A")
                     property_preview = property_val[:50] + "..." if len(property_val) > 50 else property_val
-                    logger.info(f"  Row {i}: material={row.get('material', 'N/A')[:30]}, "
-                              f"process={row.get('process', 'N/A')[:30]}, "
-                              f"property={property_preview}")
+                    logger.info(f"  Row {i}: material={row.get('material', 'N/A')[:30]}, process={row.get('process', 'N/A')[:30]}, property={property_preview}")
             else:
                 logger.warning("[Data Extraction] No data extracted from LLM response")
-            
+
             return table_data
         except json.JSONDecodeError as e:
             logger.error(f"[Data Extraction] Failed to parse JSON from response: {e}")
@@ -501,7 +500,7 @@ def _extract_data_from_text(
     pdf_text: str,
     extraction_prompt: str,
     json_schema: str,
-    model_name: Optional[str] = None,
+    model_name: str | None = None,
 ) -> dict:
     """Extract structured data from PDF text using LLM."""
     try:
@@ -589,54 +588,54 @@ def _extract_data_from_text(
 @log_io
 def data_extraction_tool(
     extraction_type: Annotated[
-        Optional[str],
+        str | None,
         "Extraction type: 'prompt_extraction' (default) or 'material_extraction'.",
     ] = "prompt_extraction",
     extraction_prompt: Annotated[
-        Optional[str],
+        str | None,
         "The prompt describing what data to extract from the PDF. Required for prompt_extraction type.",
     ] = None,
     json_schema: Annotated[
-        Optional[str],
+        str | None,
         "The expected JSON schema/format for the output. Required for prompt_extraction type.",
     ] = None,
     pdf_file_base64: Annotated[
-        Optional[str],
+        str | None,
         "Base64-encoded PDF or XML file content. Must be provided.",
     ] = None,
     model_name: Annotated[
-        Optional[str],
+        str | None,
         "Optional model name identifier. If not provided, uses the default basic model.",
     ] = None,
     optimize_prompt: Annotated[
-        Optional[bool],
+        bool | None,
         "Whether to optimize the extraction prompt using LLM. Defaults to False. Only for prompt_extraction type.",
     ] = False,
     extraction_step: Annotated[
-        Optional[int],
+        int | None,
         "Extraction step for material_extraction: 1 (extract categories) or 2 (extract data). Defaults to 1.",
     ] = 1,
     selected_material_categories: Annotated[
-        Optional[list],
+        list | None,
         "Selected material categories for step 2 of material_extraction.",
     ] = None,
     selected_process_categories: Annotated[
-        Optional[list],
+        list | None,
         "Selected process categories for step 2 of material_extraction.",
     ] = None,
     selected_property_categories: Annotated[
-        Optional[list],
+        list | None,
         "Selected property categories for step 2 of material_extraction.",
     ] = None,
 ) -> str:
     """Extract structured data from a PDF file.
-    
+
     Supports two extraction types:
     1. prompt_extraction (default): Extract data based on custom prompt and JSON schema
     2. material_extraction: Extract material-process-property triplets in two steps:
        - Step 1: Extract categories from PDF
        - Step 2: Extract data based on selected categories
-    
+
     The result can be downloaded as a JSON file from the frontend.
     """
     try:
@@ -644,52 +643,64 @@ def data_extraction_tool(
         extraction_type = (extraction_type or "prompt_extraction").strip().lower()
         if extraction_type not in ["prompt_extraction", "material_extraction"]:
             extraction_type = "prompt_extraction"
-        
+
         # Step 1: Extract text from PDF
         pdf_text = ""
         pdf_source = ""
-        
+
         if pdf_file_base64:
             # Handle base64 encoded file (PDF or XML)
             try:
                 # Decode base64
                 file_bytes = base64.b64decode(pdf_file_base64)
-                
+
                 # Extract text from file bytes (auto-detect file type)
                 pdf_text = _extract_text_from_file_bytes(file_bytes)
                 pdf_source = "uploaded_file"
-                
+
                 if not pdf_text:
                     error_msg = "Failed to extract text from uploaded file. The file may be corrupted or not a valid PDF/XML file."
                     logger.error(error_msg)
-                    return json.dumps({
-                        "error": error_msg,
-                        "source": "uploaded_file",
-                    }, ensure_ascii=False, indent=2)
-                    
+                    return json.dumps(
+                        {
+                            "error": error_msg,
+                            "source": "uploaded_file",
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+
             except Exception as e:
                 error_msg = f"Failed to process uploaded file: {repr(e)}"
                 logger.error(error_msg, exc_info=True)
-                return json.dumps({
-                    "error": error_msg,
-                    "source": "uploaded_file",
-                }, ensure_ascii=False, indent=2)
+                return json.dumps(
+                    {
+                        "error": error_msg,
+                        "source": "uploaded_file",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
         else:
             error_msg = "pdf_file_base64 must be provided"
             logger.error(error_msg)
-            return json.dumps({
-                "error": error_msg,
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {
+                    "error": error_msg,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
 
         # Branch based on extraction type
         if extraction_type == "material_extraction":
             # Material extraction mode
             extraction_step = extraction_step or 1
-            
+
             if extraction_step == 1:
                 # Step 1: Extract categories
                 categories = _extract_material_categories(pdf_text, model_name)
-                
+
                 result = {
                     "step": 1,
                     "extraction_type": "material_extraction",
@@ -704,48 +715,56 @@ def data_extraction_tool(
                         "model_used": model_name or "default",
                     },
                 }
-                
+
                 if "error" in categories:
                     result["error"] = categories["error"]
-                
+
                 result_json = json.dumps(result, ensure_ascii=False, indent=2)
                 return result_json
-                
+
             elif extraction_step == 2:
                 # Step 2: Extract data based on selected categories
                 # Log received parameters to debug value changes
-                logger.info(f"[Step 2] Received selected categories from frontend:")
+                logger.info("[Step 2] Received selected categories from frontend:")
                 logger.info(f"  - selected_material_categories (type: {type(selected_material_categories)}, value: {selected_material_categories})")
                 logger.info(f"  - selected_process_categories (type: {type(selected_process_categories)}, value: {selected_process_categories})")
                 logger.info(f"  - selected_property_categories (type: {type(selected_property_categories)}, value: {selected_property_categories})")
-                
+
                 selected_materials = selected_material_categories or []
                 selected_processes = selected_process_categories or []
                 selected_properties = selected_property_categories or []
-                
-                logger.info(f"[Step 2] Processed selected categories:")
+
+                logger.info("[Step 2] Processed selected categories:")
                 logger.info(f"  - materials: {len(selected_materials)} items - {selected_materials}")
                 logger.info(f"  - processes: {len(selected_processes)} items - {selected_processes}")
                 logger.info(f"  - properties: {len(selected_properties)} items - {selected_properties}")
-                
+
                 # Material category is required (single selection)
                 if not selected_materials or len(selected_materials) == 0:
                     error_msg = "必须至少选择一个材料类别（材料类别为单选）"
                     logger.error(error_msg)
-                    return json.dumps({
-                        "error": error_msg,
-                        "step": 2,
-                    }, ensure_ascii=False, indent=2)
-                
+                    return json.dumps(
+                        {
+                            "error": error_msg,
+                            "step": 2,
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+
                 # At least one process or property should be selected
                 if not selected_processes and not selected_properties:
                     error_msg = "必须至少选择一个工艺类别或性能类别"
                     logger.error(error_msg)
-                    return json.dumps({
-                        "error": error_msg,
-                        "step": 2,
-                    }, ensure_ascii=False, indent=2)
-                
+                    return json.dumps(
+                        {
+                            "error": error_msg,
+                            "step": 2,
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+
                 table_data = _extract_material_data(
                     pdf_text=pdf_text,
                     selected_materials=selected_materials,
@@ -753,7 +772,7 @@ def data_extraction_tool(
                     selected_properties=selected_properties,
                     model_name=model_name,
                 )
-                
+
                 result = {
                     "step": 2,
                     "extraction_type": "material_extraction",
@@ -770,24 +789,32 @@ def data_extraction_tool(
                         "data_count": len(table_data),
                     },
                 }
-                
+
                 result_json = json.dumps(result, ensure_ascii=False, indent=2)
                 return result_json
             else:
                 error_msg = f"Invalid extraction_step: {extraction_step}. Must be 1 or 2."
                 logger.error(error_msg)
-                return json.dumps({
-                    "error": error_msg,
-                }, ensure_ascii=False, indent=2)
+                return json.dumps(
+                    {
+                        "error": error_msg,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
         else:
             # Prompt extraction mode (default)
             if not extraction_prompt or not json_schema:
                 error_msg = "extraction_prompt and json_schema are required for prompt_extraction type"
                 logger.error(error_msg)
-                return json.dumps({
-                    "error": error_msg,
-                }, ensure_ascii=False, indent=2)
-            
+                return json.dumps(
+                    {
+                        "error": error_msg,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+
             # Step 2: Optimize prompt if requested
             final_prompt = extraction_prompt
             if optimize_prompt:
@@ -821,8 +848,11 @@ def data_extraction_tool(
     except Exception as e:
         error_msg = f"Failed to extract data from PDF: {repr(e)}"
         logger.error(error_msg, exc_info=True)
-        return json.dumps({
-            "error": error_msg,
-            "pdf_source": pdf_source if 'pdf_source' in locals() else "unknown",
-        }, ensure_ascii=False, indent=2)
-
+        return json.dumps(
+            {
+                "error": error_msg,
+                "pdf_source": pdf_source if "pdf_source" in locals() else "unknown",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )

@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  runStatusBadgeVariant,
+  runStatusLabel,
+} from "@/components/workflow/runs/run-display-utils";
 import { listRuns, type WorkflowRun } from "@/core/api/workflow-runs";
-import { runStatusBadgeVariant, runStatusLabel } from "@/components/workflow/runs/run-display-utils";
 
 function formatDuration(started?: string, finished?: string): string | null {
   if (!started || !finished) return null;
@@ -64,36 +67,65 @@ export default function WorkflowRunsPage() {
               返回工作流
             </Link>
           </Button>
-          <Button variant="outline" onClick={() => void loadRuns()} disabled={loading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          <Button
+            variant="outline"
+            onClick={() => void loadRuns()}
+            disabled={loading}
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+            />
             刷新
           </Button>
         </div>
       </div>
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">加载中...</div>
+        <div className="text-muted-foreground text-sm">加载中...</div>
       ) : runs.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-sm text-muted-foreground">暂无运行记录</CardContent>
+          <CardContent className="text-muted-foreground py-12 text-center text-sm">
+            暂无运行记录
+          </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
           {runs.map((run) => {
             const duration = formatDuration(run.started_at, run.finished_at);
             return (
-              <Link key={run.id} href={`/workspace/workflows/${workflowId}/runs/${run.id}`}>
+              <Link
+                key={run.id}
+                href={`/workspace/workflows/${workflowId}/runs/${run.id}`}
+              >
                 <Card className="transition hover:border-blue-400/40 hover:shadow-md">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">运行 {run.id.slice(0, 8)}</CardTitle>
-                      <Badge variant={runStatusBadgeVariant(run.status)}>{runStatusLabel(run.status)}</Badge>
+                      <CardTitle className="text-base">
+                        运行 {run.id.slice(0, 8)}
+                      </CardTitle>
+                      <Badge variant={runStatusBadgeVariant(run.status)}>
+                        {runStatusLabel(run.status)}
+                      </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-1 text-sm text-muted-foreground">
-                    <div>创建：{run.created_at ? new Date(run.created_at).toLocaleString("zh-CN") : "N/A"}</div>
-                    {run.started_at ? <div>开始：{new Date(run.started_at).toLocaleString("zh-CN")}</div> : null}
-                    {run.finished_at ? <div>结束：{new Date(run.finished_at).toLocaleString("zh-CN")}</div> : null}
+                  <CardContent className="text-muted-foreground space-y-1 text-sm">
+                    <div>
+                      创建：
+                      {run.created_at
+                        ? new Date(run.created_at).toLocaleString("zh-CN")
+                        : "N/A"}
+                    </div>
+                    {run.started_at ? (
+                      <div>
+                        开始：{new Date(run.started_at).toLocaleString("zh-CN")}
+                      </div>
+                    ) : null}
+                    {run.finished_at ? (
+                      <div>
+                        结束：
+                        {new Date(run.finished_at).toLocaleString("zh-CN")}
+                      </div>
+                    ) : null}
                     {duration ? <div>耗时：{duration}</div> : null}
                     <div className="pt-1 text-xs text-blue-600 dark:text-blue-400">
                       点击查看节点输入/输出与异步任务

@@ -3,14 +3,15 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { BookOpen, Check, Loader2, Search } from "lucide-react";
-import { getSkillByName, loadSkills } from "~/core/skills/api";
-import { groupSkillsByCategory } from "~/core/skills/groupSkills";
-import type { Skill } from "~/core/skills/type";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { getSkillByName, loadSkills } from "~/core/skills/api";
+import { groupSkillsByCategory } from "~/core/skills/groupSkills";
+import type { Skill } from "~/core/skills/type";
 import { cn } from "~/lib/utils";
 
 interface SkillPickerProps {
@@ -19,14 +20,17 @@ interface SkillPickerProps {
 }
 
 function skillTitle(skill: Skill): string {
-  return (skill.laber_name && skill.laber_name.trim()) || skill.name;
+  return skill.laber_name?.trim() || skill.name;
 }
 
 function skillDescription(skill: Skill): string {
-  const d = (skill.laber_description && skill.laber_description.trim()) || (skill.description ?? "").trim();
+  const d = skill.laber_description?.trim() || (skill.description ?? "").trim();
   if (!d) return "";
   const firstSentence = d.split(/[。.!?\n]/)[0]?.trim() || d;
-  const short = firstSentence.length > 48 ? `${firstSentence.slice(0, 45)}…` : firstSentence;
+  const short =
+    firstSentence.length > 48
+      ? `${firstSentence.slice(0, 45)}…`
+      : firstSentence;
   return short;
 }
 
@@ -91,7 +95,11 @@ export function SkillPicker({ value, onChange }: SkillPickerProps) {
     return displaySkills.filter((s) => {
       const title = skillTitle(s).toLowerCase();
       const desc = (s.description ?? "").toLowerCase();
-      return s.name.toLowerCase().includes(q) || title.includes(q) || desc.includes(q);
+      return (
+        s.name.toLowerCase().includes(q) ||
+        title.includes(q) ||
+        desc.includes(q)
+      );
     });
   }, [displaySkills, searchQuery]);
 
@@ -105,19 +113,21 @@ export function SkillPicker({ value, onChange }: SkillPickerProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <BookOpen className="h-4 w-4 text-muted-foreground" />
+        <BookOpen className="text-muted-foreground h-4 w-4" />
         <Label>绑定技能</Label>
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         单选一个技能；运行时将仅注入该技能的 SKILL.md，并启用 run_skill。
       </p>
 
-      <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+      <div className="bg-muted/30 rounded-md border px-3 py-2 text-sm">
         {selectedSkill ? (
           <div>
-            <span className="font-medium text-foreground">{selectedSkill.name}</span>
+            <span className="text-foreground font-medium">
+              {selectedSkill.name}
+            </span>
             {skillDescription(selectedSkill) ? (
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+              <p className="text-muted-foreground mt-1 line-clamp-1 text-xs">
                 （{skillDescription(selectedSkill)}）
               </p>
             ) : null}
@@ -128,7 +138,7 @@ export function SkillPicker({ value, onChange }: SkillPickerProps) {
       </div>
 
       <div className="relative">
-        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Search className="text-muted-foreground absolute top-2.5 left-2 h-4 w-4" />
         <Input
           placeholder="搜索技能名称或描述…"
           value={searchQuery}
@@ -138,31 +148,35 @@ export function SkillPicker({ value, onChange }: SkillPickerProps) {
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+        <div className="text-muted-foreground flex items-center gap-2 py-4 text-sm">
           <Loader2 className="h-4 w-4 animate-spin" />
           加载技能库…
         </div>
       ) : (
         <ScrollArea className="h-56 rounded-md border">
-          <div className="p-2 space-y-3">
+          <div className="space-y-3 p-2">
             <button
               type="button"
               onClick={() => onChange(null)}
               className={cn(
-                "w-full rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-muted",
-                !value && "bg-muted ring-1 ring-border",
+                "hover:bg-muted w-full rounded-md px-2 py-2 text-left text-sm transition-colors",
+                !value && "bg-muted ring-border ring-1",
               )}
             >
               <span className="font-medium">不绑定技能</span>
-              <p className="text-xs text-muted-foreground mt-0.5">（纯 LLM，不注入 SKILL.md）</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                （纯 LLM，不注入 SKILL.md）
+              </p>
             </button>
 
             {groups.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">没有匹配的技能</p>
+              <p className="text-muted-foreground py-6 text-center text-sm">
+                没有匹配的技能
+              </p>
             ) : (
               groups.map((g) => (
                 <div key={g.groupKey}>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-1">
+                  <div className="text-muted-foreground mb-1 px-2 text-xs font-semibold tracking-wide uppercase">
                     {g.label}
                   </div>
                   <div className="space-y-0.5">
@@ -175,8 +189,8 @@ export function SkillPicker({ value, onChange }: SkillPickerProps) {
                           type="button"
                           onClick={() => onChange(skill.name)}
                           className={cn(
-                            "w-full rounded-md px-2 py-2 text-left transition-colors hover:bg-muted",
-                            selected && "bg-muted ring-1 ring-primary/40",
+                            "hover:bg-muted w-full rounded-md px-2 py-2 text-left transition-colors",
+                            selected && "bg-muted ring-primary/40 ring-1",
                           )}
                         >
                           <div className="flex items-start gap-2">
@@ -188,18 +202,22 @@ export function SkillPicker({ value, onChange }: SkillPickerProps) {
                                   : "border-muted-foreground/40",
                               )}
                             >
-                              {selected ? <Check className="h-2.5 w-2.5" /> : null}
+                              {selected ? (
+                                <Check className="h-2.5 w-2.5" />
+                              ) : null}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="font-medium text-sm text-foreground leading-tight">
+                              <div className="text-foreground text-sm leading-tight font-medium">
                                 {skill.name}
                               </div>
                               {desc ? (
-                                <p className="text-xs text-muted-foreground mt-0.5 leading-snug line-clamp-1">
+                                <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs leading-snug">
                                   （{desc}）
                                 </p>
                               ) : (
-                                <p className="text-xs text-muted-foreground mt-0.5">（{skill.name}）</p>
+                                <p className="text-muted-foreground mt-0.5 text-xs">
+                                  （{skill.name}）
+                                </p>
                               )}
                             </div>
                           </div>

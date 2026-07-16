@@ -18,7 +18,10 @@ if (fs.existsSync(rootEnvPath)) {
 }
 
 // Compatibility: repo root .env uses NEXT_PUBLIC_API_URL, but frontend expects NEXT_PUBLIC_BACKEND_BASE_URL
-if (!process.env.NEXT_PUBLIC_BACKEND_BASE_URL && process.env.NEXT_PUBLIC_API_URL) {
+if (
+  !process.env.NEXT_PUBLIC_BACKEND_BASE_URL &&
+  process.env.NEXT_PUBLIC_API_URL
+) {
   process.env.NEXT_PUBLIC_BACKEND_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 }
 
@@ -46,4 +49,3 @@ const child = spawn(cmd, cmdArgs, {
 child.on("exit", (code) => {
   process.exit(code ?? 0);
 });
-

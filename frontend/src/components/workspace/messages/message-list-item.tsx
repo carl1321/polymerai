@@ -36,6 +36,7 @@ import {
   type FeedbackData,
 } from "@/core/api/feedback";
 import { resolveArtifactURL } from "@/core/artifacts/utils";
+import { getToken } from "@/core/auth/token";
 import { useI18n } from "@/core/i18n/hooks";
 import {
   extractContentFromMessage,
@@ -47,7 +48,6 @@ import {
 } from "@/core/messages/utils";
 import { useRehypeSplitWordsIntoSpans } from "@/core/rehype";
 import { humanMessagePlugins } from "@/core/streamdown";
-import { getToken } from "@/core/auth/token";
 import { cn } from "@/lib/utils";
 
 import { CopyButton } from "../copy-button";
@@ -474,7 +474,9 @@ function MessageContent_({
       {answerMeta && !isLoading && (
         <div className="text-muted-foreground mt-2 text-xs">
           回答完成时间：{answerMeta.finishedLabel}
-          {answerMeta.durationLabel ? ` · 耗时 ${answerMeta.durationLabel}` : ""}
+          {answerMeta.durationLabel
+            ? ` · 耗时 ${answerMeta.durationLabel}`
+            : ""}
         </div>
       )}
     </AIElementMessageContent>

@@ -51,10 +51,20 @@ export async function Header({ className, homeURL, locale }: HeaderProps) {
       <div className="relative flex items-center gap-2">
         {env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY !== "true" && (
           <>
-            <Button variant="ghost" size="sm" asChild className="group relative z-10">
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="group relative z-10"
+            >
               <a href="/login">登录</a>
             </Button>
-            <Button variant="outline" size="sm" asChild className="group relative z-10">
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="group relative z-10"
+            >
               <a href="/login">进入工作区</a>
             </Button>
           </>

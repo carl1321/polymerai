@@ -13,4 +13,3 @@ class ReadabilityExtractor:
             title=article.get("title"),
             html_content=article.get("content"),
         )
-

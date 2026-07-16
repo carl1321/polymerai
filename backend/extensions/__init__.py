@@ -17,13 +17,14 @@ def register_extensions(app: FastAPI) -> None:
 
     Call this from gateway app.py when app_database is configured.
     """
-    from extensions.auth.routes import router as auth_router
-    from extensions.auth.admin import router as admin_users_router
     from extensions.agents_db.router import router as agents_db_router
-    from extensions.new_sam.router import router as new_sam_router, workflows_alias_router as new_sam_workflows_alias_router
+    from extensions.auth.admin import router as admin_users_router
+    from extensions.auth.routes import router as auth_router
+    from extensions.new_sam.router import router as new_sam_router
+    from extensions.new_sam.router import workflows_alias_router as new_sam_workflows_alias_router
     from extensions.public_agent.router import router as public_agent_router
-    from extensions.workflows.router import router as workflows_router
     from extensions.toolbox.routes import router as toolbox_router
+    from extensions.workflows.router import router as workflows_router
 
     app.include_router(auth_router)
     app.include_router(admin_users_router)
@@ -33,7 +34,4 @@ def register_extensions(app: FastAPI) -> None:
     app.include_router(public_agent_router)
     app.include_router(workflows_router)
     app.include_router(toolbox_router)
-    logger.info(
-        "Extensions registered: /api/auth, /api/admin/users, /api/agents, /api/new-sam, "
-        "/api/workflows/new-sam, /api/public, /api/workflows (incl. tool-catalog), toolbox"
-    )
+    logger.info("Extensions registered: /api/auth, /api/admin/users, /api/agents, /api/new-sam, /api/workflows/new-sam, /api/public, /api/workflows (incl. tool-catalog), toolbox")

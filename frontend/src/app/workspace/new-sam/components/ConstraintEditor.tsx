@@ -4,9 +4,12 @@
 // Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
 // SPDX-License-Identifier: MIT
 
-import { nanoid } from "nanoid";
 import { Plus, Trash2, RotateCcw } from "lucide-react";
+import { nanoid } from "nanoid";
+
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,8 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import type { Constraint, ConstraintType } from "../types";
 import { CONSTRAINT_TYPE_CONFIGS } from "../types";
 
@@ -35,7 +37,6 @@ export function ConstraintEditor({
   constraints,
   onConstraintsChange,
 }: ConstraintEditorProps) {
-
   /**
    * 添加新约束
    */
@@ -64,7 +65,7 @@ export function ConstraintEditor({
    */
   const handleUpdateConstraint = (id: string, updates: Partial<Constraint>) => {
     onConstraintsChange(
-      constraints.map((c) => (c.id === id ? { ...c, ...updates } : c))
+      constraints.map((c) => (c.id === id ? { ...c, ...updates } : c)),
     );
   };
 
@@ -93,7 +94,11 @@ export function ConstraintEditor({
     };
 
     // 根据类型设置默认值
-    if (config.valueType === "select" && config.options && config.options.length > 0) {
+    if (
+      config.valueType === "select" &&
+      config.options &&
+      config.options.length > 0
+    ) {
       updates.value = config.options[0];
     } else if (config.valueType === "range") {
       updates.value = { min: -0.2, max: 0.2 };
@@ -109,7 +114,7 @@ export function ConstraintEditor({
       {/* 约束列表：3列并排 */}
       <div className="grid grid-cols-3 gap-4">
         {constraints.length === 0 ? (
-          <div className="col-span-full rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 py-8 text-center">
+          <div className="col-span-full rounded-lg border border-dashed border-slate-300 bg-slate-50 py-8 text-center dark:border-slate-600 dark:bg-slate-800/50">
             <p className="text-sm text-slate-500 dark:text-slate-400">
               暂无约束条件。点击下方按钮添加约束。
             </p>
@@ -124,10 +129,13 @@ export function ConstraintEditor({
                 : { min: -0.2, max: 0.2 };
 
             return (
-              <Card key={constraint.id} className="relative shadow-sm flex flex-col">
+              <Card
+                key={constraint.id}
+                className="relative flex flex-col shadow-sm"
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
                       <Checkbox
                         checked={constraint.enabled}
                         onCheckedChange={(checked) =>
@@ -137,7 +145,7 @@ export function ConstraintEditor({
                         }
                         className="shrink-0"
                       />
-                      <CardTitle className="text-sm font-medium truncate">
+                      <CardTitle className="truncate text-sm font-medium">
                         {constraint.name || config?.label || "约束"}
                       </CardTitle>
                     </div>
@@ -146,25 +154,36 @@ export function ConstraintEditor({
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDeleteConstraint(constraint.id)}
-                        className="h-7 w-7 shrink-0 text-slate-500 hover:text-destructive dark:text-slate-400"
+                        className="hover:text-destructive h-7 w-7 shrink-0 text-slate-500 dark:text-slate-400"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     )}
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-3 pt-0 flex-1">
+                <CardContent className="flex-1 space-y-3 pt-0">
                   {/* 约束类型选择 - 仅自定义约束显示 */}
                   {constraint.type === "custom" && (
                     <div className="space-y-1.5">
-                      <Label htmlFor={`type-${constraint.id}`} className="text-xs font-medium">约束类型</Label>
+                      <Label
+                        htmlFor={`type-${constraint.id}`}
+                        className="text-xs font-medium"
+                      >
+                        约束类型
+                      </Label>
                       <Select
                         value={constraint.type}
                         onValueChange={(value) =>
-                          handleTypeChange(constraint.id, value as ConstraintType)
+                          handleTypeChange(
+                            constraint.id,
+                            value as ConstraintType,
+                          )
                         }
                       >
-                        <SelectTrigger id={`type-${constraint.id}`} className="w-full h-8 text-xs">
+                        <SelectTrigger
+                          id={`type-${constraint.id}`}
+                          className="h-8 w-full text-xs"
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -181,12 +200,19 @@ export function ConstraintEditor({
                   {/* 约束名称（自定义类型时显示） */}
                   {constraint.type === "custom" && (
                     <div className="space-y-1.5">
-                      <Label htmlFor={`name-${constraint.id}`} className="text-xs font-medium">约束名称</Label>
+                      <Label
+                        htmlFor={`name-${constraint.id}`}
+                        className="text-xs font-medium"
+                      >
+                        约束名称
+                      </Label>
                       <Input
                         id={`name-${constraint.id}`}
                         value={constraint.name}
                         onChange={(e) =>
-                          handleUpdateConstraint(constraint.id, { name: e.target.value })
+                          handleUpdateConstraint(constraint.id, {
+                            name: e.target.value,
+                          })
                         }
                         placeholder="请输入约束名称"
                         className="h-8 text-xs"
@@ -197,14 +223,22 @@ export function ConstraintEditor({
                   {/* 约束值输入 */}
                   {constraint.valueType === "select" && constraint.options && (
                     <div className="space-y-1.5">
-                      <Label htmlFor={`value-${constraint.id}`} className="text-xs font-medium">值</Label>
+                      <Label
+                        htmlFor={`value-${constraint.id}`}
+                        className="text-xs font-medium"
+                      >
+                        值
+                      </Label>
                       <Select
                         value={String(constraint.value)}
                         onValueChange={(value) =>
                           handleUpdateConstraint(constraint.id, { value })
                         }
                       >
-                        <SelectTrigger id={`value-${constraint.id}`} className="w-full h-8 text-xs">
+                        <SelectTrigger
+                          id={`value-${constraint.id}`}
+                          className="h-8 w-full text-xs"
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -235,9 +269,11 @@ export function ConstraintEditor({
                           }
                           placeholder="最小"
                           step="0.1"
-                          className="flex-1 text-xs h-8"
+                          className="h-8 flex-1 text-xs"
                         />
-                        <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">~</span>
+                        <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400">
+                          ~
+                        </span>
                         <Input
                           type="number"
                           value={rangeValue.max}
@@ -251,10 +287,10 @@ export function ConstraintEditor({
                           }
                           placeholder="最大"
                           step="0.1"
-                          className="flex-1 text-xs h-8"
+                          className="h-8 flex-1 text-xs"
                         />
                         {constraint.unit && (
-                          <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">
+                          <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400">
                             {constraint.unit}
                           </span>
                         )}
@@ -262,13 +298,23 @@ export function ConstraintEditor({
                     </div>
                   )}
 
-                  {(constraint.valueType === "text" || constraint.valueType === "number") && (
+                  {(constraint.valueType === "text" ||
+                    constraint.valueType === "number") && (
                     <div className="space-y-1.5">
-                      <Label htmlFor={`value-${constraint.id}`} className="text-xs font-medium">值</Label>
+                      <Label
+                        htmlFor={`value-${constraint.id}`}
+                        className="text-xs font-medium"
+                      >
+                        值
+                      </Label>
                       <div className="flex items-center gap-2">
                         <Input
                           id={`value-${constraint.id}`}
-                          type={constraint.valueType === "number" ? "number" : "text"}
+                          type={
+                            constraint.valueType === "number"
+                              ? "number"
+                              : "text"
+                          }
                           value={String(constraint.value)}
                           onChange={(e) =>
                             handleUpdateConstraint(constraint.id, {
@@ -279,10 +325,10 @@ export function ConstraintEditor({
                             })
                           }
                           placeholder={config?.placeholder || "请输入值"}
-                          className="flex-1 h-8 text-xs"
+                          className="h-8 flex-1 text-xs"
                         />
                         {constraint.unit && (
-                          <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">
+                          <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400">
                             {constraint.unit}
                           </span>
                         )}
@@ -297,7 +343,7 @@ export function ConstraintEditor({
       </div>
 
       {/* 添加约束和恢复默认按钮 */}
-      <div className="col-span-full pt-2 flex items-center gap-2">
+      <div className="col-span-full flex items-center gap-2 pt-2">
         <Button
           type="button"
           variant="outline"
@@ -352,4 +398,3 @@ export function ConstraintEditor({
     </div>
   );
 }
-

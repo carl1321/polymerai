@@ -23,6 +23,8 @@ def test_get_skills_root_path_points_to_project_root_skills():
     path = get_skills_root_path()
     assert path.name == "skills", f"Expected 'skills', got '{path.name}'"
     assert (path.parent / "backend").is_dir(), f"Expected skills path's parent to be project root containing 'backend/', but got {path}"
+
+
 def test_get_skills_root_path_points_to_current_project_skills(tmp_path: Path, monkeypatch):
     """get_skills_root_path() should point to the caller project skills directory."""
     monkeypatch.delenv("DEER_FLOW_SKILLS_PATH", raising=False)

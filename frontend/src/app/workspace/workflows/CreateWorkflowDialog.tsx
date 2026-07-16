@@ -4,6 +4,8 @@
 "use client";
 
 import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -57,9 +58,7 @@ export function CreateWorkflowDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>创建工作流</DialogTitle>
-          <DialogDescription>
-            输入工作流的名称和描述（可选）
-          </DialogDescription>
+          <DialogDescription>输入工作流的名称和描述（可选）</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
@@ -105,4 +104,3 @@ export function CreateWorkflowDialog({
     </Dialog>
   );
 }
-

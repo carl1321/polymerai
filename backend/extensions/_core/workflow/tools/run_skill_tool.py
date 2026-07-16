@@ -14,11 +14,11 @@ from pydantic import Field
 
 from extensions._core.workflow.skill_runner import run_skill, skill_result_to_tool_json
 from extensions._core.workflow.workflow_skill_paths import (
-    structure_path_from_refs,
     build_skill_argv_from_refs,
     extract_file_refs_from_prompt,
     find_structure_path,
     resolve_workflow_work_dir,
+    structure_path_from_refs,
 )
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,19 @@ def set_workflow_tool_context(ctx: dict[str, Any] | None) -> None:
 
 def get_workflow_tool_context() -> dict[str, Any]:
     return dict(_workflow_tool_context)
+
+
+def _enforce_allowed_skill(skill_name: str, ctx: dict[str, Any]) -> str | None:
+    """Return error message if skill_name is outside the node-configured allowlist."""
+    allowed = ctx.get("allowed_skill_name") or ctx.get("skill_name")
+    if not allowed:
+        return None
+    if str(skill_name).strip() == str(allowed).strip():
+        return None
+    return (
+        f"Skill {skill_name!r} is not allowed for this node; "
+        f"use configured skill {allowed!r} only."
+    )
 
 
 def _run_skill_safe(
@@ -115,6 +128,18 @@ def invoke_workflow_skill(
 ) -> str:
     """Run skill on workflow worker (same resolution as run_skill_tool); for compiler fallback."""
     ctx = get_workflow_tool_context()
+    blocked = _enforce_allowed_skill(skill_name, ctx)
+    if blocked:
+        return skill_result_to_tool_json(
+            {
+                "success": False,
+                "error_kind": "skill_not_allowed",
+                "error": blocked,
+                "exit_code": -1,
+                "stderr": blocked,
+                "work_dir": work_dir,
+            }
+        )
     require_detach = bool(ctx.get("require_detach"))
     timeout = int(ctx.get("sync_timeout") or 3600)
     cwd, resolved_argv = _resolve_argv_and_cwd(skill_name, work_dir, argv, command, ctx)
@@ -148,6 +173,18 @@ def run_skill_tool(
         if isinstance(parsed, dict):
             kw = parsed
     ctx = get_workflow_tool_context()
+    blocked = _enforce_allowed_skill(skill_name, ctx)
+    if blocked:
+        return skill_result_to_tool_json(
+            {
+                "success": False,
+                "error_kind": "skill_not_allowed",
+                "error": blocked,
+                "exit_code": -1,
+                "stderr": blocked,
+                "work_dir": work_dir,
+            }
+        )
     require_detach = bool(ctx.get("require_detach"))
     timeout = int(ctx.get("sync_timeout") or 3600)
     cwd, resolved_argv = _resolve_argv_and_cwd(skill_name, work_dir, argv, command, ctx)

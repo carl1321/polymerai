@@ -6,9 +6,9 @@
 from __future__ import annotations
 
 from contextvars import ContextVar
-from typing import Any, Optional
+from typing import Any
 
-_workflow_state_manager: ContextVar[Optional[Any]] = ContextVar(
+_workflow_state_manager: ContextVar[Any | None] = ContextVar(
     "workflow_state_manager",
     default=None,
 )
@@ -18,5 +18,5 @@ def set_workflow_state_manager(state_manager: Any | None) -> None:
     _workflow_state_manager.set(state_manager)
 
 
-def get_workflow_state_manager() -> Optional[Any]:
+def get_workflow_state_manager() -> Any | None:
     return _workflow_state_manager.get()

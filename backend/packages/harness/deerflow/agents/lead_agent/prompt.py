@@ -389,9 +389,7 @@ def _build_clarification_blocks(prefer_rag_over_clarification: bool) -> tuple[st
             "- **Memory First**: Always check injected `<memory>` first; use `knowledge_base_search` when memory is insufficient; only then ask for clarification (except risky operations that always require confirmation).\n"
         )
     else:
-        clarification_thinking = (
-            "- **PRIORITY CHECK: If anything is unclear, missing, or has multiple interpretations, you MUST ask for clarification FIRST - do NOT proceed with work**\n"
-        )
+        clarification_thinking = "- **PRIORITY CHECK: If anything is unclear, missing, or has multiple interpretations, you MUST ask for clarification FIRST - do NOT proceed with work**\n"
         clarification_section = """
 <clarification_system>
 **WORKFLOW PRIORITY: CLARIFY → PLAN → ACT**
@@ -401,9 +399,7 @@ def _build_clarification_blocks(prefer_rag_over_clarification: bool) -> tuple[st
 
 **CRITICAL RULE: Clarification ALWAYS comes BEFORE action. Never start working and clarify mid-execution.**
 </clarification_system>"""
-        clarification_reminder = (
-            "- **Clarification First**: ALWAYS clarify unclear/missing/ambiguous requirements BEFORE starting work - never assume or guess\n"
-        )
+        clarification_reminder = "- **Clarification First**: ALWAYS clarify unclear/missing/ambiguous requirements BEFORE starting work - never assume or guess\n"
 
     return clarification_thinking, clarification_section, clarification_reminder
 
@@ -781,9 +777,7 @@ def apply_prompt_template(
 
     skills_section = get_skills_prompt_section(available_skills, app_config=app_config)
 
-    clarification_thinking, clarification_section, clarification_reminder = _build_clarification_blocks(
-        prefer_rag_over_clarification
-    )
+    clarification_thinking, clarification_section, clarification_reminder = _build_clarification_blocks(prefer_rag_over_clarification)
 
     # Get deferred tools section (tool_search)
     deferred_tools_section = get_deferred_tools_prompt_section(app_config=app_config)

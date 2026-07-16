@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,7 +20,11 @@ const SLUG_RE = /^[a-z][a-z0-9_]{1,63}$/;
 interface CreateWorkflowToolDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (payload: { name: string; display_name: string; description?: string }) => void | Promise<void>;
+  onCreate: (payload: {
+    name: string;
+    display_name: string;
+    description?: string;
+  }) => void | Promise<void>;
 }
 
 export function CreateWorkflowToolDialog({
@@ -75,11 +80,12 @@ export function CreateWorkflowToolDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-xl">
+      <DialogContent className="rounded-xl sm:max-w-md">
         <DialogHeader>
           <DialogTitle>新建工具</DialogTitle>
           <DialogDescription>
-            创建后可在工具库中编写 @tool 脚本、试跑并发布，供工作流 Tool 节点选用。
+            创建后可在工具库中编写 @tool 脚本、试跑并发布，供工作流 Tool
+            节点选用。
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -91,13 +97,17 @@ export function CreateWorkflowToolDialog({
               id="tool-slug"
               value={name}
               onChange={(e) => {
-                setName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""));
+                setName(
+                  e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""),
+                );
                 setError("");
               }}
               placeholder="例如 my_workflow_tool"
               className={error ? "border-red-500" : ""}
             />
-            <p className="text-xs text-muted-foreground">须与脚本中 @tool 函数名一致</p>
+            <p className="text-muted-foreground text-xs">
+              须与脚本中 @tool 函数名一致
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="tool-display-name">显示名称</Label>
@@ -121,13 +131,17 @@ export function CreateWorkflowToolDialog({
           {error && <p className="text-sm text-red-500">{error}</p>}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={handleCancel} disabled={submitting}>
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            disabled={submitting}
+          >
             取消
           </Button>
           <Button
             onClick={() => void handleSubmit()}
             disabled={submitting}
-            className="bg-[#1890FF] hover:bg-[#1890FF]/90 text-white"
+            className="bg-[#1890FF] text-white hover:bg-[#1890FF]/90"
           >
             {submitting ? "创建中…" : "创建"}
           </Button>

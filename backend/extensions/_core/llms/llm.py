@@ -44,4 +44,3 @@ def get_model_supports_thinking(model_name: str) -> bool:
         return bool(m.supports_thinking) if m is not None else False
     except Exception:
         return False
-

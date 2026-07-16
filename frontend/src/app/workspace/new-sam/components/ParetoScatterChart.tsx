@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: MIT
 
 import { useEffect, useRef } from "react";
+
 import type { ParetoDataPoint } from "@/app/workspace/new-sam/utils/molecule";
 
 interface ParetoScatterChartProps {
@@ -36,14 +37,16 @@ export function ParetoScatterChart({
         echarts = echartsModule.default || echartsModule;
 
         if (!chartInstanceRef.current) {
-          const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches || 
-                         document.documentElement.classList.contains("dark");
+          const isDark =
+            window.matchMedia("(prefers-color-scheme: dark)").matches ||
+            document.documentElement.classList.contains("dark");
           chartInstanceRef.current = echarts.init(chartRef.current);
-          
+
           // 监听主题变化
           const observer = new MutationObserver(() => {
             if (chartInstanceRef.current) {
-              const isDarkNow = document.documentElement.classList.contains("dark");
+              const isDarkNow =
+                document.documentElement.classList.contains("dark");
               chartInstanceRef.current.dispose();
               chartInstanceRef.current = echarts.init(chartRef.current);
               updateChart(isDarkNow);
@@ -55,8 +58,9 @@ export function ParetoScatterChart({
           });
         }
 
-        const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches || 
-                      document.documentElement.classList.contains("dark");
+        const isDark =
+          window.matchMedia("(prefers-color-scheme: dark)").matches ||
+          document.documentElement.classList.contains("dark");
         updateChart(isDark);
       } catch (error) {
         console.error("Failed to load echarts:", error);
@@ -68,9 +72,7 @@ export function ParetoScatterChart({
         if (chartInstanceRef.current) {
           chartInstanceRef.current.setOption({
             title: {
-              text: executionState === "running" 
-                ? "等待数据..." 
-                : "暂无数据",
+              text: executionState === "running" ? "等待数据..." : "暂无数据",
               left: "center",
               top: "middle",
               textStyle: {
@@ -84,7 +86,9 @@ export function ParetoScatterChart({
       }
 
       const points = paretoPoints.filter((p) => typeof p.iter === "number");
-      const iters = Array.from(new Set(points.map((p) => p.iter as number))).sort((a, b) => a - b);
+      const iters = Array.from(new Set(points.map((p) => p.iter!))).sort(
+        (a, b) => a - b,
+      );
 
       const totals = points.map((p) => p.total || 0);
       const minTotal = Math.min(...totals);
@@ -105,8 +109,12 @@ export function ParetoScatterChart({
               </div>
             `;
           },
-          backgroundColor: isDark ? "rgba(30, 41, 59, 0.95)" : "rgba(255, 255, 255, 0.95)",
-          borderColor: isDark ? "rgba(100, 116, 139, 0.3)" : "rgba(0, 0, 0, 0.1)",
+          backgroundColor: isDark
+            ? "rgba(30, 41, 59, 0.95)"
+            : "rgba(255, 255, 255, 0.95)",
+          borderColor: isDark
+            ? "rgba(100, 116, 139, 0.3)"
+            : "rgba(0, 0, 0, 0.1)",
           textStyle: {
             color: isDark ? "#e2e8f0" : "#1e293b",
           },
@@ -165,7 +173,7 @@ export function ParetoScatterChart({
             name: "候选分子",
             type: "scatter",
             // xAxis 是 category，用索引定位；y 是 total
-            data: points.map((p) => [iters.indexOf(p.iter as number), p.total]),
+            data: points.map((p) => [iters.indexOf(p.iter!), p.total]),
             symbolSize: (data: number[]) => {
               // 点大小基于总分，范围 8-24
               const total = data[1];

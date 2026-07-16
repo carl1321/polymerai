@@ -5,6 +5,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import type { WorkflowRunAsyncTask } from "@/core/api/workflows";
+
 import {
   asyncTaskStatusLabel,
   formatDateTime,
@@ -18,14 +19,18 @@ type AsyncTaskTableProps = {
 export function AsyncTaskTable({ tasks }: AsyncTaskTableProps) {
   const rows = tasks ?? [];
   if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">本次运行无 detach 异步任务（如 VASP HPC 提交）</p>;
+    return (
+      <p className="text-muted-foreground text-sm">
+        本次运行无 detach 异步任务（如 VASP HPC 提交）
+      </p>
+    );
   }
 
   return (
-    <div className="rounded-md border overflow-x-auto">
+    <div className="overflow-x-auto rounded-md border">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b bg-muted/30 text-left text-xs text-muted-foreground">
+          <tr className="bg-muted/30 text-muted-foreground border-b text-left text-xs">
             <th className="p-3 font-medium">任务名称</th>
             <th className="p-3 font-medium">job_id</th>
             <th className="p-3 font-medium">状态</th>
@@ -39,7 +44,10 @@ export function AsyncTaskTable({ tasks }: AsyncTaskTableProps) {
           {rows.map((task) => (
             <tr key={task.id} className="border-b last:border-0">
               <td className="p-3 font-medium">{task.task_name}</td>
-              <td className="p-3 font-mono text-xs max-w-[200px] truncate" title={task.job_id ?? ""}>
+              <td
+                className="max-w-[200px] truncate p-3 font-mono text-xs"
+                title={task.job_id ?? ""}
+              >
                 {task.job_id ?? "-"}
               </td>
               <td className="p-3">
@@ -47,13 +55,21 @@ export function AsyncTaskTable({ tasks }: AsyncTaskTableProps) {
                   {asyncTaskStatusLabel(task.status)}
                 </Badge>
               </td>
-              <td className="p-3 text-xs whitespace-nowrap">{formatDateTime(task.started_at)}</td>
-              <td className="p-3 text-xs whitespace-nowrap">{formatDateTime(task.finished_at)}</td>
-              <td className="p-3 text-xs whitespace-nowrap">{formatDateTime(task.next_poll_at)}</td>
+              <td className="p-3 text-xs whitespace-nowrap">
+                {formatDateTime(task.started_at)}
+              </td>
+              <td className="p-3 text-xs whitespace-nowrap">
+                {formatDateTime(task.finished_at)}
+              </td>
+              <td className="p-3 text-xs whitespace-nowrap">
+                {formatDateTime(task.next_poll_at)}
+              </td>
               <td className="p-3">
                 <div>{task.node_name ?? "-"}</div>
                 {task.workflow_node_id ? (
-                  <span className="text-[10px] text-muted-foreground font-mono">{task.workflow_node_id}</span>
+                  <span className="text-muted-foreground font-mono text-[10px]">
+                    {task.workflow_node_id}
+                  </span>
                 ) : null}
               </td>
             </tr>

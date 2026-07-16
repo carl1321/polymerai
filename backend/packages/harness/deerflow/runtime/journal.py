@@ -38,12 +38,7 @@ logger = logging.getLogger(__name__)
 def _command_output_summary(cmd: Command) -> dict[str, Any]:
     update = cmd.update if isinstance(cmd.update, dict) else {}
     messages = update.get("messages", [])
-    return {
-        "messages": [
-            m.model_dump() if isinstance(m, BaseMessage) else str(m)
-            for m in (messages if isinstance(messages, list) else [])
-        ]
-    }
+    return {"messages": [m.model_dump() if isinstance(m, BaseMessage) else str(m) for m in (messages if isinstance(messages, list) else [])]}
 
 
 def _normalize_chain_outputs(outputs: Any) -> dict[str, Any]:
@@ -81,9 +76,7 @@ class RunJournal(BaseCallbackHandler):
         self.run_id = run_id
         self.thread_id = thread_id
         self._store = event_store
-        self._owner_user_id = (
-            owner_user_id.strip() if isinstance(owner_user_id, str) and owner_user_id.strip() else None
-        )
+        self._owner_user_id = owner_user_id.strip() if isinstance(owner_user_id, str) and owner_user_id.strip() else None
         self._track_tokens = track_token_usage
         self._flush_threshold = flush_threshold
         self._progress_reporter = progress_reporter
